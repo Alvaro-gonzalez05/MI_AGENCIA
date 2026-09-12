@@ -64,15 +64,59 @@ class ControlSesion extends Notifier<EstadoSesion> {
     return SesionAbierta(_desdeSupabase(sesion.user));
   }
 
+  /// Version minima, con lo que ya trae el token. Sirve para pintar la UI
+  /// sin esperar a la red; [_completar] la enriquece despues.
   static Usuario _desdeSupabase(User u) => Usuario(
         id: u.id,
         email: u.email ?? '',
         nombre: (u.userMetadata?['nombre'] as String?) ??
             (u.email ?? '').split('@').first,
-        // El flag real vive en public.perfiles y se lee despues del login.
-        // Hasta que exista la base, nadie es desarrollador.
         esDesarrollador: false,
       );
+
+  /// Trae el perfil y la agencia del usuario.
+  ///
+  /// `es_desarrollador` vive en public.perfiles y NO en el token a proposito:
+  /// si viviera en los metadatos del usuario, cualquiera con la anon key
+  /// podria intentar escribirselo. Asi, cambiarlo exige service_role.
+  ///
+  /// Si algo de esto falla no se cierra la sesion: se entra con los datos
+  /// minimos. Quedarse afuera por no poder leer el nombre seria peor.
+  static Future<Usuario> _completar(Usuario base) async {
+    final db = Supabase.instance.client;
+    try {
+      final perfil = await db
+          .from('perfiles')
+          .select('nombre, apellido, es_desarrollador')
+          .eq('id', base.id)
+          .maybeSingle();
+
+      final membresia = await db
+          .from('membresias')
+          .select('rol, agencia_id, agencias ( nombre )')
+          .eq('usuario_id', base.id)
+          .eq('activa', true)
+          .limit(1)
+          .maybeSingle();
+
+      final nombre = [perfil?['nombre'], perfil?['apellido']]
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .join(' ');
+
+      return Usuario(
+        id: base.id,
+        email: base.email,
+        nombre: nombre.isEmpty ? base.nombre : nombre,
+        esDesarrollador: perfil?['es_desarrollador'] as bool? ?? false,
+        agenciaId: membresia?['agencia_id'] as String?,
+        agenciaNombre: (membresia?['agencias'] as Map?)?['nombre'] as String?,
+        rol: membresia?['rol'] as String?,
+      );
+    } catch (_) {
+      return base;
+    }
+  }
 
   Future<void> ingresar({required String email, required String clave}) async {
     state = const SesionCargando();
@@ -101,7 +145,7 @@ class ControlSesion extends Notifier<EstadoSesion> {
         state = const SesionCerrada(error: 'No se pudo iniciar sesión.');
         return;
       }
-      state = SesionAbierta(_desdeSupabase(r.user!));
+      state = SesionAbierta(await _completar(_desdeSupabase(r.user!)));
     } on AuthException catch (e) {
       state = SesionCerrada(error: _traducir(e.message));
     } catch (_) {

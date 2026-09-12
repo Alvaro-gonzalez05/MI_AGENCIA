@@ -84,31 +84,36 @@ class _BarraLateral extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
-    final secciones =
-        Secciones.visibles(esDesarrollador: usuario?.esDesarrollador ?? false);
+    final secciones = Secciones.visibles(
+      esDesarrollador: usuario?.esDesarrollador ?? false,
+    );
 
     String? grupoAnterior;
     final items = <Widget>[];
     for (final s in secciones) {
       if (s.grupo != grupoAnterior) {
         grupoAnterior = s.grupo;
-        items.add(Padding(
-          padding: EdgeInsets.fromLTRB(
-            compacta ? 0 : Esp.md,
-            Esp.lg,
-            Esp.md,
-            Esp.sm,
+        items.add(
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              compacta ? 0 : Esp.md,
+              Esp.lg,
+              Esp.md,
+              Esp.sm,
+            ),
+            child: compacta
+                ? Divider(color: p.borde, height: 1)
+                : EtiquetaSeccion(s.grupo),
           ),
-          child: compacta
-              ? Divider(color: p.borde, height: 1)
-              : EtiquetaSeccion(s.grupo),
-        ));
+        );
       }
-      items.add(_EnlaceNav(
-        seccion: s,
-        activo: s.id == seccionActual.id,
-        compacta: compacta,
-      ));
+      items.add(
+        _EnlaceNav(
+          seccion: s,
+          activo: s.id == seccionActual.id,
+          compacta: compacta,
+        ),
+      );
     }
 
     return Container(
@@ -392,8 +397,10 @@ class _EncabezadoPantalla extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(seccion.titulo,
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  seccion.titulo,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 Text(
                   seccion.subtitulo,
                   maxLines: 1,
@@ -437,8 +444,10 @@ class _ShellMovil extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(seccion.titulo,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              seccion.titulo,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             Text(
               seccion.subtitulo,
               maxLines: 1,
@@ -457,7 +466,9 @@ class _ShellMovil extends ConsumerWidget {
         ],
         bottom: Config.modoDemo
             ? const PreferredSize(
-                preferredSize: Size.fromHeight(28), child: CintaDemo())
+                preferredSize: Size.fromHeight(28),
+                child: CintaDemo(),
+              )
             : null,
       ),
       body: child,
@@ -484,8 +495,9 @@ class _ShellMovil extends ConsumerWidget {
             iconTheme: WidgetStateProperty.resolveWith(
               (estados) => IconThemeData(
                 size: 21,
-                color:
-                    estados.contains(WidgetState.selected) ? p.acento : p.tinta3,
+                color: estados.contains(WidgetState.selected)
+                    ? p.acento
+                    : p.tinta3,
               ),
             ),
           ),
@@ -496,10 +508,7 @@ class _ShellMovil extends ConsumerWidget {
             onDestinationSelected: (i) => context.go(principales[i].ruta),
             destinations: [
               for (final s in principales)
-                NavigationDestination(
-                  icon: Icon(s.icono),
-                  label: s.etiqueta,
-                ),
+                NavigationDestination(icon: Icon(s.icono), label: s.etiqueta),
             ],
           ),
         ),
@@ -523,58 +532,67 @@ class _ShellMovil extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(Curva.lg)),
       ),
+      // isScrollControlled + el envoltorio scrolleable: con la cuenta de
+      // desarrollador el menu tiene mas entradas de las que entran en media
+      // pantalla, y sin esto la hoja desborda en vez de dejar scrollear.
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final s in resto)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final s in resto)
+                ListTile(
+                  leading: Icon(s.icono, size: 20, color: p.tinta2),
+                  title: Text(
+                    s.etiqueta,
+                    style: const TextStyle(fontSize: 14.5),
+                  ),
+                  subtitle: Text(
+                    s.subtitulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.go(s.ruta);
+                  },
+                ),
+              Divider(color: p.borde, height: Esp.lg),
+              Consumer(
+                builder: (_, r, _) {
+                  final modo = r.watch(temaProvider);
+                  return ListTile(
+                    leading: Icon(
+                      modo == ThemeMode.dark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
+                      size: 20,
+                      color: p.tinta2,
+                    ),
+                    title: Text(
+                      modo == ThemeMode.dark ? 'Tema claro' : 'Tema oscuro',
+                      style: const TextStyle(fontSize: 14.5),
+                    ),
+                    onTap: () => r.read(temaProvider.notifier).alternar(),
+                  );
+                },
+              ),
               ListTile(
-                leading: Icon(s.icono, size: 20, color: p.tinta2),
-                title: Text(s.etiqueta, style: const TextStyle(fontSize: 14.5)),
-                subtitle: Text(
-                  s.subtitulo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                leading: Icon(Icons.logout, size: 20, color: p.critico),
+                title: Text(
+                  'Cerrar sesión',
+                  style: TextStyle(fontSize: 14.5, color: p.critico),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.go(s.ruta);
+                  ref.read(sesionProvider.notifier).salir();
                 },
               ),
-            Divider(color: p.borde, height: Esp.lg),
-            Consumer(
-              builder: (_, r, _) {
-                final modo = r.watch(temaProvider);
-                return ListTile(
-                  leading: Icon(
-                    modo == ThemeMode.dark
-                        ? Icons.light_mode_outlined
-                        : Icons.dark_mode_outlined,
-                    size: 20,
-                    color: p.tinta2,
-                  ),
-                  title: Text(
-                    modo == ThemeMode.dark ? 'Tema claro' : 'Tema oscuro',
-                    style: const TextStyle(fontSize: 14.5),
-                  ),
-                  onTap: () => r.read(temaProvider.notifier).alternar(),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout, size: 20, color: p.critico),
-              title: Text(
-                'Cerrar sesión',
-                style: TextStyle(fontSize: 14.5, color: p.critico),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                ref.read(sesionProvider.notifier).salir();
-              },
-            ),
-            const SizedBox(height: Esp.sm),
-          ],
+              const SizedBox(height: Esp.sm),
+            ],
+          ),
         ),
       ),
     );

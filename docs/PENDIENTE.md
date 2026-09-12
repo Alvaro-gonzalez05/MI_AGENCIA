@@ -7,55 +7,53 @@ esto es sólo lo que falta.
 
 ---
 
-## Bloqueante 1 — Crear la base en Supabase
+## Bloqueante 1 — Crear el primer usuario
 
-Sin esto la app funciona, pero contra datos de ejemplo en memoria.
+La base **ya está creada y conectada**. Proyecto `zthpwqcoirrpvslambhz`, con las
+10 migraciones aplicadas y verificadas (25 tablas, 6 vistas, 65 políticas RLS,
+ninguna vista sin `security_invoker`).
 
-1. Logueate en Supabase con `alvarogonzalez7070@gmail.com`. **Yo intenté
-   entrar y la sesión del navegador no estaba iniciada**; no puedo loguearme
-   por vos ni resolver el captcha.
-2. Creá el proyecto: nombre `mi-agencia`, región **South America (São Paulo)**.
-3. Abrí el SQL Editor y pegá entero
-   [`supabase/migraciones_completas.sql`](../supabase/migraciones_completas.sql).
-   Son las 10 migraciones en orden, ya verificadas contra un Postgres real.
-   Es idempotente: si lo corrés dos veces no rompe nada.
-4. Copiá de *Project Settings → API* la **Project URL** y la **publishable key**
-   (esa sí es pública, va en el cliente sin problema).
+La app ya apunta ahí: las credenciales están en `.env` (que no se commitea) y
+`scripts/dev.ps1` las inyecta solo. Falta una sola cosa para poder entrar.
 
-### Para que yo pueda trabajar contra la base
+### Crear el usuario
 
-Generá un token en <https://supabase.com/dashboard/account/tokens> y guardalo
-en una variable de entorno. **No lo pegues en el chat.**
+El registro por email está habilitado pero **exige confirmación por mail**, y el
+SMTP que trae Supabase de fábrica tiene un límite muy bajo. Así que el primer
+usuario conviene crearlo a mano:
 
-```powershell
-[Environment]::SetEnvironmentVariable('SUPABASE_TOKEN_MI_AGENCIA', 'TU_TOKEN', 'User')
-```
+**Dashboard → Authentication → Users → Add user**, y tildá **Auto Confirm User**.
 
-El `.mcp.json` de la raíz ya está armado para leerlo de ahí. Abrí Claude con
-la carpeta `mi-agencia` como directorio de trabajo y aprobá el servidor.
+### Convertirlo en cuenta de desarrollador
 
-### Después, la app contra la base real
-
-```powershell
-.\scripts\dev.ps1 run -d chrome `
-  --dart-define=SUPABASE_URL=https://xxx.supabase.co `
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_xxx
-```
-
-Con esas dos variables el modo demo se apaga solo.
-
-### Crear la cuenta de desarrollador
-
-El flag de desarrollador no se puede activar desde la app (lo impide un
-trigger, a propósito). Registrate normalmente y después, una sola vez desde el
-SQL Editor:
+El flag no se puede activar desde la app: lo impide un trigger, a propósito
+(si viviera en los metadatos del usuario, cualquiera con la publishable key
+podría intentar escribírselo). Una sola vez, desde el SQL Editor:
 
 ```sql
 update public.perfiles set es_desarrollador = true
- where email = 'alvarogonzalez7070@gmail.com';
+ where email = 'TU_EMAIL';
 ```
 
----
+Con eso entrás y ves la sección **Agencias**, que es la de administración de
+cuentas cliente.
+
+### Para que yo administre la base por MCP
+
+Esto es **opcional**. Sólo hace falta si querés que yo cree agencias, corra
+migraciones nuevas o consulte la base directamente. Para programar la app no lo
+necesito.
+
+1. <https://supabase.com/dashboard/account/tokens> → **Generate new token**.
+2. Cargalo en una variable de entorno (**no lo pegues en el chat**):
+
+   ```powershell
+   [Environment]::SetEnvironmentVariable('SUPABASE_TOKEN_MI_AGENCIA', 'TU_TOKEN', 'User')
+   ```
+
+3. Cerrá Claude y volvé a abrirlo **con la carpeta `mi-agencia` como directorio
+   de trabajo**. El `.mcp.json` de la raíz lo levanta solo y te va a pedir que
+   apruebes el servidor.
 
 ## Bloqueante 2 — Windows (necesita administrador)
 
@@ -102,12 +100,14 @@ Android y web **no necesitan nada de esto** y ya funcionan.
 | **Configuración** | Formulario sobre `agencia_config` + gestión de usuarios. |
 | **Agencias** | Panel de desarrollador: alta de agencias e invitaciones. |
 
-### Repositorio contra Supabase
+### Repositorio contra Supabase — hecho
 
-`lib/datos/repositorio.dart` tiene la interfaz y la implementación demo.
-`RepositorioSupabase` está declarada pero sin implementar: cada método es un
-select sobre las vistas que ya existen (`v_inventario`, `v_dashboard`,
-`v_clientes_semaforo`). Al conectarlo **no hay que tocar ninguna pantalla**.
+`lib/datos/repositorio_supabase.dart` ya lee de `v_inventario`,
+`agencia_config`, `oportunidades` y `v_clientes_semaforo`. No hizo falta tocar
+ninguna pantalla: hablan con la interfaz, no con Supabase.
+
+Queda pendiente la **escritura** (altas y ediciones), que llega junto con los
+formularios de cada pantalla.
 
 ### Edge Functions (ninguna escrita todavía)
 

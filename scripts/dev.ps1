@@ -3,14 +3,16 @@
 #
 #  Uso:
 #      .\scripts\dev.ps1 run -d chrome      # levanta la app en el navegador
-#      .\scripts\dev.ps1 build apk --debug  # compila el APK
-#      .\scripts\dev.ps1 doctor
+#      .\scripts\dev.ps1 build apk --release
+#      .\scripts\dev.ps1 test
+#      .\scripts\dev.ps1 analyze
 #
 #  O para dejar la terminal actual configurada y despues usar flutter suelto:
 #      . .\scripts\dev.ps1
 #
-#  Existe porque esta maquina necesita tres ajustes que Flutter no hace solo.
-#  Ver docs/ENTORNO.md para el detalle de por que.
+#  Existe porque esta maquina necesita tres ajustes que Flutter no hace solo,
+#  y porque las credenciales de Supabase se inyectan aca en vez de vivir
+#  hardcodeadas en el codigo. Ver docs/ENTORNO.md para el detalle de por que.
 # =====================================================================
 
 # 1. Toolchain en D:, porque C: tiene poco espacio libre.
@@ -34,12 +36,54 @@ foreach ($p in 'D:\dev\flutter\bin', 'D:\dev\jdk17\bin') {
   if ($env:Path -notlike "*$p*") { $env:Path = "$p;$env:Path" }
 }
 
+# ---------------------------------------------------------------------
+# Credenciales de Supabase desde .env (que no se commitea).
+#
+# Si el archivo no existe, la app arranca en MODO DEMO contra los datos de
+# ejemplo. Eso es a proposito: el proyecto tiene que poder clonarse y correr
+# sin credenciales.
+# ---------------------------------------------------------------------
+$raiz    = Split-Path $PSScriptRoot -Parent
+$archivo = Join-Path $raiz '.env'
+$defines = @()
+
+if (Test-Path $archivo) {
+  foreach ($linea in Get-Content $archivo) {
+    $t = $linea.Trim()
+    if ($t -eq '' -or $t.StartsWith('#')) { continue }
+    $i = $t.IndexOf('=')
+    if ($i -lt 1) { continue }
+    $clave = $t.Substring(0, $i).Trim()
+    $valor = $t.Substring($i + 1).Trim().Trim('"').Trim("'")
+    if ($valor) { $defines += "--dart-define=$clave=$valor" }
+  }
+}
+
 if ($args.Count -eq 0) {
-  Write-Host 'Entorno configurado en esta terminal. Ya podes usar `flutter` directamente.' -ForegroundColor Green
+  Write-Host 'Entorno configurado en esta terminal.' -ForegroundColor Green
   Write-Host "  JAVA_HOME        = $env:JAVA_HOME"
   Write-Host "  TEMP             = $env:TEMP"
   Write-Host "  GRADLE_USER_HOME = $env:GRADLE_USER_HOME"
-} else {
-  Push-Location (Join-Path $PSScriptRoot '..\app')
-  try { & flutter @args } finally { Pop-Location }
+  if ($defines.Count -gt 0) {
+    Write-Host "  Supabase         = configurado ($($defines.Count) variables)"
+  } else {
+    Write-Host '  Supabase         = sin configurar (modo demo)' -ForegroundColor Yellow
+  }
+  return
 }
+
+# Las --dart-define solo aplican a los comandos que compilan la app.
+# `test`, `analyze` y `pub` las rechazan.
+$comando   = $args[0]
+$compilan  = @('run', 'build', 'drive')
+$argumentos = @($args)
+
+if ($compilan -contains $comando -and $defines.Count -gt 0) {
+  $argumentos += $defines
+  Write-Host "Supabase: conectado a la base real ($($defines.Count) variables)" -ForegroundColor Cyan
+} elseif ($compilan -contains $comando) {
+  Write-Host 'Supabase: sin .env — la app arranca en modo demo' -ForegroundColor Yellow
+}
+
+Push-Location (Join-Path $PSScriptRoot '..\app')
+try { & flutter @argumentos } finally { Pop-Location }

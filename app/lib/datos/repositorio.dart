@@ -4,6 +4,7 @@ import '../core/config.dart';
 import '../dominio/modelos.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
+import 'repositorio_supabase.dart';
 
 /// Acceso a datos.
 ///
@@ -12,7 +13,10 @@ import 'datos_demo.dart';
 /// manana, al conectar la base, no haya que tocar una sola pantalla: solo
 /// cambia que implementacion devuelve el provider.
 abstract interface class Repositorio {
-  Future<List<VehiculoInventario>> inventario();
+  /// Pagina desde `desde`, trayendo hasta `cantidad` filas. El tope alto por
+  /// defecto alcanza para cualquier agencia real; la paginacion existe para
+  /// que el contrato no haya que cambiarlo cuando deje de alcanzar.
+  Future<List<VehiculoInventario>> inventario({int desde = 0, int cantidad = 500});
   Future<List<Interesado>> interesados();
   Future<ConfigAgencia> config();
 }
@@ -22,11 +26,11 @@ class RepositorioDemo implements Repositorio {
   const RepositorioDemo();
 
   @override
-  Future<List<VehiculoInventario>> inventario() async {
+  Future<List<VehiculoInventario>> inventario({int desde = 0, int cantidad = 500}) async {
     // Demora minima a proposito: deja ver los estados de carga reales de la
     // UI en vez de que todo aparezca instantaneo y nunca se prueben.
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    return Motor.inventario();
+    return Motor.inventario().skip(desde).take(cantidad).toList();
   }
 
   @override
@@ -55,31 +59,6 @@ class RepositorioDemo implements Repositorio {
   }
 }
 
-/// PENDIENTE: implementacion contra Supabase.
-///
-/// Cada metodo es un select sobre las vistas que ya existen en la base:
-///   inventario()  -> select * from v_inventario
-///   interesados() -> select * from oportunidades join v_clientes_semaforo
-///   config()      -> select * from agencia_config
-///
-/// No se escribe todavia porque el proyecto de Supabase aun no esta creado y
-/// no tiene sentido codear contra un esquema que no se puede ejecutar.
-class RepositorioSupabase implements Repositorio {
-  const RepositorioSupabase();
-
-  @override
-  Future<List<VehiculoInventario>> inventario() =>
-      throw UnimplementedError('Falta conectar Supabase. Ver docs/PENDIENTE.md');
-
-  @override
-  Future<List<Interesado>> interesados() =>
-      throw UnimplementedError('Falta conectar Supabase. Ver docs/PENDIENTE.md');
-
-  @override
-  Future<ConfigAgencia> config() =>
-      throw UnimplementedError('Falta conectar Supabase. Ver docs/PENDIENTE.md');
-}
-
 final repositorioProvider = Provider<Repositorio>((ref) =>
     Config.modoDemo ? const RepositorioDemo() : const RepositorioSupabase());
 
@@ -91,11 +70,16 @@ final interesadosProvider = FutureProvider<List<Interesado>>(
   (ref) => ref.watch(repositorioProvider).interesados(),
 );
 
-/// La config se lee sincrona porque casi todas las pantallas la necesitan
-/// para pintar umbrales, y bloquear cada una en un FutureBuilder por un par
-/// de numeros seria ruido. En modo demo son constantes; cuando este Supabase,
-/// se precarga al abrir sesion.
-final configProvider = Provider<ConfigAgencia>((ref) => const ConfigAgencia());
+final configAsyncProvider =
+    FutureProvider<ConfigAgencia>((ref) => ref.watch(repositorioProvider).config());
+
+/// La config se lee sincrona porque casi todas las pantallas la necesitan para
+/// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
+/// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
+/// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+final configProvider = Provider<ConfigAgencia>(
+  (ref) => ref.watch(configAsyncProvider).value ?? const ConfigAgencia(),
+);
 
 /// Totales derivados del inventario ya cargado: no se vuelve a pedir nada.
 final resumenProvider = Provider<ResumenAgencia>((ref) {
