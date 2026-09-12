@@ -4,30 +4,40 @@ Dos cosas dependen de vos y bloquean el avance. Están primero.
 
 ---
 
-## 1. Conectar el MCP de Supabase a la cuenta nueva
+## 1. MCP de Supabase propio de este proyecto
 
-**Esto no lo puedo hacer yo.** El conector de Supabase que tengo enchufado en Claude
-está autenticado contra `desarrolloscodeade@gmail.com` — por eso al pedir el proyecto
-nuevo me rebotó diciendo que *ese* usuario ya llegó a su límite de 2 proyectos gratis.
-Yo no puedo cambiar de cuenta desde acá: el token de acceso vive en la configuración
-de la app, no en el repo.
+Sí, se puede tener un MCP por proyecto: es lo que hace el `.mcp.json` de la raíz.
+Queda atado a esta carpeta y **no toca el conector global** de Claude, que sigue
+apuntando a `desarrolloscodeade@gmail.com` para tus otros proyectos.
 
-Lo que hay que hacer, desde la cuenta nueva (`alvarogonzalez7070@gmail.com`):
+El token no va en el archivo (el `.mcp.json` sí se commitea): se lee de una variable
+de entorno.
 
-1. Entrá a <https://supabase.com/dashboard/account/tokens> logueado con la cuenta nueva.
-2. **Generate new token**, nombre `claude-code-mi-agencia`. Copialo (se muestra una sola vez).
-3. En Claude Desktop: **Settings → Connectors → Supabase**, desconectá el actual y
-   reconectá pegando el token de la cuenta nueva.
-4. Avisame y yo creo el proyecto `mi-agencia` y corro las 10 migraciones de un saque.
+1. Logueate en Supabase con la cuenta nueva (`alvarogonzalez7070@gmail.com`) y entrá
+   a <https://supabase.com/dashboard/account/tokens>.
+2. **Generate new token**, nombre `mi-agencia`. Copialo — se muestra una sola vez.
+3. Guardalo como variable de entorno de usuario, en una terminal PowerShell:
 
-> El token es una credencial con acceso total a tus proyectos: **no me lo pegues en el chat.**
-> Va en la configuración del conector y nada más.
+   ```powershell
+   [Environment]::SetEnvironmentVariable('SUPABASE_TOKEN_MI_AGENCIA', 'TU_TOKEN_ACA', 'User')
+   ```
 
-**Alternativa si preferís no tocar el conector:** creá el proyecto a mano en el dashboard
-(nombre `mi-agencia`, región **South America (São Paulo)**, que es la de menor latencia
-desde Argentina) y corré vos mismo los archivos de `supabase/migrations/` en orden, desde
-el SQL Editor. Copiar y pegar, del `0001` al `0010`. Yo después me conecto por el cliente
-de la app y sigo.
+4. Cerrá y volvé a abrir Claude **con esta carpeta (`mi-agencia`) como directorio de
+   trabajo**, para que levante el `.mcp.json`. Aprobá el servidor cuando lo pregunte.
+
+> El token da acceso total a tus proyectos de Supabase: **no lo pegues en el chat.**
+> Va en la variable de entorno y nada más.
+
+### Alternativa sin MCP
+
+Creá el proyecto a mano en el dashboard (nombre `mi-agencia`, región
+**South America (São Paulo)**, la de menor latencia desde Argentina) y pegá los
+archivos de `supabase/migrations/` en el SQL Editor **en orden, del `0001` al `0010`**.
+Son idempotentes (`if not exists` / `or replace`), así que se pueden volver a correr
+sin romper nada.
+
+Las migraciones ya están verificadas: `tests/` las ejecuta contra un Postgres real
+y compara el motor de cálculo contra el JavaScript original del cliente.
 
 ---
 

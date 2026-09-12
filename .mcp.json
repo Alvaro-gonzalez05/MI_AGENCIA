@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "supabase-mi-agencia": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@supabase/mcp-server-supabase@latest"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_TOKEN_MI_AGENCIA}"
+      }
+    }
+  }
+}
