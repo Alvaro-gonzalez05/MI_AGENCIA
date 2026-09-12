@@ -59,6 +59,7 @@ abstract final class Motor {
   static List<VehiculoInventario> inventario({
     ConfigAgencia cfg = const ConfigAgencia(),
     List<VehiculoSemilla> extras = const [],
+    List<GastoSemilla> gastosExtra = const [],
   }) {
     final indices = _indices();
     final idxHoy = _indiceHoy(indices);
@@ -68,9 +69,10 @@ abstract final class Motor {
       final venta = DatosDemo.ventas
           .where((x) => x.codigo == v.codigo)
           .firstOrNull;
-      final gastos = DatosDemo.gastos
-          .where((g) => g.codigo == v.codigo)
-          .toList();
+      final gastos = [
+        ...DatosDemo.gastos,
+        ...gastosExtra,
+      ].where((g) => g.codigo == v.codigo).toList();
 
       final gastosNominal = gastos.fold<double>(0, (s, g) => s + g.importe);
       final gastosFinales = venta?.gastosFinales ?? 0;

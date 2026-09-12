@@ -75,8 +75,8 @@ Android y web funcionan sin nada de esto.
 
 | Pantalla | Qué falta |
 |---|---|
-| **Vehículos** | Formulario de alta/edición. Autocompletado contra `ref_catalogo`. Subida de fotos a Storage. |
-| **Gastos** | Alta por unidad con las 10 categorías. Adjuntar comprobante. |
+| ~~**Vehículos**~~ | **Hecho.** Falta el autocompletado contra `ref_catalogo` (necesita la API key de ArgAutos) y las fotos a Storage. |
+| ~~**Gastos**~~ | **Hecho.** Falta adjuntar el comprobante como foto o PDF. |
 | **Precios** | Alta de cambio de precio. Gráfico de evolución vs. costo. |
 | **Ventas** | Registro de venta. Al guardarla la unidad sale del stock (ya lo hace un trigger). |
 | **Campañas** | Editor, segmentación y envío. |

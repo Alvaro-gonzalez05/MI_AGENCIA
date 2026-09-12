@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/gastos.dart';
 import '../dominio/modelos.dart';
 import 'repositorio.dart';
 
@@ -189,6 +190,55 @@ class RepositorioSupabase implements Repositorio {
         .from('vehiculos')
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
+  }
+
+  @override
+  Future<List<Gasto>> gastos({String? vehiculoId}) async {
+    var consulta = _db.from('gastos').select('''
+          id, vehiculo_id, fecha, categoria, descripcion, importe, proveedor,
+          vehiculos!inner ( codigo, marca, modelo )
+        ''');
+
+    if (vehiculoId != null) consulta = consulta.eq('vehiculo_id', vehiculoId);
+
+    final filas = await consulta.order('fecha', ascending: false).limit(500);
+
+    return filas.map((f) {
+      final v = f['vehiculos'] as Map<String, dynamic>?;
+      return Gasto(
+        id: f['id'] as String,
+        vehiculoId: f['vehiculo_id'] as String,
+        fecha: _fecha(f['fecha']) ?? DateTime.now(),
+        categoria: CategoriaGasto.desde(f['categoria'] as String?),
+        importe: _decimal(f['importe']) ?? 0,
+        descripcion: f['descripcion'] as String?,
+        proveedor: f['proveedor'] as String?,
+        vehiculoCodigo: v?['codigo'] as String?,
+        vehiculoTitulo: v == null ? null : '${v['marca']} ${v['modelo']}',
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> crearGasto(AltaGasto g) async {
+    final agencia = await _miAgencia();
+    await _db.from('gastos').insert({
+      'agencia_id': agencia,
+      'vehiculo_id': g.vehiculoId,
+      'fecha': _soloFecha(g.fecha!),
+      'categoria': g.categoria.valorBd,
+      'descripcion': _oNulo(g.descripcion),
+      'proveedor': _oNulo(g.proveedor),
+      'importe': g.importe,
+    });
+  }
+
+  @override
+  Future<void> eliminarGasto(String id) async {
+    // Los gastos si se borran de verdad: a diferencia de una unidad, un gasto
+    // mal cargado no tiene historial que preservar, y dejarlo marcado como
+    // borrado obligaria a filtrarlo en cada suma del motor de calculo.
+    await _db.from('gastos').delete().eq('id', id);
   }
 
   /// Solo lo que el usuario carga. Todo lo demas (costos, margenes, dias en

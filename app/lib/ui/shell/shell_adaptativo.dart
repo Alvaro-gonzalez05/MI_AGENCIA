@@ -436,6 +436,10 @@ class _ShellMovil extends ConsumerWidget {
     final p = context.paleta;
     final principales = Secciones.barraInferior;
     final indice = principales.indexWhere((s) => s.id == seccion.id);
+    // Cuando la seccion actual no esta en la barra (Gastos, Precios, Ventas,
+    // Campanas...), se resalta "Mas". Sin esto quedaba iluminado Panel
+    // estando en otra pantalla, que es peor que no resaltar nada.
+    final indiceVisible = indice < 0 ? principales.length : indice;
 
     return Scaffold(
       appBar: AppBar(
@@ -504,11 +508,17 @@ class _ShellMovil extends ConsumerWidget {
           child: NavigationBar(
             height: 62,
             elevation: 0,
-            selectedIndex: indice < 0 ? 0 : indice,
-            onDestinationSelected: (i) => context.go(principales[i].ruta),
+            selectedIndex: indiceVisible,
+            onDestinationSelected: (i) => i < principales.length
+                ? context.go(principales[i].ruta)
+                : _abrirMenu(context, ref),
             destinations: [
               for (final s in principales)
                 NavigationDestination(icon: Icon(s.icono), label: s.etiqueta),
+              const NavigationDestination(
+                icon: Icon(Icons.more_horiz),
+                label: 'Más',
+              ),
             ],
           ),
         ),

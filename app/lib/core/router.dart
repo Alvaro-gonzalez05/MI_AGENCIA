@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../funciones/auth/pantalla_login.dart';
+import '../funciones/gastos/pantalla_gastos.dart';
 import '../funciones/interesados/pantalla_interesados.dart';
 import '../funciones/inventario/pantalla_ficha.dart';
 import '../funciones/inventario/pantalla_inventario.dart';
@@ -73,17 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Secciones.gastos.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.gastos,
-              puntos: [
-                'Carga rápida de gastos por unidad, con las diez categorías del '
-                    'sistema original.',
-                'Adjuntar el comprobante como foto o PDF.',
-                'Cada gasto queda ajustado por el IPC del mes en que se hizo, '
-                    'que es lo que permite saber el costo real de hoy.',
-                'Vista por categoría para detectar en qué se va la plata.',
-              ],
-            ),
+            builder: (_, _) => const PantallaGastos(),
           ),
           GoRoute(
             path: Secciones.precios.ruta,

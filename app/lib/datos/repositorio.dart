@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/gastos.dart';
 import '../dominio/modelos.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
@@ -36,6 +37,13 @@ abstract interface class Repositorio {
 
   /// Baja logica: conserva el historial de gastos, precios y ventas.
   Future<void> eliminarVehiculo(String id);
+
+  /// Gastos de una unidad, o de toda la agencia si no se pasa ninguna.
+  Future<List<Gasto>> gastos({String? vehiculoId});
+
+  Future<void> crearGasto(AltaGasto g);
+
+  Future<void> eliminarGasto(String id);
 }
 
 /// Implementacion en memoria con los datos de ejemplo del cliente.
@@ -46,6 +54,7 @@ class RepositorioDemo implements Repositorio {
   RepositorioDemo();
 
   final List<VehiculoSemilla> _agregados = [];
+  final List<GastoSemilla> _gastosAgregados = [];
 
   @override
   Future<List<VehiculoInventario>> inventario({
@@ -123,6 +132,59 @@ class RepositorioDemo implements Repositorio {
   }
 
   @override
+  Future<List<Gasto>> gastos({String? vehiculoId}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final inv = Motor.inventario(
+      extras: _agregados,
+      gastosExtra: _gastosAgregados,
+    );
+
+    // En demo el id del vehiculo ES su codigo, asi que se filtra por codigo.
+    final todos =
+        [
+            ...DatosDemo.gastos,
+            ..._gastosAgregados,
+          ].where((g) => vehiculoId == null || g.codigo == vehiculoId).toList()
+          ..sort((a, b) => b.fecha.compareTo(a.fecha));
+
+    return todos.map((g) {
+      final v = inv.where((x) => x.codigo == g.codigo).firstOrNull;
+      return Gasto(
+        // La semilla no trae id: se arma uno estable con lo que la identifica.
+        id: '${g.codigo}-${g.fecha.toIso8601String()}-${g.importe}',
+        vehiculoId: g.codigo,
+        fecha: g.fecha,
+        categoria: CategoriaGasto.desde(g.categoria),
+        importe: g.importe,
+        descripcion: g.descripcion,
+        vehiculoCodigo: g.codigo,
+        vehiculoTitulo: v?.titulo,
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> crearGasto(AltaGasto g) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    _gastosAgregados.add(
+      GastoSemilla(
+        codigo: g.vehiculoId!,
+        fecha: g.fecha!,
+        categoria: g.categoria.valorBd,
+        descripcion: g.descripcion.trim().isEmpty ? null : g.descripcion.trim(),
+        importe: g.importe!,
+      ),
+    );
+  }
+
+  @override
+  Future<void> eliminarGasto(String id) async {
+    _gastosAgregados.removeWhere(
+      (g) => '${g.codigo}-${g.fecha.toIso8601String()}-${g.importe}' == id,
+    );
+  }
+
+  @override
   Future<List<Interesado>> interesados() async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final inv = Motor.inventario();
@@ -151,6 +213,16 @@ final repositorioProvider = Provider<Repositorio>(
 
 final inventarioProvider = FutureProvider<List<VehiculoInventario>>(
   (ref) => ref.watch(repositorioProvider).inventario(),
+);
+
+final gastosProvider = FutureProvider<List<Gasto>>(
+  (ref) => ref.watch(repositorioProvider).gastos(),
+);
+
+/// Gastos de una unidad, para la ficha.
+final gastosDeVehiculoProvider = FutureProvider.family<List<Gasto>, String>(
+  (ref, vehiculoId) =>
+      ref.watch(repositorioProvider).gastos(vehiculoId: vehiculoId),
 );
 
 final interesadosProvider = FutureProvider<List<Interesado>>(

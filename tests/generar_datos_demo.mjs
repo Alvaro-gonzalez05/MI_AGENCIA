@@ -27,7 +27,16 @@ const vehiculos = DATA_SEED.vehiculos.map(v => `  VehiculoSemilla(
     estado: ${ESTADO[v.estado]}, observaciones: ${txt(v.obs)},
   ),`).join('\n');
 
-const gastos = DATA_SEED.gastos.map(g => `  GastoSemilla(codigo: ${txt(g.idVehiculo)}, fecha: DateTime.utc(${g.fecha.split('-').join(', ')}), categoria: ${txt(g.categoria)}, descripcion: ${txt(g.desc)}, importe: ${g.importe}),`).join('\n');
+// La categoria se guarda con el MISMO valor que usa el enum de Postgres.
+// Guardar la etiqueta en castellano hacia que la app no la reconociera y
+// mostrara todos los gastos como 'Otros'.
+const CAT_BD = {
+  'Service': 'service', 'Reparaciones': 'reparaciones', 'Cubiertas': 'cubiertas',
+  'Chapa y pintura': 'chapa_y_pintura', 'Lavado/Detallado': 'lavado_detallado',
+  'Transferencia': 'transferencia', 'Patentamiento': 'patentamiento',
+  'Gestoría': 'gestoria', 'Almacenamiento': 'almacenamiento', 'Otros': 'otros',
+};
+const gastos = DATA_SEED.gastos.map(g => `  GastoSemilla(codigo: ${txt(g.idVehiculo)}, fecha: DateTime.utc(${g.fecha.split('-').join(', ')}), categoria: ${txt(CAT_BD[g.categoria] || 'otros')}, descripcion: ${txt(g.desc)}, importe: ${g.importe}),`).join('\n');
 
 const precios = DATA_SEED.precios.map(p => `  PrecioSemilla(codigo: ${txt(p.idVehiculo)}, fecha: DateTime.utc(${p.fecha.split('-').join(', ')}), precio: ${p.nuevoPrecio}, motivo: ${txt(p.motivo)}),`).join('\n');
 
