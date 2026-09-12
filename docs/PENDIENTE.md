@@ -7,82 +7,65 @@ esto es sólo lo que falta.
 
 ---
 
-## Bloqueante 1 — Crear el primer usuario
+## Lo primero que tenés que hacer: cargar 2 secretos en GitHub
 
-La base **ya está creada y conectada**. Proyecto `zthpwqcoirrpvslambhz`, con las
-10 migraciones aplicadas y verificadas (25 tablas, 6 vistas, 65 políticas RLS,
-ninguna vista sin `security_invoker`).
+El código ya está en <https://github.com/Alvaro-gonzalez05/MI_AGENCIA>, y los
+workflows compilan los instaladores solos. Pero para que la app salga apuntando
+a tu base y no en modo demo, faltan dos valores.
 
-La app ya apunta ahí: las credenciales están en `.env` (que no se commitea) y
-`scripts/dev.ps1` las inyecta solo. Falta una sola cosa para poder entrar.
+**Settings → Secrets and variables → Actions → New repository secret**, dos veces:
 
-### Crear el usuario
+| Nombre | Valor |
+|---|---|
+| `SUPABASE_URL` | `https://zthpwqcoirrpvslambhz.supabase.co` |
+| `SUPABASE_ANON_KEY` | la publishable key (`sb_publishable_...`) |
 
-El registro por email está habilitado pero **exige confirmación por mail**, y el
-SMTP que trae Supabase de fábrica tiene un límite muy bajo. Así que el primer
-usuario conviene crearlo a mano:
+Las dos son públicas por diseño (viajan dentro de la app), pero van como
+secretos igual: así cambiar de proyecto no obliga a tocar código.
 
-**Dashboard → Authentication → Users → Add user**, y tildá **Auto Confirm User**.
+Si no los cargás, el build igual funciona: sale en modo demo contra los datos
+de ejemplo.
 
-### Convertirlo en cuenta de desarrollador
+## Publicar una versión
 
-El flag no se puede activar desde la app: lo impide un trigger, a propósito
-(si viviera en los metadatos del usuario, cualquiera con la publishable key
-podría intentar escribírselo). Una sola vez, desde el SQL Editor:
-
-```sql
-update public.perfiles set es_desarrollador = true
- where email = 'TU_EMAIL';
+```bash
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-Con eso entrás y ves la sección **Agencias**, que es la de administración de
-cuentas cliente.
+Eso dispara el workflow, que compila y publica en Releases:
 
-### Para que yo administre la base por MCP
+- `MiAgencia-Setup-0.1.0.exe` — instalador de Windows
+- `MiAgencia-Windows-portable.zip` — para PCs sin permisos de instalación
+- `MiAgencia-Android-arm64.apk` y `-arm32.apk`
 
-Esto es **opcional**. Sólo hace falta si querés que yo cree agencias, corra
-migraciones nuevas o consulte la base directamente. Para programar la app no lo
-necesito.
+Tarda unos 10-15 minutos. Se sigue desde la pestaña **Actions**.
 
-1. <https://supabase.com/dashboard/account/tokens> → **Generate new token**.
-2. Cargalo en una variable de entorno (**no lo pegues en el chat**):
+## Windows: resuelto en la nube, pendiente en tu máquina
 
-   ```powershell
-   [Environment]::SetEnvironmentVariable('SUPABASE_TOKEN_MI_AGENCIA', 'TU_TOKEN', 'User')
-   ```
+`flutter build windows` **no corre en tu PC** y no lo voy a poder arreglar yo:
+faltan el Modo Desarrollador y Visual Studio con la carga de C++, y las dos
+cosas piden permisos de administrador.
 
-3. Cerrá Claude y volvé a abrirlo **con la carpeta `mi-agencia` como directorio
-   de trabajo**. El `.mcp.json` de la raíz lo levanta solo y te va a pedir que
-   apruebes el servidor.
+**Para la entrega ya no importa**: el runner de GitHub trae todo eso y compila
+el instalador solo. Los `.exe` salen de ahí.
 
-## Bloqueante 2 — Windows (necesita administrador)
-
-`flutter build windows` todavía falla. Faltan dos cosas y las dos piden
-permisos de administrador, por eso no las pude hacer yo:
-
-**Modo Desarrollador** (Flutter lo exige para los symlinks de plugins):
+Sólo lo necesitás si querés correr la app de escritorio **localmente** mientras
+desarrollás:
 
 ```powershell
 start ms-settings:developers
 ```
 
-**Visual Studio con C++** (~7-10 GB en `C:`):
-
 ```powershell
 winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 ```
 
-> ⚠️ **Liberá espacio antes.** Quedan **11,4 GB libres en `C:`**. Si te quedás
-> sin disco a mitad de la instalación de Visual Studio, el arreglo es peor que
-> el problema.
+> ⚠️ Visual Studio ocupa 7-10 GB **en `C:`**, y quedan **13,3 GB libres**.
+> Liberá espacio antes: quedarse sin disco a mitad de esa instalación deja un
+> problema peor.
 
-Después:
-
-```powershell
-.\scripts\dev.ps1 build windows --release
-```
-
-Android y web **no necesitan nada de esto** y ya funcionan.
+Android y web funcionan sin nada de esto.
 
 ---
 
