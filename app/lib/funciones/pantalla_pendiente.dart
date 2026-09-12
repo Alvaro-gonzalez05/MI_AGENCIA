@@ -51,7 +51,8 @@ class PantallaPendiente extends StatelessWidget {
                         color: p.acentoLavado,
                         borderRadius: BorderRadius.circular(Curva.md),
                         border: Border.all(
-                            color: p.acento.withValues(alpha: 0.25)),
+                          color: p.acento.withValues(alpha: 0.25),
+                        ),
                       ),
                       child: Icon(seccion.icono, color: p.acento, size: 21),
                     ),
@@ -60,12 +61,13 @@ class PantallaPendiente extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(seccion.titulo,
-                              style: Theme.of(context).textTheme.titleLarge),
+                          Text(
+                            seccion.titulo,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
                           Text(
                             seccion.subtitulo,
-                            style:
-                                TextStyle(fontSize: 12.5, color: p.tinta3),
+                            style: TextStyle(fontSize: 12.5, color: p.tinta3),
                           ),
                         ],
                       ),
@@ -75,12 +77,15 @@ class PantallaPendiente extends StatelessWidget {
                 const SizedBox(height: Esp.xl),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: Esp.md, vertical: 6),
+                    horizontal: Esp.md,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: p.observarLavado,
                     borderRadius: BorderRadius.circular(Curva.completo),
                     border: Border.all(
-                        color: p.observar.withValues(alpha: 0.3)),
+                      color: p.observar.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     requiereBase

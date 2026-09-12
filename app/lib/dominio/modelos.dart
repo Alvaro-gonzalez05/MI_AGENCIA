@@ -16,25 +16,25 @@ enum AlertaRotacion {
   final String etiqueta;
 
   static AlertaRotacion desde(String s) => AlertaRotacion.values.firstWhere(
-        (e) => e.name == s,
-        orElse: () => AlertaRotacion.normal,
-      );
+    (e) => e.name == s,
+    orElse: () => AlertaRotacion.normal,
+  );
 
   Color color(Paleta p) => switch (this) {
-        AlertaRotacion.normal => p.bien,
-        AlertaRotacion.observar => p.observar,
-        AlertaRotacion.atencion => p.atencion,
-        AlertaRotacion.critico => p.critico,
-        AlertaRotacion.vendido => p.neutro,
-      };
+    AlertaRotacion.normal => p.bien,
+    AlertaRotacion.observar => p.observar,
+    AlertaRotacion.atencion => p.atencion,
+    AlertaRotacion.critico => p.critico,
+    AlertaRotacion.vendido => p.neutro,
+  };
 
   Color lavado(Paleta p) => switch (this) {
-        AlertaRotacion.normal => p.bienLavado,
-        AlertaRotacion.observar => p.observarLavado,
-        AlertaRotacion.atencion => p.atencionLavado,
-        AlertaRotacion.critico => p.criticoLavado,
-        AlertaRotacion.vendido => p.neutroLavado,
-      };
+    AlertaRotacion.normal => p.bienLavado,
+    AlertaRotacion.observar => p.observarLavado,
+    AlertaRotacion.atencion => p.atencionLavado,
+    AlertaRotacion.critico => p.criticoLavado,
+    AlertaRotacion.vendido => p.neutroLavado,
+  };
 }
 
 /// Semaforo CREDITICIO: situacion del interesado en la Central de Deudores
@@ -49,18 +49,18 @@ enum SemaforoCrediticio {
   final String etiqueta;
 
   Color color(Paleta p) => switch (this) {
-        SemaforoCrediticio.verde => p.bien,
-        SemaforoCrediticio.amarillo => p.observar,
-        SemaforoCrediticio.rojo => p.critico,
-        SemaforoCrediticio.sinDatos => p.neutro,
-      };
+    SemaforoCrediticio.verde => p.bien,
+    SemaforoCrediticio.amarillo => p.observar,
+    SemaforoCrediticio.rojo => p.critico,
+    SemaforoCrediticio.sinDatos => p.neutro,
+  };
 
   Color lavado(Paleta p) => switch (this) {
-        SemaforoCrediticio.verde => p.bienLavado,
-        SemaforoCrediticio.amarillo => p.observarLavado,
-        SemaforoCrediticio.rojo => p.criticoLavado,
-        SemaforoCrediticio.sinDatos => p.neutroLavado,
-      };
+    SemaforoCrediticio.verde => p.bienLavado,
+    SemaforoCrediticio.amarillo => p.observarLavado,
+    SemaforoCrediticio.rojo => p.criticoLavado,
+    SemaforoCrediticio.sinDatos => p.neutroLavado,
+  };
 }
 
 enum EstadoVehiculo {
@@ -151,9 +151,10 @@ class VehiculoInventario {
   bool get vendido => estado == EstadoVehiculo.vendido;
 
   String get titulo => '$marca $modelo';
-  String get subtitulo =>
-      [anio.toString(), if (version != null && version!.isNotEmpty) version!]
-          .join(' · ');
+  String get subtitulo => [
+    anio.toString(),
+    if (version != null && version!.isNotEmpty) version!,
+  ].join(' · ');
 }
 
 /// Totales de la agencia. Espeja la vista `v_dashboard`.

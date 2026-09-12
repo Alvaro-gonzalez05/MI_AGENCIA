@@ -53,14 +53,20 @@ abstract final class Motor {
       _indiceEn(DateTime.now(), indices);
 
   /// Reconstruye el inventario completo con todo calculado.
-  static List<VehiculoInventario> inventario({ConfigAgencia cfg = const ConfigAgencia()}) {
+  static List<VehiculoInventario> inventario({
+    ConfigAgencia cfg = const ConfigAgencia(),
+  }) {
     final indices = _indices();
     final idxHoy = _indiceHoy(indices);
     final hoy = DateTime.now();
 
     return DatosDemo.vehiculos.map((v) {
-      final venta = DatosDemo.ventas.where((x) => x.codigo == v.codigo).firstOrNull;
-      final gastos = DatosDemo.gastos.where((g) => g.codigo == v.codigo).toList();
+      final venta = DatosDemo.ventas
+          .where((x) => x.codigo == v.codigo)
+          .firstOrNull;
+      final gastos = DatosDemo.gastos
+          .where((g) => g.codigo == v.codigo)
+          .toList();
 
       final gastosNominal = gastos.fold<double>(0, (s, g) => s + g.importe);
       final gastosFinales = venta?.gastosFinales ?? 0;
@@ -71,10 +77,12 @@ abstract final class Motor {
       final diasEnStock = fechaFin.difference(v.fechaIngreso).inDays;
 
       // Ultimo cambio de precio; si no hubo, rige el precio objetivo de alta.
-      final historial = DatosDemo.precios.where((p) => p.codigo == v.codigo).toList()
-        ..sort((a, b) => a.fecha.compareTo(b.fecha));
-      final precioActual =
-          historial.isNotEmpty ? historial.last.precio : v.precioObjetivo;
+      final historial =
+          DatosDemo.precios.where((p) => p.codigo == v.codigo).toList()
+            ..sort((a, b) => a.fecha.compareTo(b.fecha));
+      final precioActual = historial.isNotEmpty
+          ? historial.last.precio
+          : v.precioObjetivo;
 
       final vendido = venta != null;
       final estado = vendido ? EstadoVehiculo.vendido : v.estado;
@@ -87,11 +95,12 @@ abstract final class Motor {
       );
       final costoTotalHoy =
           v.precioCompra * idxHoy / _indiceEn(v.fechaIngreso, indices) +
-              gastosAjustados +
-              gastosFinales;
+          gastosAjustados +
+          gastosFinales;
 
-      final margenActual =
-          precioActual > 0 ? (precioActual - costoTotal) / precioActual : 0.0;
+      final margenActual = precioActual > 0
+          ? (precioActual - costoTotal) / precioActual
+          : 0.0;
       final margenEsperado = v.precioObjetivo > 0
           ? (v.precioObjetivo - costoTotal) / v.precioObjetivo
           : 0.0;
@@ -161,20 +170,33 @@ abstract final class Motor {
     return ResumenAgencia(
       unidadesEnStock: enStock.length,
       unidadesVendidas: vendidos.length,
-      capitalInmovilizado:
-          enStock.fold<double>(0, (s, v) => s + v.capitalInmovilizado),
-      gananciaPotencial:
-          enStock.fold<double>(0, (s, v) => s + v.gananciaEstimada),
+      capitalInmovilizado: enStock.fold<double>(
+        0,
+        (s, v) => s + v.capitalInmovilizado,
+      ),
+      gananciaPotencial: enStock.fold<double>(
+        0,
+        (s, v) => s + v.gananciaEstimada,
+      ),
       gananciaRealizada: vendidos.fold<double>(
-          0, (s, v) => s + ((v.precioFinal ?? 0) - v.costoTotal)),
+        0,
+        (s, v) => s + ((v.precioFinal ?? 0) - v.costoTotal),
+      ),
       gananciaRealizadaIpc: vendidos.fold<double>(
-          0, (s, v) => s + ((v.precioFinal ?? 0) - v.costoTotalHoy)),
-      gananciaRealizadaUsd: vendidos.fold<double>(0, (s, v) => s + v.gananciaRealUsd),
+        0,
+        (s, v) => s + ((v.precioFinal ?? 0) - v.costoTotalHoy),
+      ),
+      gananciaRealizadaUsd: vendidos.fold<double>(
+        0,
+        (s, v) => s + v.gananciaRealUsd,
+      ),
       diasPromedioStock: prom(enStock.map((v) => v.diasEnStock.toDouble())),
       margenPromedio: prom(enStock.map((v) => v.margenActual)),
       criticos: inv.where((v) => v.alerta == AlertaRotacion.critico).length,
       enAtencion: inv.where((v) => v.alerta == AlertaRotacion.atencion).length,
-      enObservacion: inv.where((v) => v.alerta == AlertaRotacion.observar).length,
+      enObservacion: inv
+          .where((v) => v.alerta == AlertaRotacion.observar)
+          .length,
       bajoMargenMinimo: enStock.where((v) => v.margenActual < 0.10).length,
     );
   }
@@ -207,7 +229,8 @@ abstract final class Motor {
   }
 
   /// Capital inmovilizado y ganancia acumulada mes a mes, para los graficos.
-  static List<({DateTime mes, double capital, double gananciaAcum})> evolucion() {
+  static List<({DateTime mes, double capital, double gananciaAcum})>
+  evolucion() {
     final resultado = <({DateTime mes, double capital, double gananciaAcum})>[];
     for (final fila in DatosDemo.ipc) {
       final finMes = DateTime.utc(fila.mes.year, fila.mes.month + 1, 0);
@@ -216,7 +239,9 @@ abstract final class Motor {
 
       for (final v in DatosDemo.vehiculos) {
         if (v.fechaIngreso.isAfter(finMes)) continue;
-        final venta = DatosDemo.ventas.where((x) => x.codigo == v.codigo).firstOrNull;
+        final venta = DatosDemo.ventas
+            .where((x) => x.codigo == v.codigo)
+            .firstOrNull;
         final gastosHasta = DatosDemo.gastos
             .where((g) => g.codigo == v.codigo && !g.fecha.isAfter(finMes))
             .fold<double>(0, (s, g) => s + g.importe);
@@ -225,7 +250,8 @@ abstract final class Motor {
           final gastosTotales = DatosDemo.gastos
               .where((g) => g.codigo == v.codigo)
               .fold<double>(0, (s, g) => s + g.importe);
-          ganancia += venta.precioFinal -
+          ganancia +=
+              venta.precioFinal -
               (v.precioCompra + gastosTotales + venta.gastosFinales);
         } else {
           capital += v.precioCompra + gastosHasta;

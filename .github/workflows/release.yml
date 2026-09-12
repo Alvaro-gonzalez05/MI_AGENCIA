@@ -1,0 +1,149 @@
+name: Publicar instaladores
+
+# Compila la app y publica los instaladores en Releases.
+#
+# Windows se compila ACA y no en la maquina de desarrollo a proposito: el
+# runner de GitHub ya trae Visual Studio con la carga de C++ (unos 10 GB que
+# Flutter exige para Windows), asi no hay que instalarla localmente.
+#
+# Se dispara de dos formas:
+#   - al empujar un tag v*  (ej: git tag v0.1.0 && git push origin v0.1.0)
+#   - a mano desde la pestaña Actions (workflow_dispatch)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.47.4'
+
+jobs:
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analisis
+        working-directory: app
+        run: flutter analyze
+
+      - name: Tests
+        working-directory: app
+        run: flutter test
+
+      # Si los secretos no estan cargados, la app se compila en MODO DEMO
+      # contra los datos de ejemplo. Preferible a que el build falle.
+      - name: Compilar APK
+        working-directory: app
+        run: >
+          flutter build apk --release --split-per-abi
+          --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Renombrar para que se entienda cual bajar
+        run: |
+          cd app/build/app/outputs/flutter-apk
+          mv app-arm64-v8a-release.apk   MiAgencia-Android-arm64.apk
+          mv app-armeabi-v7a-release.apk MiAgencia-Android-arm32.apk
+          rm -f app-x86_64-release.apk *.sha1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: app/build/app/outputs/flutter-apk/MiAgencia-Android-*.apk
+
+  windows:
+    name: Windows (instalador)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        working-directory: app
+        run: flutter pub get
+
+      - name: Compilar Windows
+        working-directory: app
+        run: >
+          flutter build windows --release
+          --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Armar el instalador con Inno Setup
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v',''
+          if (-not $version -or $version -eq "${{ github.ref_name }}") { $version = "0.0.0" }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            /DMiVersion=$version `
+            installer\mi_agencia.iss
+        shell: pwsh
+
+      # El ZIP portable es para quien no quiere o no puede instalar nada:
+      # se descomprime y se ejecuta. Util en PCs de agencia con restricciones.
+      - name: Armar tambien un ZIP portable
+        run: |
+          Compress-Archive -Path app\build\windows\x64\runner\Release\* `
+                           -DestinationPath "installer\salida\MiAgencia-Windows-portable.zip"
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: installer/salida/*
+
+  publicar:
+    name: Publicar en Releases
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    # Solo cuando hay un tag: una corrida a mano deja los archivos como
+    # artefactos del workflow, sin crear un release a medio hacer.
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: entrega
+
+      - name: Crear el release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Mi Agencia ${{ github.ref_name }}
+          generate_release_notes: true
+          files: entrega/**/*
+          body: |
+            ## Descargas
+
+            | Si tenés… | Bajá esto |
+            |---|---|
+            | **Windows** | `MiAgencia-Setup-*.exe` — instalador, crea acceso directo y se desinstala desde Panel de control |
+            | **Windows sin permisos de instalación** | `MiAgencia-Windows-portable.zip` — descomprimir y ejecutar |
+            | **Android** (casi todos los celulares desde 2017) | `MiAgencia-Android-arm64.apk` |
+            | **Android viejo** (32 bits) | `MiAgencia-Android-arm32.apk` |
+
+            > El APK no está firmado con una clave de Play Store, así que Android
+            > va a pedir permiso para instalar desde fuera de la tienda. Es
+            > esperable mientras la app no esté publicada.

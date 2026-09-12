@@ -44,20 +44,22 @@ class _Contenido extends ConsumerWidget {
     final columnas = ancho >= Corte.escritorio
         ? 4
         : ancho >= Corte.tablet
-            ? 3
-            : ancho >= Corte.movil
-                ? 2
-                : 1;
+        ? 3
+        : ancho >= Corte.movil
+        ? 2
+        : 1;
 
-    final enRojo = inventario
-        .where((v) => !v.vendido && v.alerta == AlertaRotacion.critico)
-        .toList()
-      ..sort((a, b) => b.diasEnStock.compareTo(a.diasEnStock));
+    final enRojo =
+        inventario
+            .where((v) => !v.vendido && v.alerta == AlertaRotacion.critico)
+            .toList()
+          ..sort((a, b) => b.diasEnStock.compareTo(a.diasEnStock));
 
-    final bajoMargen = inventario
-        .where((v) => !v.vendido && v.margenActual < cfg.margenMinimo)
-        .toList()
-      ..sort((a, b) => a.margenActual.compareTo(b.margenActual));
+    final bajoMargen =
+        inventario
+            .where((v) => !v.vendido && v.margenActual < cfg.margenMinimo)
+            .toList()
+          ..sort((a, b) => a.margenActual.compareTo(b.margenActual));
 
     return ListView(
       padding: const EdgeInsets.all(Esp.xl),
@@ -90,8 +92,9 @@ class _Contenido extends ConsumerWidget {
               titulo: 'Días promedio en stock',
               valor: r.diasPromedioStock.toStringAsFixed(0),
               detalle: 'Objetivo: menos de ${cfg.diasAmarillo} días',
-              detalleColor:
-                  r.diasPromedioStock > cfg.diasAmarillo ? p.atencion : p.bien,
+              detalleColor: r.diasPromedioStock > cfg.diasAmarillo
+                  ? p.atencion
+                  : p.bien,
               icono: Icons.schedule,
             ),
             TarjetaMetrica(
@@ -211,10 +214,7 @@ class _GananciaReal extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final b in bloques) ...[
-                  b,
-                  const SizedBox(height: Esp.lg),
-                ],
+                for (final b in bloques) ...[b, const SizedBox(height: Esp.lg)],
               ],
             )
           else
@@ -240,8 +240,8 @@ class _GananciaReal extends StatelessWidget {
             resumen.gananciaRealizada <= 0
                 ? 'Todavía no hay ventas cargadas.'
                 : 'La inflación se llevó ${Fmt.pesos(perdida)} de la ganancia '
-                    'nominal: queda ${Fmt.porcentaje(proporcion, decimales: 0)} '
-                    'de poder de compra real.',
+                      'nominal: queda ${Fmt.porcentaje(proporcion, decimales: 0)} '
+                      'de poder de compra real.',
             style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.5),
           ),
         ],
@@ -400,8 +400,10 @@ class _ItemLeyenda extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Esp.sm - 2),
-                Text(etiqueta,
-                    style: TextStyle(fontSize: 12.5, color: p.tinta2)),
+                Text(
+                  etiqueta,
+                  style: TextStyle(fontSize: 12.5, color: p.tinta2),
+                ),
               ],
             ),
             Text(rango, style: TextStyle(fontSize: 11, color: p.tinta3)),

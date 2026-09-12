@@ -1,0 +1,58 @@
+name: Verificacion
+
+# Corre en cada push y en cada pull request. Si esto se pone en rojo, algo
+# se rompio: no mergear.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  app:
+    name: App Flutter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+
+      - working-directory: app
+        run: flutter pub get
+
+      - name: Analisis estatico
+        working-directory: app
+        run: flutter analyze
+
+      - name: Formato
+        working-directory: app
+        run: dart format --set-exit-if-changed lib test
+
+      - name: Tests
+        working-directory: app
+        run: flutter test
+
+  base:
+    name: Esquema y motor de calculo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - working-directory: tests
+        run: npm install
+
+      # Levanta un Postgres real (PGlite/WASM), aplica todas las migraciones y
+      # compara el motor de calculo contra el JavaScript original del cliente.
+      # Si alguien toca una formula del SQL y cambia un numero, salta aca.
+      - name: Migraciones y paridad con el sistema original
+        working-directory: tests
+        run: npm test

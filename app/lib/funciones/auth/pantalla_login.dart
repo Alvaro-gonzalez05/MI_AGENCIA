@@ -56,20 +56,29 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
                   const _Logo(tamano: 44),
                   const SizedBox(height: Esp.xl),
                 ],
-                Text('Ingresá a tu cuenta',
-                    style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Ingresá a tu cuenta',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: Esp.sm),
                 Text(
                   'Gestión de stock, costos y rentabilidad de tu agencia.',
-                  style: TextStyle(fontSize: 13.5, color: p.tinta3, height: 1.5),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: p.tinta3,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: Esp.xxl),
 
-                Text('Email',
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: p.tinta2)),
+                Text(
+                  'Email',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: p.tinta2,
+                  ),
+                ),
                 const SizedBox(height: Esp.sm),
                 TextFormField(
                   controller: _email,
@@ -94,11 +103,14 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
                 ),
                 const SizedBox(height: Esp.lg),
 
-                Text('Contraseña',
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: p.tinta2)),
+                Text(
+                  'Contraseña',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: p.tinta2,
+                  ),
+                ),
                 const SizedBox(height: Esp.sm),
                 TextFormField(
                   controller: _clave,
@@ -135,8 +147,9 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
                     decoration: BoxDecoration(
                       color: p.criticoLavado,
                       borderRadius: BorderRadius.circular(Curva.md),
-                      border:
-                          Border.all(color: p.critico.withValues(alpha: 0.35)),
+                      border: Border.all(
+                        color: p.critico.withValues(alpha: 0.35),
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,9 +286,7 @@ class _PanelMarca extends StatelessWidget {
       child: Stack(
         children: [
           // Malla tenue de fondo. Aporta textura sin competir con nada.
-          Positioned.fill(
-            child: CustomPaint(painter: _MallaPainter(p.borde)),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _MallaPainter(p.borde))),
           Padding(
             padding: const EdgeInsets.all(Esp.xxxl),
             child: Column(

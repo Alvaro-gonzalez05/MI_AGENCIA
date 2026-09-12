@@ -17,7 +17,10 @@ class RepositorioSupabase implements Repositorio {
   SupabaseClient get _db => Supabase.instance.client;
 
   @override
-  Future<List<VehiculoInventario>> inventario({int desde = 0, int cantidad = 500}) async {
+  Future<List<VehiculoInventario>> inventario({
+    int desde = 0,
+    int cantidad = 500,
+  }) async {
     final filas = await _db
         .from('v_inventario')
         .select()
@@ -29,7 +32,11 @@ class RepositorioSupabase implements Repositorio {
 
   @override
   Future<ConfigAgencia> config() async {
-    final fila = await _db.from('agencia_config').select().limit(1).maybeSingle();
+    final fila = await _db
+        .from('agencia_config')
+        .select()
+        .limit(1)
+        .maybeSingle();
     if (fila == null) return const ConfigAgencia();
 
     // El tipo de cambio no vive en agencia_config: la config solo elige CUAL
@@ -50,7 +57,8 @@ class RepositorioSupabase implements Repositorio {
       margenMinimo: _decimal(fila['margen_minimo']) ?? 0.10,
       margenObjetivo: _decimal(fila['margen_objetivo']) ?? 0.30,
       toleranciaCaidaMargen: _decimal(fila['tolerancia_caida_margen']) ?? 0.005,
-      toleranciaDesvioPrecio: _decimal(fila['tolerancia_desvio_precio']) ?? 0.02,
+      toleranciaDesvioPrecio:
+          _decimal(fila['tolerancia_desvio_precio']) ?? 0.02,
       umbralGastosAltos: _decimal(fila['umbral_gastos_altos']) ?? 1000000,
       redondeo: _decimal(fila['redondeo']) ?? 50000,
       capacidad: _entero(fila['capacidad']) ?? 60,
@@ -98,10 +106,10 @@ class RepositorioSupabase implements Repositorio {
 
       return Interesado(
         id: f['id'] as String,
-        nombre: [cliente['nombre'], cliente['apellido']]
-            .whereType<String>()
-            .where((s) => s.isNotEmpty)
-            .join(' '),
+        nombre: [
+          cliente['nombre'],
+          cliente['apellido'],
+        ].whereType<String>().where((s) => s.isNotEmpty).join(' '),
         semaforo: _aSemaforo(sem?['semaforo'] as String?),
         telefono: cliente['telefono'] as String?,
         email: cliente['email'] as String?,
@@ -126,38 +134,38 @@ class RepositorioSupabase implements Repositorio {
   // -------------------------------------------------------------------
 
   static double? _decimal(dynamic v) => switch (v) {
-        null => null,
-        final num n => n.toDouble(),
-        final String s => double.tryParse(s),
-        _ => null,
-      };
+    null => null,
+    final num n => n.toDouble(),
+    final String s => double.tryParse(s),
+    _ => null,
+  };
 
   static int? _entero(dynamic v) => switch (v) {
-        null => null,
-        final int n => n,
-        final num n => n.round(),
-        final String s => int.tryParse(s) ?? double.tryParse(s)?.round(),
-        _ => null,
-      };
+    null => null,
+    final int n => n,
+    final num n => n.round(),
+    final String s => int.tryParse(s) ?? double.tryParse(s)?.round(),
+    _ => null,
+  };
 
   static DateTime? _fecha(dynamic v) =>
       v == null ? null : DateTime.tryParse(v as String);
 
   static EstadoVehiculo _aEstado(String? s) => switch (s) {
-        'en_stock' => EstadoVehiculo.enStock,
-        'en_preparacion' => EstadoVehiculo.enPreparacion,
-        'reservado' => EstadoVehiculo.reservado,
-        'vendido' => EstadoVehiculo.vendido,
-        'dado_de_baja' => EstadoVehiculo.dadoDeBaja,
-        _ => EstadoVehiculo.enStock,
-      };
+    'en_stock' => EstadoVehiculo.enStock,
+    'en_preparacion' => EstadoVehiculo.enPreparacion,
+    'reservado' => EstadoVehiculo.reservado,
+    'vendido' => EstadoVehiculo.vendido,
+    'dado_de_baja' => EstadoVehiculo.dadoDeBaja,
+    _ => EstadoVehiculo.enStock,
+  };
 
   static SemaforoCrediticio _aSemaforo(String? s) => switch (s) {
-        'verde' => SemaforoCrediticio.verde,
-        'amarillo' => SemaforoCrediticio.amarillo,
-        'rojo' => SemaforoCrediticio.rojo,
-        _ => SemaforoCrediticio.sinDatos,
-      };
+    'verde' => SemaforoCrediticio.verde,
+    'amarillo' => SemaforoCrediticio.amarillo,
+    'rojo' => SemaforoCrediticio.rojo,
+    _ => SemaforoCrediticio.sinDatos,
+  };
 
   static VehiculoInventario _aVehiculo(Map<String, dynamic> f) {
     return VehiculoInventario(

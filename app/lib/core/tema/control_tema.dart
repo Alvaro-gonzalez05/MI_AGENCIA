@@ -14,8 +14,8 @@ class ControlTema extends Notifier<ThemeMode> {
   @override
   ThemeMode build() => ThemeMode.dark;
 
-  void alternar() => state =
-      state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  void alternar() =>
+      state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
 
   void poner(ThemeMode modo) => state = modo;
 }

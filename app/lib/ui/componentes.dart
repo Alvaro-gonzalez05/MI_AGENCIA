@@ -99,10 +99,8 @@ class EtiquetaSeccion extends StatelessWidget {
   final String texto;
 
   @override
-  Widget build(BuildContext context) => Text(
-        texto.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall,
-      );
+  Widget build(BuildContext context) =>
+      Text(texto.toUpperCase(), style: Theme.of(context).textTheme.labelSmall);
 }
 
 /// Tarjeta de metrica del dashboard: un numero grande y su contexto.

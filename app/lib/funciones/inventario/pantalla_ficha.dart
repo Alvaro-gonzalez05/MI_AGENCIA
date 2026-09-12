@@ -91,11 +91,13 @@ class _Ficha extends StatelessWidget {
             ],
           )
         else
-          Column(children: [
-            ...izquierda,
-            const SizedBox(height: Esp.md),
-            ...derecha,
-          ]),
+          Column(
+            children: [
+              ...izquierda,
+              const SizedBox(height: Esp.md),
+              ...derecha,
+            ],
+          ),
         const SizedBox(height: Esp.xl),
       ],
     );
@@ -123,8 +125,10 @@ class _Cabecera extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(v.titulo,
-                        style: Theme.of(context).textTheme.headlineMedium),
+                    Text(
+                      v.titulo,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
                     const SizedBox(height: Esp.xs),
                     Text(
                       '${v.codigo} · ${v.subtitulo}'
@@ -240,8 +244,9 @@ class _Costos extends StatelessWidget {
           const EtiquetaSeccion('Capital y costos'),
           const SizedBox(height: Esp.sm),
           FilaDato(
-              etiqueta: 'Precio de compra',
-              valor: Fmt.pesos(v.precioCompra)),
+            etiqueta: 'Precio de compra',
+            valor: Fmt.pesos(v.precioCompra),
+          ),
           FilaDato(
             etiqueta: 'Gastos acumulados (${v.cantidadGastos})',
             valor: Fmt.pesos(v.gastosAcum),
@@ -271,7 +276,8 @@ class _Costos extends StatelessWidget {
           FilaDato(
             etiqueta: 'Costo por día parado',
             valor: Fmt.pesos(
-                v.diasEnStock > 0 ? v.costoTotal / v.diasEnStock : v.costoTotal),
+              v.diasEnStock > 0 ? v.costoTotal / v.diasEnStock : v.costoTotal,
+            ),
           ),
         ],
       ),
@@ -311,12 +317,15 @@ class _GananciaReal extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Margen real',
-                        style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+                    Text(
+                      'Margen real',
+                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                    ),
                     Text(
                       Fmt.porcentaje(
                         v.precioActual > 0
-                            ? (v.precioActual - v.costoTotalHoy) / v.precioActual
+                            ? (v.precioActual - v.costoTotalHoy) /
+                                  v.precioActual
                             : 0,
                       ),
                       style: TextStyle(
@@ -335,9 +344,9 @@ class _GananciaReal extends StatelessWidget {
           Text(
             enRojo
                 ? 'A precio de hoy, esta unidad pierde plata una vez descontada '
-                    'la inflación acumulada desde que entró.'
+                      'la inflación acumulada desde que entró.'
                 : 'Es lo que queda después de descontar la inflación acumulada '
-                    'desde que la unidad entró al stock.',
+                      'desde que la unidad entró al stock.',
             style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.5),
           ),
         ],
@@ -379,8 +388,10 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
           const SizedBox(height: Esp.lg),
           Row(
             children: [
-              Text('Margen deseado',
-                  style: TextStyle(fontSize: 13, color: p.tinta2)),
+              Text(
+                'Margen deseado',
+                style: TextStyle(fontSize: 13, color: p.tinta2),
+              ),
               const Spacer(),
               Text(
                 Fmt.porcentaje(_margen, decimales: 0),
@@ -410,8 +421,7 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
           FilaDato(etiqueta: 'Precio exacto', valor: Fmt.pesos(exacto)),
           FilaDato(
             etiqueta: 'Diferencia vs. actual',
-            valor:
-                '${diferencia >= 0 ? '+' : ''}${Fmt.pesos(diferencia)}',
+            valor: '${diferencia >= 0 ? '+' : ''}${Fmt.pesos(diferencia)}',
             valorColor: diferencia > 0 ? p.bien : p.critico,
           ),
           FilaDato(
@@ -430,10 +440,10 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
               ajuste.abs() < 0.02
                   ? 'El precio actual ya está alineado con ese margen.'
                   : ajuste > 0
-                      ? 'Habría que subir el precio ${Fmt.porcentaje(ajuste)} '
-                          'para alcanzar ese margen.'
-                      : 'Se puede bajar el precio ${Fmt.porcentaje(ajuste.abs())} '
-                          'y todavía alcanzar ese margen.',
+                  ? 'Habría que subir el precio ${Fmt.porcentaje(ajuste)} '
+                        'para alcanzar ese margen.'
+                  : 'Se puede bajar el precio ${Fmt.porcentaje(ajuste.abs())} '
+                        'y todavía alcanzar ese margen.',
               style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
             ),
           ),
@@ -496,8 +506,10 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
           const SizedBox(height: Esp.md),
           Row(
             children: [
-              Text('Tasa mensual',
-                  style: TextStyle(fontSize: 13, color: p.tinta2)),
+              Text(
+                'Tasa mensual',
+                style: TextStyle(fontSize: 13, color: p.tinta2),
+              ),
               const Spacer(),
               Text(
                 Fmt.porcentaje(_tasa),

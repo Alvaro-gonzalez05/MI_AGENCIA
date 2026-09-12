@@ -16,7 +16,10 @@ abstract interface class Repositorio {
   /// Pagina desde `desde`, trayendo hasta `cantidad` filas. El tope alto por
   /// defecto alcanza para cualquier agencia real; la paginacion existe para
   /// que el contrato no haya que cambiarlo cuando deje de alcanzar.
-  Future<List<VehiculoInventario>> inventario({int desde = 0, int cantidad = 500});
+  Future<List<VehiculoInventario>> inventario({
+    int desde = 0,
+    int cantidad = 500,
+  });
   Future<List<Interesado>> interesados();
   Future<ConfigAgencia> config();
 }
@@ -26,7 +29,10 @@ class RepositorioDemo implements Repositorio {
   const RepositorioDemo();
 
   @override
-  Future<List<VehiculoInventario>> inventario({int desde = 0, int cantidad = 500}) async {
+  Future<List<VehiculoInventario>> inventario({
+    int desde = 0,
+    int cantidad = 500,
+  }) async {
     // Demora minima a proposito: deja ver los estados de carga reales de la
     // UI en vez de que todo aparezca instantaneo y nunca se prueben.
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -59,8 +65,10 @@ class RepositorioDemo implements Repositorio {
   }
 }
 
-final repositorioProvider = Provider<Repositorio>((ref) =>
-    Config.modoDemo ? const RepositorioDemo() : const RepositorioSupabase());
+final repositorioProvider = Provider<Repositorio>(
+  (ref) =>
+      Config.modoDemo ? const RepositorioDemo() : const RepositorioSupabase(),
+);
 
 final inventarioProvider = FutureProvider<List<VehiculoInventario>>(
   (ref) => ref.watch(repositorioProvider).inventario(),
@@ -70,8 +78,9 @@ final interesadosProvider = FutureProvider<List<Interesado>>(
   (ref) => ref.watch(repositorioProvider).interesados(),
 );
 
-final configAsyncProvider =
-    FutureProvider<ConfigAgencia>((ref) => ref.watch(repositorioProvider).config());
+final configAsyncProvider = FutureProvider<ConfigAgencia>(
+  (ref) => ref.watch(repositorioProvider).config(),
+);
 
 /// La config se lee sincrona porque casi todas las pantallas la necesitan para
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de

@@ -42,10 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
 
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (_, _) => const PantallaLogin(),
-      ),
+      GoRoute(path: '/login', builder: (_, _) => const PantallaLogin()),
 
       ShellRoute(
         builder: (_, _, child) => ShellAdaptativo(child: child),

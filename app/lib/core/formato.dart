@@ -16,6 +16,7 @@ abstract final class Fmt {
     final cuerpo = _entero.format(n.abs().round());
     return '${negativo ? '-' : ''}$simbolo$cuerpo';
   }
+
   static final _fecha = DateFormat('dd/MM/yyyy', 'es_AR');
   static final _fechaCorta = DateFormat('dd MMM', 'es_AR');
   static final _mesAnio = DateFormat('MMM yy', 'es_AR');
@@ -57,13 +58,14 @@ abstract final class Fmt {
   static String fechaCorta(DateTime? f) =>
       f == null ? sinDato : _fechaCorta.format(f);
 
-  static String mesAnio(DateTime? f) => f == null ? sinDato : _mesAnio.format(f);
+  static String mesAnio(DateTime? f) =>
+      f == null ? sinDato : _mesAnio.format(f);
 
   static String dias(int? n) => n == null
       ? sinDato
       : n == 1
-          ? '1 día'
-          : '$n días';
+      ? '1 día'
+      : '$n días';
 
   /// Kilometraje: 62.000 km.
   static String km(num? n) => n == null ? sinDato : '${_entero.format(n)} km';

@@ -37,8 +37,14 @@ void main() {
     });
 
     test('financiación con valores inválidos devuelve cero, no NaN', () {
-      expect(Motor.financiacion(monto: 0, cuotas: 12, tasaMensual: 0.06).cuota, 0);
-      expect(Motor.financiacion(monto: 1000, cuotas: 0, tasaMensual: 0.06).cuota, 0);
+      expect(
+        Motor.financiacion(monto: 0, cuotas: 12, tasaMensual: 0.06).cuota,
+        0,
+      );
+      expect(
+        Motor.financiacion(monto: 1000, cuotas: 0, tasaMensual: 0.06).cuota,
+        0,
+      );
     });
 
     test('el inventario de demo carga las 13 unidades del cliente', () {

@@ -30,13 +30,12 @@ class FiltroInventario {
     bool? soloEnStock,
     bool limpiarAlerta = false,
     bool limpiarMarca = false,
-  }) =>
-      FiltroInventario(
-        busqueda: busqueda ?? this.busqueda,
-        alerta: limpiarAlerta ? null : (alerta ?? this.alerta),
-        marca: limpiarMarca ? null : (marca ?? this.marca),
-        soloEnStock: soloEnStock ?? this.soloEnStock,
-      );
+  }) => FiltroInventario(
+    busqueda: busqueda ?? this.busqueda,
+    alerta: limpiarAlerta ? null : (alerta ?? this.alerta),
+    marca: limpiarMarca ? null : (marca ?? this.marca),
+    soloEnStock: soloEnStock ?? this.soloEnStock,
+  );
 
   bool get hayFiltros =>
       busqueda.isNotEmpty || alerta != null || marca != null || !soloEnStock;
@@ -51,8 +50,9 @@ class ControlFiltro extends Notifier<FiltroInventario> {
   void limpiar() => state = const FiltroInventario();
 }
 
-final filtroProvider =
-    NotifierProvider<ControlFiltro, FiltroInventario>(ControlFiltro.new);
+final filtroProvider = NotifierProvider<ControlFiltro, FiltroInventario>(
+  ControlFiltro.new,
+);
 
 /// Inventario ya filtrado y ordenado. Se recalcula solo cuando cambia el
 /// filtro o llegan datos nuevos.
@@ -156,11 +156,12 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
       );
     }
 
-    final marcas = (asincrono.value ?? const <VehiculoInventario>[])
-        .map((v) => v.marca)
-        .toSet()
-        .toList()
-      ..sort();
+    final marcas =
+        (asincrono.value ?? const <VehiculoInventario>[])
+            .map((v) => v.marca)
+            .toSet()
+            .toList()
+          ..sort();
 
     final mostrados = lista.take(_visibles).toList();
 
@@ -217,7 +218,9 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
         if (mostrados.isNotEmpty)
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: Esp.xl, vertical: Esp.sm),
+              horizontal: Esp.xl,
+              vertical: Esp.sm,
+            ),
             decoration: BoxDecoration(
               color: p.superficie,
               border: Border(top: BorderSide(color: p.borde)),
@@ -299,8 +302,7 @@ class _BarraFiltros extends ConsumerWidget {
     final notificador = ref.read(filtroProvider.notifier);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Esp.xl, vertical: Esp.md),
+      padding: const EdgeInsets.symmetric(horizontal: Esp.xl, vertical: Esp.md),
       decoration: BoxDecoration(
         color: p.superficie,
         border: Border(bottom: BorderSide(color: p.borde)),
@@ -315,8 +317,7 @@ class _BarraFiltros extends ConsumerWidget {
             height: 38,
             child: TextField(
               controller: buscador,
-              onChanged: (v) =>
-                  notificador.poner(filtro.copiar(busqueda: v)),
+              onChanged: (v) => notificador.poner(filtro.copiar(busqueda: v)),
               decoration: InputDecoration(
                 hintText: 'Marca, modelo o código',
                 prefixIcon: const Icon(Icons.search, size: 18),
@@ -337,8 +338,9 @@ class _BarraFiltros extends ConsumerWidget {
           _Chip(
             etiqueta: 'Solo en stock',
             activo: filtro.soloEnStock,
-            onTap: () =>
-                notificador.poner(filtro.copiar(soloEnStock: !filtro.soloEnStock)),
+            onTap: () => notificador.poner(
+              filtro.copiar(soloEnStock: !filtro.soloEnStock),
+            ),
           ),
           for (final a in [
             AlertaRotacion.critico,
@@ -350,9 +352,11 @@ class _BarraFiltros extends ConsumerWidget {
               etiqueta: a.etiqueta,
               activo: filtro.alerta == a,
               color: a.color(p),
-              onTap: () => notificador.poner(filtro.alerta == a
-                  ? filtro.copiar(limpiarAlerta: true)
-                  : filtro.copiar(alerta: a)),
+              onTap: () => notificador.poner(
+                filtro.alerta == a
+                    ? filtro.copiar(limpiarAlerta: true)
+                    : filtro.copiar(alerta: a),
+              ),
             ),
           if (marcas.isNotEmpty)
             Container(
@@ -366,8 +370,10 @@ class _BarraFiltros extends ConsumerWidget {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String?>(
                   value: filtro.marca,
-                  hint: Text('Marca',
-                      style: TextStyle(fontSize: 13, color: p.tinta3)),
+                  hint: Text(
+                    'Marca',
+                    style: TextStyle(fontSize: 13, color: p.tinta3),
+                  ),
                   isDense: true,
                   borderRadius: BorderRadius.circular(Curva.md),
                   dropdownColor: p.superficieElevada,
@@ -375,15 +381,19 @@ class _BarraFiltros extends ConsumerWidget {
                   items: [
                     DropdownMenuItem(
                       value: null,
-                      child: Text('Todas las marcas',
-                          style: TextStyle(fontSize: 13, color: p.tinta2)),
+                      child: Text(
+                        'Todas las marcas',
+                        style: TextStyle(fontSize: 13, color: p.tinta2),
+                      ),
                     ),
                     for (final m in marcas)
                       DropdownMenuItem(value: m, child: Text(m)),
                   ],
-                  onChanged: (v) => notificador.poner(v == null
-                      ? filtro.copiar(limpiarMarca: true)
-                      : filtro.copiar(marca: v)),
+                  onChanged: (v) => notificador.poner(
+                    v == null
+                        ? filtro.copiar(limpiarMarca: true)
+                        : filtro.copiar(marca: v),
+                  ),
                 ),
               ),
             ),
@@ -474,12 +484,11 @@ class _FilaVehiculo extends StatelessWidget {
     final margenColor = v.margenActual < 0
         ? p.critico
         : v.margenActual < 0.10
-            ? p.observar
-            : p.bien;
+        ? p.observar
+        : p.bien;
 
     return Tarjeta(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Esp.lg, vertical: Esp.md),
+      padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.md),
       onTap: () => context.go('/inventario/${v.id}'),
       child: Row(
         children: [
@@ -528,9 +537,16 @@ class _FilaVehiculo extends StatelessWidget {
               ],
             ),
           ),
-          _Columna(etiqueta: 'Días', valor: '${v.diasEnStock}', color: v.alerta.color(p)),
+          _Columna(
+            etiqueta: 'Días',
+            valor: '${v.diasEnStock}',
+            color: v.alerta.color(p),
+          ),
           _Columna(etiqueta: 'Costo', valor: Fmt.pesosCompacto(v.costoTotal)),
-          _Columna(etiqueta: 'Precio', valor: Fmt.pesosCompacto(v.precioActual)),
+          _Columna(
+            etiqueta: 'Precio',
+            valor: Fmt.pesosCompacto(v.precioActual),
+          ),
           _Columna(
             etiqueta: 'Margen',
             valor: Fmt.porcentaje(v.margenActual),

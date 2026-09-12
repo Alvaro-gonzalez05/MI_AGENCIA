@@ -173,11 +173,15 @@ class _TarjetaInteresado extends StatelessWidget {
                   color: i.semaforo.lavado(p),
                   borderRadius: BorderRadius.circular(Curva.md),
                   border: Border.all(
-                      color: i.semaforo.color(p).withValues(alpha: 0.35)),
+                    color: i.semaforo.color(p).withValues(alpha: 0.35),
+                  ),
                 ),
                 alignment: Alignment.center,
-                child: Icon(Icons.person_outline,
-                    size: 18, color: i.semaforo.color(p)),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 18,
+                  color: i.semaforo.color(p),
+                ),
               ),
               const SizedBox(width: Esp.md),
               Expanded(

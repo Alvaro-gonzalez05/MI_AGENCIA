@@ -49,17 +49,15 @@ abstract final class TemaApp {
   static ThemeData _construir(Paleta p, Brightness brillo) {
     final base = ThemeData(brightness: brillo, useMaterial3: true);
 
-    final esquema = ColorScheme.fromSeed(
-      seedColor: p.acento,
-      brightness: brillo,
-    ).copyWith(
-      primary: p.acento,
-      onPrimary: p.acentoTinta,
-      surface: p.superficie,
-      onSurface: p.tinta,
-      error: p.critico,
-      outline: p.borde,
-    );
+    final esquema =
+        ColorScheme.fromSeed(seedColor: p.acento, brightness: brillo).copyWith(
+          primary: p.acento,
+          onPrimary: p.acentoTinta,
+          surface: p.superficie,
+          onSurface: p.tinta,
+          error: p.critico,
+          outline: p.borde,
+        );
 
     final texto = _tipografia(p, base.textTheme);
 
@@ -125,8 +123,13 @@ abstract final class TemaApp {
           disabledBackgroundColor: p.bordeFuerte,
           disabledForegroundColor: p.tinta3,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: Esp.xl, vertical: Esp.lg),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Curva.md)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Esp.xl,
+            vertical: Esp.lg,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Curva.md),
+          ),
           textStyle: const TextStyle(
             fontFamily: _sans,
             fontSize: 14,
@@ -139,8 +142,13 @@ abstract final class TemaApp {
         style: OutlinedButton.styleFrom(
           foregroundColor: p.tinta,
           side: BorderSide(color: p.bordeFuerte),
-          padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.md),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Curva.md)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Esp.lg,
+            vertical: Esp.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Curva.md),
+          ),
           textStyle: const TextStyle(
             fontFamily: _sans,
             fontSize: 14,
@@ -164,7 +172,11 @@ abstract final class TemaApp {
 
       snackBarTheme: SnackBarThemeData(
         backgroundColor: p.superficieElevada,
-        contentTextStyle: TextStyle(color: p.tinta, fontFamily: _sans, fontSize: 13.5),
+        contentTextStyle: TextStyle(
+          color: p.tinta,
+          fontFamily: _sans,
+          fontSize: 13.5,
+        ),
         actionTextColor: p.acento,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -234,8 +246,16 @@ abstract final class TemaApp {
           color: p.tinta,
         ),
         bodyLarge: TextStyle(fontFamily: _sans, fontSize: 14.5, color: p.tinta),
-        bodyMedium: TextStyle(fontFamily: _sans, fontSize: 13.5, color: p.tinta2),
-        bodySmall: TextStyle(fontFamily: _sans, fontSize: 12.5, color: p.tinta3),
+        bodyMedium: TextStyle(
+          fontFamily: _sans,
+          fontSize: 13.5,
+          color: p.tinta2,
+        ),
+        bodySmall: TextStyle(
+          fontFamily: _sans,
+          fontSize: 12.5,
+          color: p.tinta3,
+        ),
         // Encabezados de tabla y etiquetas de seccion: chicas, en versalitas
         // falsas y con mucho tracking, para que se lean como estructura y no
         // compitan con los datos.

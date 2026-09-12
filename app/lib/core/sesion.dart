@@ -67,12 +67,13 @@ class ControlSesion extends Notifier<EstadoSesion> {
   /// Version minima, con lo que ya trae el token. Sirve para pintar la UI
   /// sin esperar a la red; [_completar] la enriquece despues.
   static Usuario _desdeSupabase(User u) => Usuario(
-        id: u.id,
-        email: u.email ?? '',
-        nombre: (u.userMetadata?['nombre'] as String?) ??
-            (u.email ?? '').split('@').first,
-        esDesarrollador: false,
-      );
+    id: u.id,
+    email: u.email ?? '',
+    nombre:
+        (u.userMetadata?['nombre'] as String?) ??
+        (u.email ?? '').split('@').first,
+    esDesarrollador: false,
+  );
 
   /// Trae el perfil y la agencia del usuario.
   ///
@@ -99,10 +100,10 @@ class ControlSesion extends Notifier<EstadoSesion> {
           .limit(1)
           .maybeSingle();
 
-      final nombre = [perfil?['nombre'], perfil?['apellido']]
-          .whereType<String>()
-          .where((s) => s.isNotEmpty)
-          .join(' ');
+      final nombre = [
+        perfil?['nombre'],
+        perfil?['apellido'],
+      ].whereType<String>().where((s) => s.isNotEmpty).join(' ');
 
       return Usuario(
         id: base.id,
@@ -126,21 +127,25 @@ class ControlSesion extends Notifier<EstadoSesion> {
       // se entra a los datos de ejemplo. La cinta de "modo demo" lo deja claro
       // en pantalla para que nadie lo confunda con la app real.
       await Future<void>.delayed(const Duration(milliseconds: 450));
-      state = SesionAbierta(Usuario(
-        id: 'demo',
-        email: email.isEmpty ? 'demo@miagencia.app' : email,
-        nombre: 'Usuario Demo',
-        esDesarrollador: true,
-        agenciaId: 'demo',
-        agenciaNombre: 'Agencia Demo',
-        rol: 'owner',
-      ));
+      state = SesionAbierta(
+        Usuario(
+          id: 'demo',
+          email: email.isEmpty ? 'demo@miagencia.app' : email,
+          nombre: 'Usuario Demo',
+          esDesarrollador: true,
+          agenciaId: 'demo',
+          agenciaNombre: 'Agencia Demo',
+          rol: 'owner',
+        ),
+      );
       return;
     }
 
     try {
-      final r = await Supabase.instance.client.auth
-          .signInWithPassword(email: email.trim(), password: clave);
+      final r = await Supabase.instance.client.auth.signInWithPassword(
+        email: email.trim(),
+        password: clave,
+      );
       if (r.user == null) {
         state = const SesionCerrada(error: 'No se pudo iniciar sesión.');
         return;
@@ -178,8 +183,9 @@ class ControlSesion extends Notifier<EstadoSesion> {
   }
 }
 
-final sesionProvider =
-    NotifierProvider<ControlSesion, EstadoSesion>(ControlSesion.new);
+final sesionProvider = NotifierProvider<ControlSesion, EstadoSesion>(
+  ControlSesion.new,
+);
 
 /// Atajo: el usuario actual, o null si no hay sesion.
 final usuarioProvider = Provider<Usuario?>((ref) {
