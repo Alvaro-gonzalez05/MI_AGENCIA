@@ -256,8 +256,14 @@ select
   coalesce(sum(gastos_acum) filter (where not vendido), 0)  as gastos_en_stock,
   coalesce(sum(ganancia_estimada) filter (where not vendido), 0) as ganancia_potencial,
   coalesce(sum(precio_final - costo_total) filter (where vendido), 0) as ganancia_realizada,
-  coalesce(sum(ganancia_real_ipc) filter (where vendido), 0) as ganancia_realizada_ipc,
-  coalesce(sum(ganancia_real_usd) filter (where vendido), 0) as ganancia_realizada_usd,
+  -- Para una unidad YA VENDIDA la ganancia se mide contra el precio final de
+  -- venta, no contra el ultimo precio publicado. Usar precio_actual aca
+  -- infla la ganancia cada vez que se cerro por debajo de la publicacion,
+  -- que es lo habitual al negociar.
+  coalesce(sum(precio_final - costo_total_hoy) filter (where vendido), 0)
+    as ganancia_realizada_ipc,
+  coalesce(sum((precio_final - costo_total_hoy) / nullif(tipo_cambio, 0))
+    filter (where vendido), 0) as ganancia_realizada_usd,
   round(avg(dias_en_stock) filter (where not vendido), 1)   as dias_promedio_stock,
   round(avg(dias_en_stock) filter (where vendido), 1)       as dias_promedio_venta,
   round(avg(margen_actual) filter (where not vendido), 4)   as margen_promedio,
