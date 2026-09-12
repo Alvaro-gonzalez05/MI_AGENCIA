@@ -1,0 +1,57 @@
+# ---- Secretos: NUNCA commitear ----
+.env
+.env.*
+!.env.example
+*.pem
+*.jks
+*.keystore
+key.properties
+service-account*.json
+
+# ---- Flutter / Dart ----
+app/.dart_tool/
+app/.packages
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/pubspec.lock
+**/*.g.dart
+**/*.freezed.dart
+**/*.config.dart
+
+# ---- Android ----
+app/android/.gradle/
+app/android/local.properties
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+app/android/key.properties
+
+# ---- Windows ----
+app/windows/flutter/ephemeral/
+app/windows/x64/
+
+# ---- iOS / macOS (por si mas adelante) ----
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/macos/Pods/
+
+# ---- Supabase CLI ----
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# ---- Editores / SO ----
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ---- Claude Code ----
+.claude/settings.local.json
+
+# ---- Tests ----
+tests/node_modules/
+tests/package-lock.json

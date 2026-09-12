@@ -1,0 +1,14 @@
+{
+  "name": "mi-agencia-tests",
+  "private": true,
+  "type": "module",
+  "description": "Verificacion del esquema y del motor de calculo contra un Postgres real (PGlite/WASM). No necesita Docker ni conexion a Supabase.",
+  "scripts": {
+    "test": "node migraciones.mjs && node paridad_motor.mjs",
+    "migraciones": "node migraciones.mjs",
+    "paridad": "node paridad_motor.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.11"
+  }
+}

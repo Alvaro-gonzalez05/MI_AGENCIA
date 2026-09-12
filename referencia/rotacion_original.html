@@ -1,0 +1,2340 @@
+<title>ERP Agencias de Autos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    color-scheme: light;
+    --surface:        #eef1f6;
+    --surface-card:   #ffffff;
+    --surface-sunken: #f4f6f9;
+    --surface-hover:  #e7ebf1;
+    --border:         #dbe1e9;
+    --border-strong:  #c3ccd8;
+    --ink:            #12161f;
+    --ink-2:          #4c5666;
+    --ink-3:          #838da0;
+    --accent:         #1c5cab;
+    --accent-ink:     #ffffff;
+    --accent-wash:    #e7f0fb;
+    --good:           #0ca30c;
+    --good-wash:      #e4f6e2;
+    --warning:        #b3790a;
+    --warning-wash:   #fdf1d9;
+    --serious:        #c85a34;
+    --serious-wash:   #fbe6dc;
+    --critical:       #d03b3b;
+    --critical-wash:  #fbe1e1;
+    --shadow: 0 1px 2px rgba(18,22,31,0.04), 0 8px 24px -12px rgba(18,22,31,0.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --surface:        #0e1116;
+      --surface-card:   #171b23;
+      --surface-sunken: #12151b;
+      --surface-hover:  #1e2430;
+      --border:         #262c38;
+      --border-strong:  #333c4b;
+      --ink:            #e9edf4;
+      --ink-2:          #aab4c4;
+      --ink-3:          #757f92;
+      --accent:         #5b93e0;
+      --accent-ink:     #0b1220;
+      --accent-wash:    #17253a;
+      --good:           #3ec46b;
+      --good-wash:      #123321;
+      --warning:        #f0b429;
+      --warning-wash:   #3a2c0d;
+      --serious:        #f0895c;
+      --serious-wash:   #3a2213;
+      --critical:       #ef6a6a;
+      --critical-wash:  #3a1616;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --surface:        #0e1116;
+    --surface-card:   #171b23;
+    --surface-sunken: #12151b;
+    --surface-hover:  #1e2430;
+    --border:         #262c38;
+    --border-strong:  #333c4b;
+    --ink:            #e9edf4;
+    --ink-2:          #aab4c4;
+    --ink-3:          #757f92;
+    --accent:         #5b93e0;
+    --accent-ink:     #0b1220;
+    --accent-wash:    #17253a;
+    --good:           #3ec46b;
+    --good-wash:      #123321;
+    --warning:        #f0b429;
+    --warning-wash:   #3a2c0d;
+    --serious:        #f0895c;
+    --serious-wash:   #3a2213;
+    --critical:       #ef6a6a;
+    --critical-wash:  #3a1616;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--surface);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.disp{font-family:"Oswald", "IBM Plex Sans", sans-serif; text-transform:uppercase; letter-spacing:.02em;}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums;}
+  a{color:var(--accent);}
+  button{font-family:inherit;}
+  ::selection{background:var(--accent-wash);}
+
+  /* ============ SHELL ============ */
+  #app{display:flex; min-height:100vh;}
+
+  .sidebar{
+    width:216px; flex:none;
+    background:var(--surface-card);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{
+    padding:22px 20px 16px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand-mark{
+    width:30px;height:30px;border-radius:7px;
+    background:var(--accent); color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .brand-name{font-family:"Oswald",sans-serif; font-size:19px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;}
+  .brand-tag{font-size:10.5px; color:var(--ink-3); letter-spacing:.03em; margin-top:1px;}
+
+  nav.mainnav{padding:6px 10px; display:flex; flex-direction:column; gap:2px; flex:1;}
+  .navlink{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:8px;
+    color:var(--ink-2); font-size:13.5px; font-weight:500;
+    cursor:pointer; border:1px solid transparent;
+    user-select:none;
+  }
+  .navlink svg{width:16px;height:16px;flex:none;opacity:.85;}
+  .navlink:hover{background:var(--surface-hover); color:var(--ink);}
+  .navlink.active{background:var(--accent-wash); color:var(--accent); font-weight:600;}
+  .navlink.active svg{opacity:1;}
+  .navgroup-label{font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.08em; padding:14px 12px 4px;}
+
+  .sidebar-foot{
+    padding:14px 18px 18px; border-top:1px solid var(--border);
+    font-size:11.5px; color:var(--ink-3);
+  }
+
+  .content{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 28px; border-bottom:1px solid var(--border);
+    background:var(--surface-card);
+    position:sticky; top:0; z-index:5;
+    gap:16px; flex-wrap:wrap;
+  }
+  .topbar h1{font-size:19px; margin:0; font-weight:600; letter-spacing:.02em;}
+  .topbar .sub{font-size:12px; color:var(--ink-3); text-transform:none; letter-spacing:0; font-family:"IBM Plex Sans",sans-serif; margin-top:2px;}
+  .topbar-right{display:flex; align-items:center; gap:10px;}
+
+  .pane{padding:24px 28px 60px; max-width:1280px;}
+  .pane[hidden]{display:none;}
+
+  /* ============ PRIMITIVES ============ */
+  .btn{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:8px;
+    background:var(--surface-sunken); color:var(--ink);
+    border:1px solid var(--border-strong);
+    font-size:13px; font-weight:500; cursor:pointer;
+  }
+  .btn:hover{background:var(--surface-hover);}
+  .btn-accent{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .btn-accent:hover{filter:brightness(1.06);}
+  .btn-ghost{background:transparent; border-color:transparent; color:var(--ink-2);}
+  .btn-ghost:hover{background:var(--surface-hover);}
+  .btn-sm{padding:5px 10px; font-size:12px; border-radius:6px;}
+
+  .card{
+    background:var(--surface-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+  }
+  .section-title{font-size:13px; font-weight:600; margin:0 0 2px; letter-spacing:.02em;}
+  .section-note{font-size:12px; color:var(--ink-3); margin:0 0 14px; text-transform:none; font-family:"IBM Plex Sans",sans-serif; letter-spacing:0;}
+
+  .grid{display:grid; gap:14px;}
+  .grid-stats{grid-template-columns:repeat(4,1fr);}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  @media (max-width:1050px){ .grid-stats{grid-template-columns:repeat(2,1fr);} .grid-2{grid-template-columns:1fr;} }
+
+  .stat{padding:16px 18px; display:flex; flex-direction:column; gap:6px;}
+  .stat-label{font-size:10.5px; color:var(--ink-3); letter-spacing:.06em; font-weight:600;}
+  .stat-value{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:22px; font-weight:600; letter-spacing:-.01em;}
+  .stat-value.small{font-size:19px;}
+  .stat-caption{font-size:11.5px; color:var(--ink-3);}
+  .stat-caption.accent{color:var(--accent);}
+  .stat-caption.critical{color:var(--critical);}
+  .stat-caption.good{color:var(--good);}
+  .stat-value.accent{color:var(--accent);}
+  .stat-value.critical{color:var(--critical);}
+  .stat-value.good{color:var(--good);}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px 3px 7px; border-radius:99px;
+    font-size:11.5px; font-weight:600; white-space:nowrap;
+  }
+  .pill .dot{width:6px;height:6px;border-radius:50%;flex:none;}
+  .pill-normal{background:var(--good-wash); color:var(--good);}
+  .pill-normal .dot{background:var(--good);}
+  .pill-observar{background:var(--warning-wash); color:var(--warning);}
+  .pill-observar .dot{background:var(--warning);}
+  .pill-atencion{background:var(--serious-wash); color:var(--serious);}
+  .pill-atencion .dot{background:var(--serious);}
+  .pill-critico{background:var(--critical-wash); color:var(--critical);}
+  .pill-critico .dot{background:var(--critical);}
+  .pill-vendido{background:var(--accent-wash); color:var(--accent);}
+  .pill-vendido .dot{background:var(--accent);}
+  .pill-neutral{background:var(--surface-sunken); color:var(--ink-2); border:1px solid var(--border);}
+
+  table{border-collapse:collapse; width:100%; font-size:13px;}
+  thead th{
+    text-align:left; font-size:10.5px; color:var(--ink-3);
+    text-transform:uppercase; letter-spacing:.06em; font-weight:600;
+    padding:9px 12px; border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  tbody td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.rowhover:hover{background:var(--surface-sunken); cursor:pointer;}
+  td.num, th.num{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
+  .table-wrap{overflow-x:auto; border-radius:12px;}
+  .diag{font-size:12px; color:var(--ink-2); max-width:360px; min-width:260px; white-space:normal;}
+
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11.5px; color:var(--ink-2); font-weight:600;}
+  .field input, .field select{
+    padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong);
+    background:var(--surface-sunken); color:var(--ink); font-size:13px; font-family:inherit;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--accent); outline-offset:0; border-color:var(--accent);}
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:14px;}
+  .form-actions{display:flex; gap:8px; align-items:center;}
+  .form-msg{font-size:12px; color:var(--good); font-weight:600;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .kbd{font-family:"IBM Plex Mono",monospace; font-size:11px; background:var(--surface-sunken); border:1px solid var(--border-strong); border-radius:4px; padding:1px 5px;}
+
+  .empty{padding:30px; text-align:center; color:var(--ink-3); font-size:13px;}
+
+  /* charts */
+  .chart-tooltip{
+    position:absolute; pointer-events:none; z-index:20;
+    background:var(--ink); color:var(--surface);
+    font-size:11.5px; padding:6px 9px; border-radius:6px;
+    box-shadow:var(--shadow); white-space:nowrap; transform:translate(-50%,-115%);
+    font-family:"IBM Plex Mono",monospace;
+  }
+  :root:not([data-theme="light"]) .chart-tooltip{background:var(--surface-card); color:var(--ink); border:1px solid var(--border-strong);}
+  :root[data-theme="dark"] .chart-tooltip{background:var(--surface-card); color:var(--ink); border:1px solid var(--border-strong);}
+  .barlbl{font-family:"IBM Plex Sans",sans-serif; font-size:11.5px; fill:var(--ink-2);}
+  .barval{font-family:"IBM Plex Mono",monospace; font-size:11.5px; fill:var(--ink); font-weight:600;}
+  .gridline{stroke:var(--border);}
+  .chart-legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px;}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-2);}
+  .legend-swatch{width:9px;height:9px;border-radius:2px;}
+
+  .config-row{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--border);}
+  .config-row:last-child{border-bottom:none;}
+  .config-row .meta{max-width:64%;}
+  .config-row .meta .name{font-size:13px; font-weight:600;}
+  .config-row .meta .desc{font-size:11.5px; color:var(--ink-3); margin-top:2px;}
+  .config-row input{width:120px; text-align:right;}
+
+  .ficha-select{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .ficha-select select{min-width:280px;}
+
+  .metric-block{padding:16px 18px;}
+  .metric-block h3{font-size:11px; margin:0 0 12px; color:var(--ink-3); letter-spacing:.06em;}
+  .metric-row{display:flex; justify-content:space-between; align-items:baseline; padding:5px 0;}
+  .metric-row .k{font-size:12.5px; color:var(--ink-2);}
+  .metric-row .v{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600;}
+
+  .diag-banner{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:12px 14px; border-radius:10px; font-size:12.5px; line-height:1.6;
+    background:var(--surface-sunken); border:1px solid var(--border); color:var(--ink-2);
+  }
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--surface); padding:10px 18px; border-radius:99px;
+    font-size:12.5px; font-weight:500; box-shadow:var(--shadow); z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+</style>
+
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 17V9.5a1 1 0 0 1 .5-.87l7-4a1 1 0 0 1 1 0l7 4a1 1 0 0 1 .5.87V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17h16M8 17v-4h8v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">ERP</div>
+        <div class="brand-tag">Agencias de autos</div>
+      </div>
+    </div>
+    <nav class="mainnav" id="mainnav"></nav>
+    <div class="sidebar-foot" id="sidebarfoot">Cargando…</div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div>
+        <h1 id="pagetitle">Panel</h1>
+        <div class="sub" id="pagesub">—</div>
+      </div>
+      <div class="topbar-right">
+        <span class="pill pill-neutral" id="fxBadge" style="font-family:'IBM Plex Mono',monospace;"></span>
+        <button class="btn btn-sm" id="btnReset" title="Vuelve a los datos de ejemplo originales">Restaurar datos de ejemplo</button>
+      </div>
+    </header>
+    <div id="panes"></div>
+  </div>
+</div>
+
+<div class="chart-tooltip" id="tooltip" style="display:none;"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ======================================================================
+   ICONS
+====================================================================== */
+const ICONS = {
+  dashboard: '<svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="3.5" width="7.5" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="3.5" width="7.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="11.5" width="7.5" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3.5" y="15" width="7.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>',
+  inventario: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 17V9.5a1 1 0 0 1 .5-.87l7-4a1 1 0 0 1 1 0l7 4a1 1 0 0 1 .5.87V17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17h16M8 17v-4h8v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ficha: '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3.5" width="16" height="17" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  vehiculos: '<svg viewBox="0 0 24 24" fill="none"><circle cx="7" cy="17" r="2" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="17" r="2" stroke="currentColor" stroke-width="1.7"/><path d="M5 17H3.5v-3.2L5.4 9a2 2 0 0 1 1.8-1.1h7.4A2 2 0 0 1 16.4 9l2 4.3H21V17h-2M9 17h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  gastos: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 3.5h9l3 3V20a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 9h6M9 12.5h6M9 16h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  precios: '<svg viewBox="0 0 24 24" fill="none"><path d="M11.3 3.7 20 12.4a1.4 1.4 0 0 1 0 2L14.4 20a1.4 1.4 0 0 1-2 0L3.7 11.3V5.5a1.8 1.8 0 0 1 1.8-1.8h5.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="8.3" cy="8.3" r="1.3" fill="currentColor"/></svg>',
+  ventas: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 8.5 17 20 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  config: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4M17.9 17.9l-1.4-1.4M7.5 7.5 6.1 6.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  interesados: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5 19.5c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+};
+
+/* ======================================================================
+   SEED DATA  (tomado del Excel "ERP Agencias de autos.xlsx")
+====================================================================== */
+function seedData(){
+  return {
+    vehiculos: [
+      {id:"V001",marca:"Toyota",modelo:"Corolla",anio:2021,version:"XEI 1.8 CVT",km:62000,fechaCompra:"2026-05-28",fechaIngreso:"2026-05-30",precioCompra:19800000,precioObjetivo:22500000,estado:"En stock",obs:"Único dueño, service oficial"},
+      {id:"V002",marca:"Volkswagen",modelo:"Amarok",anio:2020,version:"V6 Highline",km:98000,fechaCompra:"2026-03-10",fechaIngreso:"2026-03-12",precioCompra:34500000,precioObjetivo:39900000,estado:"En stock",obs:"Requiere cubiertas nuevas"},
+      {id:"V003",marca:"Ford",modelo:"Ranger",anio:2022,version:"XLT 3.2 4x4",km:71000,fechaCompra:"2026-07-14",fechaIngreso:"2026-07-16",precioCompra:41000000,precioObjetivo:46500000,estado:"En stock",obs:"Ingresó por parte de pago"},
+      {id:"V004",marca:"Chevrolet",modelo:"Cruze",anio:2019,version:"LTZ 1.4T",km:88000,fechaCompra:"2026-02-05",fechaIngreso:"2026-02-08",precioCompra:15200000,precioObjetivo:18500000,estado:"En stock",obs:"Detalle de chapa en puerta trasera"},
+      {id:"V005",marca:"Fiat",modelo:"Cronos",anio:2023,version:"Drive 1.3 GSE",km:34000,fechaCompra:"2026-08-01",fechaIngreso:"2026-08-03",precioCompra:16900000,precioObjetivo:19200000,estado:"En stock",obs:"Muy bajo kilometraje"},
+      {id:"V006",marca:"Peugeot",modelo:"208",anio:2022,version:"Allure 1.6",km:41000,fechaCompra:"2026-06-18",fechaIngreso:"2026-06-20",precioCompra:17400000,precioObjetivo:20000000,estado:"En stock",obs:""},
+      {id:"V007",marca:"Renault",modelo:"Duster",anio:2021,version:"Iconic 1.3T",km:66000,fechaCompra:"2026-04-22",fechaIngreso:"2026-04-25",precioCompra:21000000,precioObjetivo:24500000,estado:"En preparación",obs:"En taller por chapa y pintura"},
+      {id:"V008",marca:"Honda",modelo:"HR-V",anio:2020,version:"EXL CVT",km:79000,fechaCompra:"2026-01-15",fechaIngreso:"2026-01-18",precioCompra:24800000,precioObjetivo:29000000,estado:"En stock",obs:"Difícil rotación, revisar precio"},
+      {id:"V009",marca:"Toyota",modelo:"Hilux",anio:2019,version:"SRV 4x4 AT",km:132000,fechaCompra:"2026-05-05",fechaIngreso:"2026-05-07",precioCompra:32000000,precioObjetivo:37500000,estado:"Reservado",obs:"Seña recibida"},
+      {id:"V010",marca:"Nissan",modelo:"Kicks",anio:2021,version:"Advance CVT",km:58000,fechaCompra:"2026-07-28",fechaIngreso:"2026-07-30",precioCompra:20500000,precioObjetivo:23500000,estado:"En stock",obs:""},
+      {id:"V011",marca:"Volkswagen",modelo:"Gol Trend",anio:2018,version:"Trendline 1.6",km:105000,fechaCompra:"2026-02-20",fechaIngreso:"2026-02-22",precioCompra:9800000,precioObjetivo:12500000,estado:"En stock",obs:"Unidad de entrada, alta demanda"},
+      {id:"V012",marca:"Chevrolet",modelo:"Tracker",anio:2022,version:"Premier 1.2T",km:45000,fechaCompra:"2026-06-02",fechaIngreso:"2026-06-04",precioCompra:26500000,precioObjetivo:30500000,estado:"En stock",obs:""},
+      {id:"V013",marca:"Ford",modelo:"EcoSport",anio:2019,version:"SE 1.5",km:92000,fechaCompra:"2026-03-01",fechaIngreso:"2026-03-04",precioCompra:13500000,precioObjetivo:16500000,estado:"En stock",obs:"Vendida a cliente recurrente",foto:null},
+    ],
+    gastos: [
+      {id:"G001",idVehiculo:"V001",fecha:"2026-06-02",categoria:"Service",desc:"Service completo 60.000 km",importe:320000},
+      {id:"G002",idVehiculo:"V001",fecha:"2026-06-05",categoria:"Lavado/Detallado",desc:"Detallado interior y pulido",importe:85000},
+      {id:"G003",idVehiculo:"V001",fecha:"2026-06-10",categoria:"Transferencia",desc:"Gastos de transferencia",importe:210000},
+      {id:"G004",idVehiculo:"V002",fecha:"2026-03-20",categoria:"Cubiertas",desc:"4 cubiertas 255/60 R18",importe:1450000},
+      {id:"G005",idVehiculo:"V002",fecha:"2026-04-02",categoria:"Service",desc:"Service mayor V6",importe:480000},
+      {id:"G006",idVehiculo:"V002",fecha:"2026-05-15",categoria:"Reparaciones",desc:"Reparación tren delantero",importe:620000},
+      {id:"G007",idVehiculo:"V002",fecha:"2026-06-20",categoria:"Almacenamiento",desc:"Cochera 3 meses",importe:180000},
+      {id:"G008",idVehiculo:"V003",fecha:"2026-07-20",categoria:"Lavado/Detallado",desc:"Lavado y detallado",importe:70000},
+      {id:"G009",idVehiculo:"V003",fecha:"2026-07-25",categoria:"Gestoría",desc:"Gestoría documentación",importe:150000},
+      {id:"G010",idVehiculo:"V004",fecha:"2026-02-15",categoria:"Chapa y pintura",desc:"Chapa y pintura puerta trasera",importe:540000},
+      {id:"G011",idVehiculo:"V004",fecha:"2026-03-10",categoria:"Service",desc:"Service de mantenimiento",importe:240000},
+      {id:"G012",idVehiculo:"V004",fecha:"2026-05-05",categoria:"Almacenamiento",desc:"Cochera 3 meses",importe:180000},
+      {id:"G013",idVehiculo:"V004",fecha:"2026-07-01",categoria:"Reparaciones",desc:"Cambio de embrague",importe:710000},
+      {id:"G014",idVehiculo:"V005",fecha:"2026-08-05",categoria:"Lavado/Detallado",desc:"Lavado de entrega",importe:45000},
+      {id:"G015",idVehiculo:"V006",fecha:"2026-06-25",categoria:"Service",desc:"Service 40.000 km",importe:260000},
+      {id:"G016",idVehiculo:"V006",fecha:"2026-07-08",categoria:"Cubiertas",desc:"2 cubiertas delanteras",importe:380000},
+      {id:"G017",idVehiculo:"V007",fecha:"2026-05-02",categoria:"Chapa y pintura",desc:"Reparación lateral completo",importe:980000},
+      {id:"G018",idVehiculo:"V007",fecha:"2026-05-20",categoria:"Service",desc:"Service + correa",importe:410000},
+      {id:"G019",idVehiculo:"V007",fecha:"2026-06-15",categoria:"Reparaciones",desc:"Suspensión trasera",importe:350000},
+      {id:"G020",idVehiculo:"V008",fecha:"2026-01-25",categoria:"Service",desc:"Service CVT",importe:390000},
+      {id:"G021",idVehiculo:"V008",fecha:"2026-02-18",categoria:"Cubiertas",desc:"4 cubiertas 215/55 R17",importe:1120000},
+      {id:"G022",idVehiculo:"V008",fecha:"2026-04-10",categoria:"Almacenamiento",desc:"Cochera 3 meses",importe:180000},
+      {id:"G023",idVehiculo:"V008",fecha:"2026-06-05",categoria:"Reparaciones",desc:"Aire acondicionado",importe:290000},
+      {id:"G024",idVehiculo:"V008",fecha:"2026-07-12",categoria:"Almacenamiento",desc:"Cochera 2 meses",importe:120000},
+      {id:"G025",idVehiculo:"V009",fecha:"2026-05-15",categoria:"Service",desc:"Service 130.000 km",importe:520000},
+      {id:"G026",idVehiculo:"V009",fecha:"2026-05-28",categoria:"Patentamiento",desc:"Trámite patentamiento",importe:340000},
+      {id:"G027",idVehiculo:"V010",fecha:"2026-08-02",categoria:"Lavado/Detallado",desc:"Detallado completo",importe:90000},
+      {id:"G028",idVehiculo:"V010",fecha:"2026-08-08",categoria:"Transferencia",desc:"Gastos de transferencia",importe:230000},
+      {id:"G029",idVehiculo:"V011",fecha:"2026-03-01",categoria:"Reparaciones",desc:"Motor de arranque",importe:180000},
+      {id:"G030",idVehiculo:"V011",fecha:"2026-03-15",categoria:"Chapa y pintura",desc:"Retoque de pintura general",importe:420000},
+      {id:"G031",idVehiculo:"V011",fecha:"2026-06-01",categoria:"Almacenamiento",desc:"Cochera 4 meses",importe:240000},
+      {id:"G032",idVehiculo:"V012",fecha:"2026-06-10",categoria:"Service",desc:"Service completo",importe:300000},
+      {id:"G033",idVehiculo:"V012",fecha:"2026-06-18",categoria:"Lavado/Detallado",desc:"Detallado de entrega",importe:80000},
+      {id:"G034",idVehiculo:"V013",fecha:"2026-03-12",categoria:"Reparaciones",desc:"Caja de dirección",importe:450000},
+      {id:"G035",idVehiculo:"V013",fecha:"2026-03-25",categoria:"Service",desc:"Service general",importe:230000},
+      {id:"G036",idVehiculo:"V013",fecha:"2026-04-05",categoria:"Transferencia",desc:"Gastos de transferencia",importe:190000},
+    ],
+    precios: [
+      {id:"P001",idVehiculo:"V001",fecha:"2026-08-10",nuevoPrecio:22100000,motivo:"Ajuste por baja de consultas"},
+      {id:"P002",idVehiculo:"V002",fecha:"2026-06-05",nuevoPrecio:38500000,motivo:"Reducción para acelerar rotación"},
+      {id:"P003",idVehiculo:"V004",fecha:"2026-05-10",nuevoPrecio:17800000,motivo:"Ajuste de mercado"},
+      {id:"P004",idVehiculo:"V004",fecha:"2026-07-15",nuevoPrecio:17200000,motivo:"Sigue sin venderse"},
+      {id:"P005",idVehiculo:"V007",fecha:"2026-06-20",nuevoPrecio:25200000,motivo:"Suba por reparaciones realizadas"},
+      {id:"P006",idVehiculo:"V008",fecha:"2026-04-05",nuevoPrecio:27500000,motivo:"Baja rotación"},
+      {id:"P007",idVehiculo:"V008",fecha:"2026-06-20",nuevoPrecio:26200000,motivo:"Segunda baja de precio"},
+      {id:"P008",idVehiculo:"V009",fecha:"2026-07-01",nuevoPrecio:36800000,motivo:"Negociación con cliente"},
+      {id:"P009",idVehiculo:"V011",fecha:"2026-05-01",nuevoPrecio:12900000,motivo:"Alta demanda del segmento"},
+      {id:"P010",idVehiculo:"V012",fecha:"2026-07-05",nuevoPrecio:29800000,motivo:"Cierre de operación"},
+      {id:"P011",idVehiculo:"V013",fecha:"2026-05-10",nuevoPrecio:15900000,motivo:"Ajuste para cerrar venta"},
+    ],
+    ventas: [
+      {id:"VT001",idVehiculo:"V012",fechaVenta:"2026-07-18",precioFinal:29500000,gastosFinales:120000,cliente:"M. Fernández",vendedor:"Laura G.",obs:"Financiación propia 12 cuotas"},
+      {id:"VT002",idVehiculo:"V013",fechaVenta:"2026-05-22",precioFinal:15700000,gastosFinales:90000,cliente:"J. Sosa",vendedor:"Diego R.",obs:"Cliente recurrente"},
+    ],
+    interesados: [
+      {id:"I001",idVehiculo:"V003",nombre:"L. Benítez",telefono:"11-4455-2200",fecha:"2026-08-10",obs:"Preguntó por financiación a 12 cuotas"},
+      {id:"I002",idVehiculo:"V008",nombre:"R. Ibarra",telefono:"11-6677-8899",fecha:"2026-08-14",obs:"Va a volver con su pareja a ver la unidad"},
+      {id:"I003",idVehiculo:"V012",nombre:"C. Domínguez",telefono:"11-2233-4455",fecha:"2026-08-18",obs:"Pidió que le avisen si baja el precio"},
+    ],
+    // VALOR DE REVISTA — tabla propia, cargada a mano con datos reales (no inventados) tomados de
+    // la Guía de Precios de Autocosmos Argentina, que a su vez cita a la Cámara del Comercio Automotor
+    // (CCA) como fuente oficial — el mismo tipo de fuente que usa InfoAuto. No se conecta en vivo a
+    // ningún sitio externo (el Artifact no puede hacer llamadas de red a sitios no permitidos, y ni
+    // InfoAuto ni InfoUsados ofrecen consulta gratis/programática), así que hay que actualizarla a mano
+    // periódicamente. Cargada el 28/08/2026.
+    referencias: [
+      {marca:"Toyota", modelo:"Corolla", anio:2021, precio:29500000, fuente:"Autocosmos/CCA — HV 1.8 XEI CVT", url:"https://www.autocosmos.com.ar/guiadeprecios/toyota/corolla/2021"},
+      {marca:"Volkswagen", modelo:"Amarok", anio:2020, precio:47200000, fuente:"Autocosmos/CCA — V6 4x4 8AT Highline", url:"https://www.autocosmos.com.ar/guiadeprecios/volkswagen/amarok-pick---up/2020"},
+      {marca:"Ford", modelo:"Ranger", anio:2022, precio:38300000, fuente:"Autocosmos/CCA — D/C 3.2 XLT 4x4 6AT", url:"https://www.autocosmos.com.ar/guiadeprecios/ford/ranger-pick---up/2022"},
+      {marca:"Chevrolet", modelo:"Cruze", anio:2019, precio:23100000, fuente:"Autocosmos/CCA — 4P LTZ AT", url:"https://www.autocosmos.com.ar/guiadeprecios/chevrolet/cruze/2019"},
+      {marca:"Fiat", modelo:"Cronos", anio:2023, precio:20000000, fuente:"Autocosmos/CCA — Drive GSE", url:"https://www.autocosmos.com.ar/guiadeprecios/fiat/cronos/2023"},
+      {marca:"Peugeot", modelo:"208", anio:2022, precio:20650000, fuente:"Autocosmos/CCA — Allure 1.6", url:"https://www.autocosmos.com.ar/guiadeprecios/peugeot/208/2022"},
+      {marca:"Renault", modelo:"Duster", anio:2021, precio:25500000, fuente:"Autocosmos/CCA — Iconic 1.3T 4x4", url:"https://www.autocosmos.com.ar/guiadeprecios/renault/duster/2021"},
+      {marca:"Honda", modelo:"HR-V", anio:2020, precio:36100000, fuente:"Autocosmos/CCA — EX-L 2WD CVT", url:"https://www.autocosmos.com.ar/guiadeprecios/honda/hr-v/2020"},
+      {marca:"Toyota", modelo:"Hilux", anio:2019, precio:36400000, fuente:"Autocosmos/CCA — D/C 2.8 SRV 4x4 6AT", url:"https://www.autocosmos.com.ar/guiadeprecios/toyota/hilux-pick---up/2019"},
+      {marca:"Nissan", modelo:"Kicks", anio:2021, precio:24150000, fuente:"Autocosmos/CCA — Advance CVT", url:"https://www.autocosmos.com.ar/guiadeprecios/nissan/kicks/2021"},
+      {marca:"Volkswagen", modelo:"Gol Trend", anio:2018, precio:13900000, fuente:"Autocosmos/CCA — 5P Trendline", url:"https://www.autocosmos.com.ar/guiadeprecios/volkswagen/gol-trend/2018"},
+      {marca:"Chevrolet", modelo:"Tracker", anio:2022, precio:27450000, fuente:"Autocosmos/CCA — 5P 1.2T 6AT Premier", url:"https://www.autocosmos.com.ar/guiadeprecios/chevrolet/tracker/2022"},
+      {marca:"Ford", modelo:"EcoSport", anio:2019, precio:20500000, fuente:"Estimado sobre avisos reales (deruedas.com.ar), SE 1.5, rango $18,3M–$23,9M", url:"https://www.deruedas.com.ar/precio/Autos/ford/EcoSport/2019"},
+    ],
+    config: {
+      diasVerde:30, diasAmarillo:60, diasRojo:90,
+      margenMinimo:0.10, margenObjetivo:0.30,
+      toleranciaCaidaMargen:0.005, umbralGastosAltos:1000000,
+      toleranciaDesvioPrecio:0.02, redondeo:50000, capacidad:60,
+      tasaFinanciacionMensual:0.06,
+      tipoCambio:1515, tipoCambioOficial:1515, tipoCambioMayorista:1499, tipoCambioBlue:1550,
+      fechaCotizacion:"2026-08-21",
+      ipcSerie: [
+        {mes:"2025-07", variacion:null, fuente:null, url:null},
+        {mes:"2025-08", variacion:0.019, fuente:"INDEC, Informe técnico IPC julio 2026 — serie de variaciones mensuales del nivel general, total nacional.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2025-09", variacion:0.021, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2025-10", variacion:0.023, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2025-11", variacion:0.025, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2025-12", variacion:0.028, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2026-01", variacion:0.029, fuente:"INDEC, Informe técnico IPC enero 2026 — nivel general 2,9% mensual.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_02_261443D4406C.pdf"},
+        {mes:"2026-02", variacion:0.029, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2026-03", variacion:0.034, fuente:"INDEC, Informe técnico IPC marzo 2026 — nivel general 3,4% mensual.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_04_26853171E136.pdf"},
+        {mes:"2026-04", variacion:0.026, fuente:"INDEC, Informe técnico IPC abril 2026 — nivel general 2,6% mensual.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_05_2680B692D2F5.pdf"},
+        {mes:"2026-05", variacion:0.021, fuente:"INDEC, Informe técnico IPC mayo 2026 — nivel general 2,1% mensual.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_06_26C132AEE4E9.pdf"},
+        {mes:"2026-06", variacion:0.019, fuente:"INDEC, Informe técnico IPC julio 2026.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2026-07", variacion:0.021, fuente:"INDEC, Informe técnico IPC julio 2026 — nivel general 2,1% mensual.", url:"https://www.indec.gob.ar/uploads/informesdeprensa/ipc_08_2642C82F62AE.pdf"},
+        {mes:"2026-08", variacion:0.021, fuente:"Proyección: el INDEC publica agosto a mediados de septiembre. Por defecto se usa la variación de julio (2,1%). Reemplazala por el dato real cuando salga.", url:null, proyeccion:true},
+      ],
+    },
+  };
+}
+
+const CATEGORIAS = ["Service","Reparaciones","Cubiertas","Chapa y pintura","Lavado/Detallado","Transferencia","Patentamiento","Gestoría","Almacenamiento","Otros"];
+const ESTADOS = ["En stock","En preparación","Reservado"];
+
+/* ======================================================================
+   STORE
+====================================================================== */
+const STORAGE_KEY = "rotacion_demo_v1";
+let DATA = loadData();
+
+function migrarData(data){
+  // Compatibilidad con datos guardados antes de agregar interesados/referencias/financiación.
+  const seed = seedData();
+  if(!Array.isArray(data.interesados)) data.interesados = [];
+  if(!Array.isArray(data.referencias)) data.referencias = seed.referencias;
+  if(data.config && data.config.tasaFinanciacionMensual===undefined) data.config.tasaFinanciacionMensual = seed.config.tasaFinanciacionMensual;
+  return data;
+}
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return migrarData(JSON.parse(raw));
+  }catch(e){ /* storage unavailable — fall through to seed */ }
+  return seedData();
+}
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){ /* ignore */ }
+}
+function resetData(){
+  DATA = seedData();
+  saveData();
+  render();
+  toast("Datos de ejemplo restaurados");
+}
+
+/* ======================================================================
+   HELPERS
+====================================================================== */
+function d(str){ return new Date(str+"T00:00:00"); }
+function todayDate(){ return new Date(); }
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+function fmtDate(str){ const x=d(str); return x.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function fmtARS(n){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  const neg = n<0; n = Math.round(Math.abs(n));
+  return (neg?"-":"")+"$ "+n.toLocaleString("es-AR");
+}
+function fmtUSD(n){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  return "US$ "+Math.round(n).toLocaleString("es-AR");
+}
+function fmtPct(n, dec){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  dec = dec===undefined?1:dec;
+  return (n*100).toLocaleString("es-AR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+"%";
+}
+function esc(s){ return (s===undefined||s===null)?"":String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function uid(prefix, list, key){
+  const nums = list.map(x=>parseInt(String(x[key]).replace(/\D/g,""),10)||0);
+  const n = (nums.length?Math.max(...nums):0)+1;
+  return prefix+String(n).padStart(3,"0");
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+function roundUp(n, step){ return Math.ceil(n/step)*step; }
+
+/* ======================================================================
+   FOTOS — redimensiona en el navegador (canvas) antes de guardar en
+   localStorage como base64, para no inflar el almacenamiento.
+====================================================================== */
+function resizeImageToDataURL(file, maxDim, cb){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      let w = img.width, h = img.height;
+      if(w>=h){ if(w>maxDim){ h = Math.round(h*maxDim/w); w = maxDim; } }
+      else { if(h>maxDim){ w = Math.round(w*maxDim/h); h = maxDim; } }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = function(){ cb(null); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function(){ cb(null); };
+  reader.readAsDataURL(file);
+}
+
+/* ======================================================================
+   BACKUP / RESTORE — usa la capability "downloads" del Artifact cuando
+   está disponible; si no, cae a un textarea copiable.
+====================================================================== */
+async function tryDownloadsSave(filename, data){
+  try{
+    if(!(window.claude && typeof window.claude.use === "function")) return false;
+    const downloads = await window.claude.use("downloads");
+    if(!downloads) return false;
+    await downloads.save({filename, data});
+    return true;
+  }catch(e){ return false; }
+}
+function mostrarFallback(texto){
+  const fallback = document.getElementById("backupFallback");
+  const ta = document.getElementById("backupTextarea");
+  if(fallback && ta){
+    ta.value = texto;
+    fallback.style.display = "block";
+    ta.focus(); ta.select();
+    toast("Copiá el texto de abajo y guardalo en un archivo");
+  }
+}
+function celdaCSV(v){
+  v = (v===null||v===undefined) ? "" : String(v);
+  if(/[;"\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+function armarCSV(headers, rows){
+  return "﻿" + [headers.join(";")].concat(rows.map(r=>r.map(celdaCSV).join(";"))).join("\r\n");
+}
+async function descargarCSV(filename, headers, rows){
+  const csv = armarCSV(headers, rows);
+  const ok = await tryDownloadsSave(filename, csv);
+  if(ok) toast("Descargado: "+filename);
+  else mostrarFallback(csv);
+}
+
+/* ======================================================================
+   PRECIO DE REFERENCIA — tabla propia editable (ver DATA.referencias).
+   No es una conexión en vivo a InfoAuto/InfoUsados: son valores que se
+   cargan y actualizan a mano en Configuración.
+====================================================================== */
+function buscarReferencia(marca, modelo, anio){
+  const m = (marca||"").trim().toLowerCase(), mo = (modelo||"").trim().toLowerCase();
+  const anioNum = parseInt(anio,10);
+  const candidatos = DATA.referencias.filter(r=>r.marca.trim().toLowerCase()===m && r.modelo.trim().toLowerCase()===mo);
+  if(!candidatos.length) return null;
+  const exacto = candidatos.find(r=>r.anio===anioNum);
+  if(exacto) return {precio:exacto.precio, exacto:true, anioRef:exacto.anio, fuente:exacto.fuente, url:exacto.url};
+  // sin año exacto: toma el más cercano y ajusta ~6%/año de depreciación estimada
+  const masCercano = candidatos.slice().sort((a,b)=>Math.abs(a.anio-anioNum)-Math.abs(b.anio-anioNum))[0];
+  const dif = anioNum - masCercano.anio;
+  const precioAjustado = masCercano.precio * Math.pow(0.94, dif);
+  return {precio:Math.round(precioAjustado/10000)*10000, exacto:false, anioRef:masCercano.anio, fuente:masCercano.fuente, url:masCercano.url};
+}
+
+/* ======================================================================
+   FINANCIACIÓN — amortización francesa (cuota fija)
+====================================================================== */
+function calcularCuota(monto, cuotas, tasaMensual){
+  // Interés directo/flat sobre el capital total (no amortización francesa): la tasa
+  // se aplica siempre sobre el monto original, no sobre saldo decreciente. Es el método
+  // más común en financiación de usados en Argentina ("X cuotas fijas de $Y").
+  if(!monto || !cuotas || cuotas<=0) return {cuota:0, total:0, interes:0};
+  const interes = monto * (tasaMensual||0) * cuotas;
+  const total = monto + interes;
+  const cuota = total/cuotas;
+  return {cuota, total, interes};
+}
+
+/* ======================================================================
+   IPC — inflación (replica el bloque de Config y las columnas de ajuste
+   por IPC de Gastos e Inventario)
+====================================================================== */
+const MESES_ABBR = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function mesLabel(mesStr){
+  const [y,m] = mesStr.split("-").map(Number);
+  return MESES_ABBR[m-1]+"-"+String(y).slice(2);
+}
+function ipcIndices(){
+  let acc = 100;
+  return DATA.config.ipcSerie.map((row,i)=>{
+    if(i>0) acc = acc*(1+row.variacion);
+    return {...row, indice:acc};
+  });
+}
+function mesDeHoy(){
+  const h = todayDate();
+  return h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0");
+}
+function indiceHoy(){
+  const series = ipcIndices();
+  const found = series.find(r=>r.mes===mesDeHoy());
+  return found ? found.indice : series[series.length-1].indice;
+}
+function ipcIndiceEnMes(fechaStr){
+  const series = ipcIndices();
+  const found = series.find(r=>r.mes===fechaStr.slice(0,7));
+  return found ? found.indice : indiceHoy();
+}
+function importeGastoHoy(g){
+  return g.importe * indiceHoy() / ipcIndiceEnMes(g.fecha);
+}
+
+/* ======================================================================
+   MOTOR DE CÁLCULO  (replica las fórmulas de la hoja "Inventario")
+====================================================================== */
+function computeInventory(){
+  const cfg = DATA.config;
+  const hoy = todayDate();
+  return DATA.vehiculos.map(v=>{
+    const venta = DATA.ventas.find(x=>x.idVehiculo===v.id) || null;
+    const estado = venta ? "Vendido" : v.estado;
+    const gastosVehiculo = DATA.gastos.filter(g=>g.idVehiculo===v.id);
+    const gastosAcum = gastosVehiculo.reduce((s,g)=>s+g.importe,0) + (venta? venta.gastosFinales : 0);
+    const costoTotal = v.precioCompra + gastosAcum;
+    const fechaFin = venta ? d(venta.fechaVenta) : hoy;
+    const diasEnStock = daysBetween(d(v.fechaIngreso), fechaFin);
+
+    const historial = DATA.precios.filter(p=>p.idVehiculo===v.id).sort((a,b)=>d(a.fecha)-d(b.fecha));
+    const precioActual = historial.length ? historial[historial.length-1].nuevoPrecio : v.precioObjetivo;
+
+    const capitalInmovilizado = estado==="Vendido" ? 0 : costoTotal;
+    const gananciaEstimada = precioActual - costoTotal;
+    const margenEsperado = v.precioObjetivo ? (v.precioObjetivo - costoTotal)/v.precioObjetivo : 0;
+    const margenActual = precioActual ? (precioActual - costoTotal)/precioActual : 0;
+    const margenReal = venta ? (venta.precioFinal - costoTotal)/venta.precioFinal : null;
+
+    const precioParaMargenObjetivo = costoTotal/(1-cfg.margenObjetivo);
+    const ajusteNecesario = precioActual ? (precioParaMargenObjetivo/precioActual - 1) : 0;
+    const varVsObjetivo = v.precioObjetivo ? (precioActual/v.precioObjetivo - 1) : null;
+    const gastosRatio = v.precioCompra ? gastosAcum/v.precioCompra : 0;
+    const costoDiario = diasEnStock>0 ? costoTotal/diasEnStock : costoTotal;
+    const cantidadGastos = gastosVehiculo.length;
+    const precioParaMargenMinimo = costoTotal/(1-cfg.margenMinimo);
+    const precioEquilibrio = costoTotal;
+
+    // Ajuste por inflación (IPC INDEC) — replica Inventario!Z:AD
+    const idxHoy = indiceHoy();
+    const indiceCompra = ipcIndiceEnMes(v.fechaIngreso);
+    const costoTotalHoy = v.precioCompra*idxHoy/indiceCompra + gastosVehiculo.reduce((s,g)=>s+importeGastoHoy(g),0) + (venta? venta.gastosFinales : 0);
+    const margenRealIPC = precioActual ? (precioActual - costoTotalHoy)/precioActual : null;
+    const gananciaRealIPC = precioActual - costoTotalHoy;
+    const gananciaRealIPCUSD = gananciaRealIPC/cfg.tipoCambio;
+
+    let alerta;
+    if(estado==="Vendido") alerta="vendido";
+    else if(diasEnStock>=cfg.diasRojo) alerta="critico";
+    else if(diasEnStock>=cfg.diasAmarillo) alerta="atencion";
+    else if(diasEnStock>=cfg.diasVerde) alerta="observar";
+    else alerta="normal";
+
+    const diagParts = [];
+    if(estado==="Vendido"){
+      diagParts.push("✅ Vendido en "+diasEnStock+" días con margen real de "+fmtPct(margenReal)+".");
+    }else{
+      if(diasEnStock>=cfg.diasRojo) diagParts.push("🔴 Lleva "+diasEnStock+" días en stock.");
+      else if(diasEnStock>=cfg.diasAmarillo) diagParts.push("⚠️ Lleva "+diasEnStock+" días en stock.");
+      else if(diasEnStock>=cfg.diasVerde) diagParts.push("🟡 Lleva "+diasEnStock+" días en stock, dentro de lo esperable.");
+      else diagParts.push("🟢 Lleva "+diasEnStock+" días en stock, plazo normal.");
+      if(margenActual < cfg.margenMinimo) diagParts.push("⚠️ Margen actual "+fmtPct(margenActual)+", por debajo del mínimo.");
+      if(margenActual < margenEsperado - cfg.toleranciaCaidaMargen) diagParts.push("📉 El margen cayó de "+fmtPct(margenEsperado)+" a "+fmtPct(margenActual)+".");
+      if(gastosAcum >= cfg.umbralGastosAltos) diagParts.push("💰 "+fmtARS(gastosAcum)+" de gastos acumulados.");
+      if(margenActual >= cfg.margenObjetivo) diagParts.push("📈 Margen por encima del objetivo.");
+      if(ajusteNecesario > cfg.toleranciaDesvioPrecio) diagParts.push("🎯 Para el margen objetivo habría que publicarlo a "+fmtARS(precioParaMargenObjetivo)+".");
+    }
+
+    return {
+      ...v, estado, venta, gastosAcum, costoTotal, diasEnStock, precioActual,
+      capitalInmovilizado, gananciaEstimada, margenEsperado, margenActual, margenReal,
+      precioParaMargenObjetivo, ajusteNecesario, alerta, diagnostico: diagParts.join(" "),
+      historial, varVsObjetivo, gastosRatio, costoDiario, cantidadGastos,
+      precioParaMargenMinimo, precioEquilibrio, gastosVehiculo,
+      indiceCompra, costoTotalHoy, margenRealIPC, gananciaRealIPC, gananciaRealIPCUSD,
+    };
+  });
+}
+
+function integrityChecks(){
+  const dupCount = (arr, key) => arr.length - new Set(arr.map(x=>x[key])).size;
+  const vehIds = new Set(DATA.vehiculos.map(v=>v.id));
+  const ventaCounts = {};
+  DATA.ventas.forEach(x=>{ ventaCounts[x.idVehiculo] = (ventaCounts[x.idVehiculo]||0)+1; });
+  const vendidosDuplicados = Object.values(ventaCounts).filter(n=>n>1).length;
+  return [
+    {label:"IDs duplicados en Vehículos", n:dupCount(DATA.vehiculos,"id")},
+    {label:"IDs duplicados en Gastos", n:dupCount(DATA.gastos,"id")},
+    {label:"IDs duplicados en Precios", n:dupCount(DATA.precios,"id")},
+    {label:"IDs duplicados en Ventas", n:dupCount(DATA.ventas,"id")},
+    {label:"Vehículos vendidos más de una vez", n:vendidosDuplicados},
+    {label:"Gastos con ID de vehículo inexistente", n:DATA.gastos.filter(g=>!vehIds.has(g.idVehiculo)).length},
+    {label:"Precios con ID de vehículo inexistente", n:DATA.precios.filter(p=>!vehIds.has(p.idVehiculo)).length},
+    {label:"Ventas con ID de vehículo inexistente", n:DATA.ventas.filter(x=>!vehIds.has(x.idVehiculo)).length},
+  ];
+}
+
+/* ======================================================================
+   EVOLUCIÓN MENSUAL — reconstruye capital inmovilizado y ganancia
+   nominal/real acumulada mes a mes, usando las fechas ya cargadas.
+====================================================================== */
+function evolucionMensual(){
+  const inv = computeInventory();
+  return DATA.config.ipcSerie.map(row=>{
+    const [y,m] = row.mes.split("-").map(Number);
+    const asOf = new Date(y, m, 0); // último día de ese mes
+    let capital = 0;
+    DATA.vehiculos.forEach(v=>{
+      if(d(v.fechaIngreso) > asOf) return;
+      const venta = DATA.ventas.find(x=>x.idVehiculo===v.id);
+      if(venta && d(venta.fechaVenta) <= asOf) return;
+      const gastosAsOf = DATA.gastos.filter(g=>g.idVehiculo===v.id && d(g.fecha)<=asOf).reduce((s,g)=>s+g.importe,0);
+      capital += v.precioCompra + gastosAsOf;
+    });
+    let gananciaNomAcum = 0, gananciaRealAcum = 0;
+    inv.forEach(v=>{
+      if(v.venta && d(v.venta.fechaVenta) <= asOf){
+        gananciaNomAcum += (v.venta.precioFinal - v.costoTotal);
+        gananciaRealAcum += (v.venta.precioFinal - v.costoTotalHoy);
+      }
+    });
+    return {mes:row.mes, asOf, capital, gananciaNomAcum, gananciaRealAcum};
+  });
+}
+
+function pillFor(alerta){
+  const map = {
+    normal:   {c:"pill-normal",   t:"Normal"},
+    observar: {c:"pill-observar", t:"Observar"},
+    atencion: {c:"pill-atencion", t:"Atención"},
+    critico:  {c:"pill-critico",  t:"Crítico"},
+    vendido:  {c:"pill-vendido",  t:"Vendido"},
+  };
+  const m = map[alerta] || map.normal;
+  return `<span class="pill ${m.c}"><span class="dot"></span>${m.t}</span>`;
+}
+
+/* ======================================================================
+   CHARTS (SVG) — barras horizontales con tooltip
+====================================================================== */
+function hBarChart(el, items, opts){
+  opts = opts||{};
+  const w = el.clientWidth || 560;
+  const rowH = opts.rowH || 30;
+  const gap = 10;
+  const labelW = opts.labelW || 128;
+  const valueW = 96;
+  const plotW = Math.max(80, w - labelW - valueW - 16);
+  const h = items.length*rowH + (items.length-1)*gap + 8;
+  const max = Math.max(1, ...items.map(i=>i.value));
+
+  let bars = "";
+  items.forEach((it,i)=>{
+    const y = i*(rowH+gap);
+    const bw = Math.max(2, (it.value/max)*plotW);
+    bars += `
+      <g class="hbar" data-idx="${i}">
+        <text x="${labelW-10}" y="${y+rowH/2}" text-anchor="end" dominant-baseline="middle" class="barlbl">${esc(it.label)}</text>
+        <rect x="${labelW}" y="${y+6}" width="${plotW}" height="${rowH-12}" rx="4" fill="var(--surface-sunken)"></rect>
+        <rect x="${labelW}" y="${y+6}" width="${bw}" height="${rowH-12}" rx="4" fill="${it.color}" data-full="${bw}"></rect>
+        <text x="${labelW+plotW+10}" y="${y+rowH/2}" dominant-baseline="middle" class="barval">${it.valueLabel}</text>
+      </g>`;
+  });
+
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(opts.ariaLabel||'')}">${bars}</svg>`;
+
+  const tip = document.getElementById("tooltip");
+  el.querySelectorAll(".hbar").forEach((g,i)=>{
+    g.addEventListener("mouseenter",(ev)=>{
+      const it = items[i];
+      tip.style.display="block";
+      tip.innerHTML = `<strong>${esc(it.label)}</strong><br>${it.tooltip||it.valueLabel}`;
+      moveTip(ev);
+    });
+    g.addEventListener("mousemove", moveTip);
+    g.addEventListener("mouseleave", ()=>{ tip.style.display="none"; });
+  });
+  function moveTip(ev){
+    const tip = document.getElementById("tooltip");
+    tip.style.left = ev.clientX+"px";
+    tip.style.top = ev.clientY+"px";
+  }
+}
+
+function lineChart(el, points, opts){
+  opts = opts||{};
+  const w = el.clientWidth || 480;
+  const h = opts.h || 160;
+  const padL=44, padR=16, padT=16, padB=26;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  if(points.length===0){
+    el.innerHTML = `<div class="empty">Sin cambios de precio registrados</div>`;
+    return;
+  }
+  const xs = points.map(p=>p.x.getTime());
+  const ys = points.map(p=>p.y);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs);
+  const ymin=Math.min(...ys)*0.97, ymax=Math.max(...ys)*1.03;
+  const X = t => padL + (xmax===xmin?plotW/2:(t-xmin)/(xmax-xmin)*plotW);
+  const Y = v => padT + plotH - (ymax===ymin?plotH/2:(v-ymin)/(ymax-ymin)*plotH);
+
+  let grid="";
+  for(let i=0;i<=3;i++){
+    const gy = padT + plotH*i/3;
+    grid += `<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" class="gridline" stroke-width="1"/>`;
+  }
+
+  const path = points.map((p,i)=> (i===0?"M":"L")+X(p.x.getTime()).toFixed(1)+","+Y(p.y).toFixed(1)).join(" ");
+  const area = path + ` L${X(points[points.length-1].x.getTime()).toFixed(1)},${(padT+plotH).toFixed(1)} L${X(points[0].x.getTime()).toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
+
+  let dots = "";
+  points.forEach((p,i)=>{
+    dots += `<circle class="pt" data-idx="${i}" cx="${X(p.x.getTime()).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface-card)" stroke-width="2"></circle>`;
+  });
+  const lastX = X(points[points.length-1].x.getTime()), lastY = Y(points[points.length-1].y);
+
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    ${grid}
+    <path d="${area}" fill="var(--accent)" opacity="0.08"></path>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+    ${dots}
+    <circle cx="${lastX}" cy="${lastY}" r="5.5" fill="none" stroke="var(--accent)" stroke-width="2"></circle>
+    <text x="${padL}" y="${h-6}" class="barlbl">${points[0].x.toLocaleDateString("es-AR")}</text>
+    <text x="${w-padR}" y="${h-6}" text-anchor="end" class="barlbl">${points[points.length-1].x.toLocaleDateString("es-AR")}</text>
+  </svg>`;
+
+  const tip = document.getElementById("tooltip");
+  el.querySelectorAll(".pt").forEach((c,i)=>{
+    c.addEventListener("mouseenter",(ev)=>{
+      const p = points[i];
+      tip.style.display="block";
+      tip.innerHTML = `<strong>${fmtARS(p.y)}</strong><br>${p.x.toLocaleDateString("es-AR")}${p.label?" — "+esc(p.label):""}`;
+      tip.style.left=ev.clientX+"px"; tip.style.top=ev.clientY+"px";
+    });
+    c.addEventListener("mousemove",(ev)=>{ tip.style.left=ev.clientX+"px"; tip.style.top=ev.clientY+"px"; });
+    c.addEventListener("mouseleave",()=>{ tip.style.display="none"; });
+  });
+}
+
+function multiLineChart(el, series, opts){
+  opts = opts||{};
+  const w = el.clientWidth || 480;
+  const h = opts.h || 200;
+  const padL=54, padR=16, padT=16, padB=26;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const allPoints = series.flatMap(s=>s.points);
+  if(!allPoints.length){ el.innerHTML = `<div class="empty">Sin datos suficientes todavía</div>`; return; }
+  const xs = allPoints.map(p=>p.x.getTime()), ys = allPoints.map(p=>p.y);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs);
+  let ymin=Math.min(0,...ys), ymax=Math.max(0,...ys);
+  if(ymin===ymax){ ymin-=1; ymax+=1; }
+  const pad=(ymax-ymin)*0.1; ymin-=pad; ymax+=pad;
+  const X = t => padL + (xmax===xmin?plotW/2:(t-xmin)/(xmax-xmin)*plotW);
+  const Y = v => padT + plotH - (ymax===ymin?plotH/2:(v-ymin)/(ymax-ymin)*plotH);
+
+  let grid="";
+  for(let i=0;i<=3;i++){
+    const gy = padT + plotH*i/3;
+    grid += `<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" class="gridline" stroke-width="1"/>`;
+  }
+  let zeroLine = "";
+  if(ymin<0 && ymax>0){
+    const zy = Y(0).toFixed(1);
+    zeroLine = `<line x1="${padL}" y1="${zy}" x2="${w-padR}" y2="${zy}" stroke="var(--border-strong)" stroke-width="1" stroke-dasharray="3,3"/>`;
+  }
+  let paths = "";
+  series.forEach(s=>{
+    const pts = s.points.slice().sort((a,b)=>a.x-b.x);
+    const path = pts.map((p,i)=>(i===0?"M":"L")+X(p.x.getTime()).toFixed(1)+","+Y(p.y).toFixed(1)).join(" ");
+    paths += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    pts.forEach(p=>{
+      paths += `<circle cx="${X(p.x.getTime()).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="3" fill="${s.color}"><title>${esc(s.label)} — ${p.x.toLocaleDateString("es-AR",{month:"short",year:"2-digit"})}: ${s.fmt?esc(s.fmt(p.y)):p.y}</title></circle>`;
+    });
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    ${grid}${zeroLine}${paths}
+    <text x="${padL}" y="${h-6}" class="barlbl">${new Date(xmin).toLocaleDateString("es-AR",{month:"short",year:"2-digit"})}</text>
+    <text x="${w-padR}" y="${h-6}" text-anchor="end" class="barlbl">${new Date(xmax).toLocaleDateString("es-AR",{month:"short",year:"2-digit"})}</text>
+  </svg>
+  <div class="chart-legend">${series.map(s=>`<div class="legend-item"><span class="legend-swatch" style="background:${s.color};"></span>${esc(s.label)}</div>`).join("")}</div>`;
+}
+
+/* ======================================================================
+   NAV / ROUTING
+====================================================================== */
+const SECTIONS = [
+  {id:"dashboard", label:"Panel", group:"Análisis", title:"Panel de control", sub:"Capital, antigüedad y rentabilidad del stock"},
+  {id:"inventario", label:"Inventario", group:"Análisis", title:"Inventario", sub:"Vista calculada: cruza vehículos, gastos, precios y ventas"},
+  {id:"ficha", label:"Ficha", group:"Análisis", title:"Ficha del vehículo", sub:"Detalle individual y simulador de precio"},
+  {id:"vehiculos", label:"Vehículos", group:"Carga de datos", title:"Vehículos", sub:"Alta de unidades — cada vehículo es un registro independiente"},
+  {id:"gastos", label:"Gastos", group:"Carga de datos", title:"Gastos", sub:"Cada gasto es un movimiento nuevo. Los anteriores no se editan"},
+  {id:"precios", label:"Precios", group:"Carga de datos", title:"Precios", sub:"Historial de cambios de precio por vehículo"},
+  {id:"ventas", label:"Ventas", group:"Carga de datos", title:"Ventas", sub:"Al cargar una venta, el vehículo sale del stock"},
+  {id:"interesados", label:"Interesados", group:"Carga de datos", title:"Interesados", sub:"Seguimiento simple de clientes interesados por vehículo"},
+  {id:"config", label:"Configuración", group:"Sistema", title:"Configuración", sub:"Umbrales y parámetros — todo el sistema se recalcula solo"},
+];
+
+let currentSection = "dashboard";
+
+function renderNav(){
+  const nav = document.getElementById("mainnav");
+  let html = ""; let lastGroup = null;
+  SECTIONS.forEach(s=>{
+    if(s.group!==lastGroup){ html += `<div class="navgroup-label">${s.group}</div>`; lastGroup=s.group; }
+    html += `<div class="navlink ${s.id===currentSection?'active':''}" data-nav="${s.id}">${ICONS[s.id]}<span>${s.label}</span></div>`;
+  });
+  nav.innerHTML = html;
+  nav.querySelectorAll("[data-nav]").forEach(el=>{
+    el.addEventListener("click", ()=>{ goTo(el.getAttribute("data-nav")); });
+  });
+}
+
+function goTo(id){
+  currentSection = id;
+  const s = SECTIONS.find(x=>x.id===id);
+  document.getElementById("pagetitle").textContent = s.title;
+  document.getElementById("pagesub").textContent = s.sub;
+  renderNav();
+  renderPane();
+  window.scrollTo({top:0});
+}
+
+/* ======================================================================
+   RENDER: DASHBOARD
+====================================================================== */
+function renderDashboard(){
+  const inv = computeInventory();
+  const cfg = DATA.config;
+  const activos = inv.filter(v=>v.estado!=="Vendido");
+  const vendidos = inv.filter(v=>v.estado==="Vendido");
+
+  const capitalTotal = activos.reduce((s,v)=>s+v.capitalInmovilizado,0);
+  const capitalAnejo = activos.filter(v=>v.diasEnStock>=cfg.diasAmarillo).reduce((s,v)=>s+v.capitalInmovilizado,0);
+  const nAnejo = activos.filter(v=>v.diasEnStock>=cfg.diasAmarillo).length;
+  const diasProm = activos.length ? activos.reduce((s,v)=>s+v.diasEnStock,0)/activos.length : 0;
+  const gastosTotalStock = activos.reduce((s,v)=>s+v.gastosAcum,0);
+  const ticketProm = activos.length ? activos.reduce((s,v)=>s+v.precioActual,0)/activos.length : 0;
+  const masCaro = activos.length ? Math.max(...activos.map(v=>v.precioActual)) : 0;
+  const masBarato = activos.length ? Math.min(...activos.map(v=>v.precioActual)) : 0;
+  const facturacionActual = activos.reduce((s,v)=>s+v.precioActual,0);
+  const gananciaActual = activos.reduce((s,v)=>s+v.gananciaEstimada,0);
+  const margenPonderado = facturacionActual ? gananciaActual/facturacionActual : 0;
+  const facturacionObjetivo = activos.reduce((s,v)=>s+v.precioParaMargenObjetivo,0);
+  const gananciaObjetivo = facturacionObjetivo - capitalTotal;
+  const margenRealVendidos = vendidos.length ? (vendidos.reduce((s,v)=>s+v.venta.precioFinal,0) - vendidos.reduce((s,v)=>s+v.costoTotal,0)) / vendidos.reduce((s,v)=>s+v.venta.precioFinal,0) : 0;
+
+  // Ganancia real ajustada por inflación (IPC) — stock activo
+  const gananciaEstimadaUSD = cfg.tipoCambio ? gananciaActual/cfg.tipoCambio : 0;
+  const gananciaRealTotalUSD = activos.reduce((s,v)=>s+v.gananciaRealIPCUSD,0);
+  const autosConPerdidaReal = activos.filter(v=>v.margenRealIPC!==null && v.margenRealIPC<0).length;
+  const margenRealPonderado = facturacionActual ? activos.reduce((s,v)=>s+v.gananciaRealIPC,0)/facturacionActual : 0;
+  const inflacionPromedio = inv.length ? indiceHoy()/(inv.reduce((s,v)=>s+v.indiceCompra,0)/inv.length) - 1 : 0;
+  const ratioNominalReal = gananciaEstimadaUSD ? gananciaRealTotalUSD/gananciaEstimadaUSD : 0;
+  const deltaNominalReal = ratioNominalReal - 1;
+
+  const buckets = [
+    {label:"0–"+cfg.diasVerde+" días", min:0, max:cfg.diasVerde, color:"var(--good)"},
+    {label:(cfg.diasVerde+1)+"–"+cfg.diasAmarillo+" días", min:cfg.diasVerde+1, max:cfg.diasAmarillo, color:"var(--warning)"},
+    {label:(cfg.diasAmarillo+1)+"–"+cfg.diasRojo+" días", min:cfg.diasAmarillo+1, max:cfg.diasRojo, color:"var(--serious)"},
+    {label:"Más de "+cfg.diasRojo+" días", min:cfg.diasRojo+1, max:Infinity, color:"var(--critical)"},
+  ].map(b=>{
+    const val = activos.filter(v=>v.diasEnStock>=b.min && v.diasEnStock<=b.max).reduce((s,v)=>s+v.capitalInmovilizado,0);
+    const n = activos.filter(v=>v.diasEnStock>=b.min && v.diasEnStock<=b.max).length;
+    return {label:b.label, value:val, valueLabel: (val/1e6).toLocaleString("es-AR",{maximumFractionDigits:1})+"M", tooltip: fmtARS(val)+" · "+n+" vehículo(s)", color:b.color};
+  });
+
+  const gastosPorCat = CATEGORIAS.map(cat=>{
+    const val = DATA.gastos.filter(g=>g.categoria===cat).reduce((s,g)=>s+g.importe,0);
+    const n = DATA.gastos.filter(g=>g.categoria===cat).length;
+    return {label:cat, value:val, n, valueLabel: val? (val/1e6).toLocaleString("es-AR",{maximumFractionDigits:2})+"M":"—", tooltip: fmtARS(val)+" · "+n+" gasto(s)"};
+  }).filter(x=>x.value>0).sort((a,b)=>b.value-a.value).map(x=>({...x, color:"var(--accent)"}));
+
+  const criticos = activos.filter(v=>v.alerta==="critico").sort((a,b)=>b.diasEnStock-a.diasEnStock);
+  const margenBajo = activos.filter(v=>v.margenActual < cfg.margenMinimo).sort((a,b)=>a.margenActual-b.margenActual);
+
+  const masAntiguo = activos.length? activos.reduce((a,b)=> b.diasEnStock>a.diasEnStock?b:a) : null;
+  const mayorGastoV = activos.length? activos.reduce((a,b)=> b.gastosAcum>a.gastosAcum?b:a) : null;
+  const mejorMargenV = activos.length? activos.reduce((a,b)=> b.margenActual>a.margenActual?b:a) : null;
+  const necesitanAjuste = activos.filter(v=>v.ajusteNecesario>cfg.toleranciaDesvioPrecio);
+  const faltanteTotal = necesitanAjuste.reduce((s,v)=>s+(v.precioParaMargenObjetivo-v.precioActual),0);
+  const nombreV = v => `${v.marca} ${v.modelo} ${v.anio}`;
+
+  const topAntiguedad = activos.slice().sort((a,b)=>b.diasEnStock-a.diasEnStock).slice(0,5);
+  const topCapitalRank = activos.slice().sort((a,b)=>b.capitalInmovilizado-a.capitalInmovilizado).slice(0,5);
+  const topMenorMargen = activos.slice().sort((a,b)=>a.margenActual-b.margenActual).slice(0,5);
+  const topGastoRank = activos.slice().sort((a,b)=>b.gastosAcum-a.gastosAcum).slice(0,5);
+
+  const rankList = (items, valueFn) => items.length? items.map((v,i)=>`
+      <div style="display:flex; justify-content:space-between; align-items:baseline; padding:6px 0; border-bottom:1px solid var(--border); gap:10px;">
+        <div style="display:flex; gap:8px; min-width:0;"><span style="color:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:11.5px; flex:none;">${i+1}</span><span style="font-size:12.5px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(nombreV(v))}</span></div>
+        <span class="mono" style="font-size:12px; flex:none; color:var(--ink-2);">${valueFn(v)}</span>
+      </div>`).join("") : `<div class="empty" style="padding:14px 0;">Sin datos</div>`;
+
+  const integrity = integrityChecks();
+  const integrityOk = integrity.every(c=>c.n===0);
+
+  return `
+    <div class="grid grid-stats">
+      <div class="card stat">
+        <div class="stat-label">CAPITAL TOTAL INMOVILIZADO</div>
+        <div class="stat-value">${fmtARS(capitalTotal)}</div>
+        <div class="stat-caption">${fmtUSD(capitalTotal/cfg.tipoCambio)} · compra + gastos de ${activos.length} unidad(es)</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">VEHÍCULOS EN STOCK</div>
+        <div class="stat-value">${activos.length}</div>
+        <div class="stat-caption">${vendidos.length} vendido(s) histórico(s)</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">DÍAS PROMEDIO EN STOCK</div>
+        <div class="stat-value">${diasProm.toFixed(0)}</div>
+        <div class="stat-caption">Plazo normal configurado: ${cfg.diasVerde} días</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">MARGEN ACTUAL PONDERADO</div>
+        <div class="stat-value">${fmtPct(margenPonderado)}</div>
+        <div class="stat-caption">Objetivo configurado: ${fmtPct(cfg.margenObjetivo,0)}</div>
+      </div>
+
+      <div class="card stat">
+        <div class="stat-label">CAPITAL EN UNIDADES AÑEJAS</div>
+        <div class="stat-value critical">${fmtARS(capitalAnejo)}</div>
+        <div class="stat-caption critical">${fmtUSD(capitalAnejo/cfg.tipoCambio)} · ${nAnejo} unidad(es) con más de ${cfg.diasAmarillo} días</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">TOTAL GASTOS DEL STOCK</div>
+        <div class="stat-value">${fmtARS(gastosTotalStock)}</div>
+        <div class="stat-caption">${fmtUSD(gastosTotalStock/cfg.tipoCambio)} · promedio ${fmtARS(activos.length?gastosTotalStock/activos.length:0)} por unidad</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">TICKET PROMEDIO DEL STOCK</div>
+        <div class="stat-value">${fmtARS(ticketProm)}</div>
+        <div class="stat-caption">Más caro ${fmtARS(masCaro)} · más barato ${fmtARS(masBarato)}</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">MARGEN REAL DE VENDIDOS</div>
+        <div class="stat-value good">${fmtPct(margenRealVendidos)}</div>
+        <div class="stat-caption">${vendidos.length} operación(es) cerrada(s)</div>
+      </div>
+    </div>
+
+    <div class="grid grid-stats" style="margin-top:14px;">
+      <div class="card stat">
+        <div class="stat-label">FACTURACIÓN ESTIMADA (precio actual)</div>
+        <div class="stat-value small">${fmtARS(facturacionActual)}</div>
+        <div class="stat-caption">${fmtUSD(facturacionActual/cfg.tipoCambio)} · margen ${fmtPct(margenPonderado)}</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">GANANCIA ESTIMADA</div>
+        <div class="stat-value small good">${fmtARS(gananciaActual)}</div>
+        <div class="stat-caption good">${fmtUSD(gananciaActual/cfg.tipoCambio)} · al precio publicado hoy</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">FACTURACIÓN CON MARGEN OBJETIVO</div>
+        <div class="stat-value small accent">${fmtARS(facturacionObjetivo)}</div>
+        <div class="stat-caption accent">${fmtUSD(facturacionObjetivo/cfg.tipoCambio)}</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">GANANCIA CON MARGEN OBJETIVO</div>
+        <div class="stat-value small accent">${fmtARS(gananciaObjetivo)}</div>
+        <div class="stat-caption accent">${fmtUSD(gananciaObjetivo/cfg.tipoCambio)} · upside de ${fmtARS(gananciaObjetivo-gananciaActual)} vs. hoy</div>
+      </div>
+    </div>
+
+    <div class="grid grid-stats" style="margin-top:14px;">
+      <div class="card stat">
+        <div class="stat-label">GANANCIA REAL EN USD (ajustada por inflación)</div>
+        <div class="stat-value small ${gananciaRealTotalUSD<0?'critical':'good'}">${fmtUSD(gananciaRealTotalUSD)}</div>
+        <div class="stat-caption ${gananciaRealTotalUSD<0?'critical':''}">Al precio de hoy. Margen real ponderado ${fmtPct(margenRealPonderado)}</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">AUTOS CON PÉRDIDA REAL</div>
+        <div class="stat-value small ${autosConPerdidaReal>0?'critical':'good'}">${autosConPerdidaReal}</div>
+        <div class="stat-caption">Margen nominal positivo pero real negativo tras un ${fmtPct(inflacionPromedio)} de inflación promedio</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">GANANCIA NOMINAL vs REAL</div>
+        <div class="stat-value small ${deltaNominalReal<0?'critical':''}">${fmtPct(ratioNominalReal,0)}</div>
+        <div class="stat-caption ${deltaNominalReal<0?'critical':''}">La ganancia real es ${deltaNominalReal>=0?"+":""}${fmtPct(deltaNominalReal,0)} respecto de la nominal</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">ÍNDICE IPC USADO</div>
+        <div class="stat-value small">${indiceHoy().toLocaleString("es-AR",{maximumFractionDigits:2})}</div>
+        <div class="stat-caption">Base jul-25=100. Fuente: INDEC.</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin:22px 0 2px;">Evolución mensual</div>
+    <div class="section-note">Reconstruida a partir de las fechas ya cargadas — muestra cómo la inflación se va comiendo la ganancia real mes a mes.</div>
+    <div class="grid grid-2">
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Capital inmovilizado — evolución mensual</div>
+        <div class="section-note">Plata inmovilizada en stock activo, a fin de cada mes (pesos nominales de ese momento)</div>
+        <div id="chartEvolCapital"></div>
+      </div>
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Ganancia acumulada: nominal vs. real (USD)</div>
+        <div class="section-note">Ventas cerradas hasta cada mes — la línea real ya descuenta la inflación</div>
+        <div id="chartEvolGanancia"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px;">
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Capital inmovilizado por antigüedad</div>
+        <div class="section-note">Cuánto capital está parado en cada franja de días en stock</div>
+        <div id="chartBuckets"></div>
+      </div>
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Gastos acumulados por categoría</div>
+        <div class="section-note">Suma histórica de gastos cargados, todas las unidades</div>
+        <div id="chartGastos"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px;">
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">🔴 Vehículos críticos (${cfg.diasRojo}+ días)</div>
+        <div class="section-note">Ordenados por días en stock</div>
+        ${criticos.length? criticos.map(v=>`
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-weight:600; font-size:13px;">${esc(v.marca)} ${esc(v.modelo)} ${v.anio}</div>
+              <div style="font-size:11.5px; color:var(--ink-3);">${v.diasEnStock} días · margen actual ${fmtPct(v.margenActual)}</div>
+            </div>
+            <button class="btn btn-sm btn-ghost" data-goficha="${v.id}">Ver ficha →</button>
+          </div>`).join("") : `<div class="empty">No hay vehículos en estado crítico.</div>`}
+      </div>
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">⚠️ Margen por debajo del mínimo</div>
+        <div class="section-note">Mínimo configurado: ${fmtPct(cfg.margenMinimo,0)} sobre precio de venta</div>
+        ${margenBajo.length? margenBajo.map(v=>`
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-weight:600; font-size:13px;">${esc(v.marca)} ${esc(v.modelo)} ${v.anio}</div>
+              <div style="font-size:11.5px; color:var(--ink-3);">margen ${fmtPct(v.margenActual)} · esperado ${fmtPct(v.margenEsperado)}</div>
+            </div>
+            <button class="btn btn-sm btn-ghost" data-goficha="${v.id}">Ver ficha →</button>
+          </div>`).join("") : `<div class="empty">Ningún vehículo por debajo del margen mínimo.</div>`}
+      </div>
+    </div>
+
+    <div class="card" style="padding:18px 20px; margin-top:14px;">
+      <div class="section-title">Alertas e indicadores automáticos</div>
+      <div class="section-note">Se recalculan solos con cada cambio de datos o de configuración</div>
+      <div style="display:flex; flex-direction:column; gap:9px; font-size:12.5px; line-height:1.6;">
+        <div>⚠️ Tenés <strong>${fmtARS(capitalAnejo)}</strong> inmovilizados en ${nAnejo} vehículo(s) con más de ${cfg.diasAmarillo} días en stock.</div>
+        ${criticos.length? `<div>🔴 ${criticos.length} vehículo(s) superan los ${cfg.diasRojo} días: ${criticos.map(v=>esc(nombreV(v))).join(", ")}.</div>` : ""}
+        ${margenBajo.length? `<div>⚠️ ${margenBajo.length} vehículo(s) con margen actual por debajo del mínimo (${fmtPct(cfg.margenMinimo,0)}): ${margenBajo.map(v=>esc(nombreV(v))).join(", ")}.</div>` : ""}
+        ${masAntiguo? `<div>🕒 Unidad más antigua: <strong>${esc(nombreV(masAntiguo))}</strong> — ${masAntiguo.diasEnStock} días y ${fmtARS(masAntiguo.capitalInmovilizado)} inmovilizados.</div>` : ""}
+        ${mayorGastoV? `<div>💰 Mayor gasto acumulado: <strong>${esc(nombreV(mayorGastoV))}</strong> con ${fmtARS(mayorGastoV.gastosAcum)} en gastos sobre el precio de compra.</div>` : ""}
+        ${mejorMargenV? `<div>📈 Mejor margen actual: <strong>${esc(nombreV(mejorMargenV))}</strong> con ${fmtPct(mejorMargenV.margenActual)}, contra un promedio ponderado de ${fmtPct(margenPonderado)}.</div>` : ""}
+        ${necesitanAjuste.length? `<div>🎯 ${necesitanAjuste.length} vehículo(s) están más de ${fmtPct(cfg.toleranciaDesvioPrecio,0)} por debajo del precio necesario para el margen objetivo de ${fmtPct(cfg.margenObjetivo,0)}: faltan ${fmtARS(faltanteTotal)} en total.</div>` : `<div>✅ Ningún vehículo necesita ajuste de precio para llegar al margen objetivo.</div>`}
+        <div>${integrityOk? "✅ Sin IDs duplicados y sin gastos, precios o ventas apuntando a un vehículo que no existe." : "⚠️ Hay inconsistencias de datos — revisá el panel de Controles de integridad más abajo."}</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin:22px 0 2px;">Rankings del stock — Top 5</div>
+    <div class="section-note">Solo unidades en stock (no vendidas)</div>
+    <div class="grid grid-stats">
+      <div class="card" style="padding:16px 18px;">
+        <h3 style="font-size:11px; margin:0 0 8px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase;">Mayor antigüedad</h3>
+        ${rankList(topAntiguedad, v=>v.diasEnStock+" d")}
+      </div>
+      <div class="card" style="padding:16px 18px;">
+        <h3 style="font-size:11px; margin:0 0 8px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase;">Mayor capital inmovilizado</h3>
+        ${rankList(topCapitalRank, v=>(v.capitalInmovilizado/1e6).toLocaleString("es-AR",{maximumFractionDigits:1})+"M")}
+      </div>
+      <div class="card" style="padding:16px 18px;">
+        <h3 style="font-size:11px; margin:0 0 8px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase;">Menor margen actual</h3>
+        ${rankList(topMenorMargen, v=>fmtPct(v.margenActual))}
+      </div>
+      <div class="card" style="padding:16px 18px;">
+        <h3 style="font-size:11px; margin:0 0 8px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase;">Mayor gasto acumulado</h3>
+        ${rankList(topGastoRank, v=>(v.gastosAcum/1e6).toLocaleString("es-AR",{maximumFractionDigits:2})+"M")}
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px;">
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Top vehículos por capital inmovilizado</div>
+        <div class="section-note">Las unidades que más plata tienen paradas hoy</div>
+        <div id="chartTopCapital"></div>
+      </div>
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Controles de integridad</div>
+        <div class="section-note">Chequeos automáticos de consistencia entre las cuatro tablas</div>
+        <div style="display:flex; flex-direction:column;">
+          ${integrity.map(c=>`
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px;">
+              <span style="color:var(--ink-2);">${c.label}</span>
+              <span class="pill ${c.n===0?'pill-normal':'pill-critico'}"><span class="dot"></span>${c.n}</span>
+            </div>`).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function afterRenderDashboard(){
+  const inv = computeInventory();
+  const cfg = DATA.config;
+  const activos = inv.filter(v=>v.estado!=="Vendido");
+
+  const buckets = [
+    {label:"0–"+cfg.diasVerde, min:0, max:cfg.diasVerde, color:"var(--good)"},
+    {label:(cfg.diasVerde+1)+"–"+cfg.diasAmarillo, min:cfg.diasVerde+1, max:cfg.diasAmarillo, color:"var(--warning)"},
+    {label:(cfg.diasAmarillo+1)+"–"+cfg.diasRojo, min:cfg.diasAmarillo+1, max:cfg.diasRojo, color:"var(--serious)"},
+    {label:"+"+cfg.diasRojo, min:cfg.diasRojo+1, max:Infinity, color:"var(--critical)"},
+  ].map(b=>{
+    const vs = activos.filter(v=>v.diasEnStock>=b.min && v.diasEnStock<=b.max);
+    const val = vs.reduce((s,v)=>s+v.capitalInmovilizado,0);
+    return {label:b.label+" días", value:val, valueLabel: val? "$ "+(val/1e6).toLocaleString("es-AR",{maximumFractionDigits:1})+"M":"$ 0", tooltip: fmtARS(val)+" · "+vs.length+" vehículo(s)", color:b.color};
+  });
+  const elB = document.getElementById("chartBuckets");
+  if(elB) hBarChart(elB, buckets, {ariaLabel:"Capital por antigüedad"});
+
+  const evol = evolucionMensual();
+  const elEvolCap = document.getElementById("chartEvolCapital");
+  if(elEvolCap) lineChart(elEvolCap, evol.map(e=>({x:e.asOf, y:e.capital})), {h:180});
+  const elEvolGan = document.getElementById("chartEvolGanancia");
+  if(elEvolGan){
+    multiLineChart(elEvolGan, [
+      {label:"Ganancia nominal acumulada", color:"var(--ink-3)", fmt:fmtUSD, points: evol.map(e=>({x:e.asOf, y:e.gananciaNomAcum/cfg.tipoCambio}))},
+      {label:"Ganancia real acumulada (IPC)", color:"var(--accent)", fmt:fmtUSD, points: evol.map(e=>({x:e.asOf, y:e.gananciaRealAcum/cfg.tipoCambio}))},
+    ], {h:180});
+  }
+
+  const gastosPorCat = CATEGORIAS.map(cat=>{
+    const rows = DATA.gastos.filter(g=>g.categoria===cat);
+    const val = rows.reduce((s,g)=>s+g.importe,0);
+    return {label:cat, value:val, n:rows.length};
+  }).filter(x=>x.value>0).sort((a,b)=>b.value-a.value).slice(0,8)
+    .map(x=>({label:x.label, value:x.value, valueLabel:"$ "+(x.value/1e6).toLocaleString("es-AR",{maximumFractionDigits:2})+"M", tooltip: fmtARS(x.value)+" · "+x.n+" gasto(s)", color:"var(--accent)"}));
+  const elG = document.getElementById("chartGastos");
+  if(elG) hBarChart(elG, gastosPorCat, {ariaLabel:"Gastos por categoría"});
+
+  const topCapital = activos.slice().sort((a,b)=>b.capitalInmovilizado-a.capitalInmovilizado).slice(0,6)
+    .map(v=>({label:v.marca+" "+v.modelo+" "+v.anio, value:v.capitalInmovilizado, valueLabel:"$ "+(v.capitalInmovilizado/1e6).toLocaleString("es-AR",{maximumFractionDigits:1})+"M", tooltip: fmtARS(v.capitalInmovilizado)+" · "+v.diasEnStock+" días", color:"var(--accent)"}));
+  const elT = document.getElementById("chartTopCapital");
+  if(elT) hBarChart(elT, topCapital, {ariaLabel:"Top vehículos por capital inmovilizado", labelW:150});
+
+  document.querySelectorAll("[data-goficha]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      window._fichaSelect = b.getAttribute("data-goficha");
+      goTo("ficha");
+    });
+  });
+}
+
+/* ======================================================================
+   RENDER: INVENTARIO
+====================================================================== */
+function filaInventario(v){
+  return `
+    <tr class="rowhover" data-goficha="${v.id}">
+      <td><div style="display:flex; align-items:center; gap:9px;">
+        ${v.foto? `<img src="${v.foto}" style="width:38px;height:28px;object-fit:cover;border-radius:5px;flex:none;">` : `<div style="width:38px;height:28px;border-radius:5px;background:var(--surface-sunken);flex:none;"></div>`}
+        <div><div style="font-weight:600;">${esc(v.marca)} ${esc(v.modelo)} ${v.anio}</div><div style="font-size:11px; color:var(--ink-3);">${esc(v.id)} · ${esc(v.version)}</div></div>
+      </div></td>
+      <td>${pillFor(v.alerta)}</td>
+      <td class="num">${v.diasEnStock}</td>
+      <td class="num">${fmtARS(v.costoTotal)}</td>
+      <td class="num">${fmtARS(v.precioActual)}</td>
+      <td class="num"><div style="color:${v.gananciaEstimada<0?'var(--critical)':'var(--ink)'};">${fmtARS(v.gananciaEstimada)}</div><div style="font-size:10.5px; color:var(--ink-3);">${fmtUSD(v.gananciaEstimada/DATA.config.tipoCambio)}</div></td>
+      <td class="num">${fmtPct(v.margenActual)}</td>
+      <td class="num" style="color:${v.margenRealIPC<0?'var(--critical)':'var(--ink)'};" title="Índice IPC en compra: ${v.indiceCompra.toLocaleString("es-AR",{maximumFractionDigits:2})} · Costo a pesos de hoy: ${fmtARS(v.costoTotalHoy)}">${v.margenRealIPC!==null?fmtPct(v.margenRealIPC):"—"}</td>
+      <td class="num" style="color:${v.gananciaRealIPCUSD<0?'var(--critical)':'var(--ink)'};">${fmtUSD(v.gananciaRealIPCUSD)}</td>
+      <td class="diag">${v.diagnostico}</td>
+    </tr>`;
+}
+function ordenInventario(inv){
+  const order = {critico:0, atencion:1, observar:2, normal:3, vendido:4};
+  return inv.slice().sort((a,b)=>order[a.alerta]-order[b.alerta] || b.diasEnStock-a.diasEnStock);
+}
+function renderInventario(){
+  const inv = ordenInventario(computeInventory());
+  const activos = inv.filter(v=>v.estado!=="Vendido").length;
+  const marcas = [...new Set(DATA.vehiculos.map(v=>v.marca))].sort();
+
+  return `
+    <div class="card" style="padding:14px 16px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div class="section-note" style="margin:0;">✔ ${DATA.vehiculos.length} de ${DATA.config.capacidad} vehículos según la capacidad configurada · ${activos} en stock. Se recalcula solo al cargar vehículos, gastos, precios o ventas.</div>
+    </div>
+    <div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <input id="invBuscar" placeholder="Buscar por marca, modelo o ID" style="flex:1; min-width:200px; padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface-sunken); color:var(--ink); font-size:13px;">
+      <select id="invEstado" style="padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface-sunken); color:var(--ink); font-size:13px;">
+        <option value="">Todos los estados</option>
+        ${ESTADOS.map(e=>`<option value="${e}">${e}</option>`).join("")}
+        <option value="Vendido">Vendido</option>
+      </select>
+      <select id="invMarca" style="padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface-sunken); color:var(--ink); font-size:13px;">
+        <option value="">Todas las marcas</option>
+        ${marcas.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join("")}
+      </select>
+      <select id="invDias" style="padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface-sunken); color:var(--ink); font-size:13px;">
+        <option value="">Cualquier antigüedad</option>
+        <option value="0-30">0–30 días</option>
+        <option value="31-60">31–60 días</option>
+        <option value="61-90">61–90 días</option>
+        <option value="91-+">Más de 90 días</option>
+      </select>
+      <span class="form-msg" id="invContador" style="color:var(--ink-3); font-weight:500;"></span>
+    </div>
+    <div class="card table-wrap">
+      <table id="tablaInventario" style="min-width:1180px;">
+        <thead><tr>
+          <th>Vehículo</th><th>Estado</th><th class="num">Días</th><th class="num">Costo total</th>
+          <th class="num">Precio actual</th><th class="num">Ganancia estimada</th><th class="num">Margen actual</th>
+          <th class="num">Margen real (IPC)</th><th class="num">Ganancia real (USD)</th><th>Diagnóstico</th>
+        </tr></thead>
+        <tbody id="tbodyInventario">${inv.map(filaInventario).join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderInventario(){
+  const inv = ordenInventario(computeInventory());
+  const tabla = document.getElementById("tablaInventario");
+  const tbody = document.getElementById("tbodyInventario");
+  const contador = document.getElementById("invContador");
+  function aplicarFiltros(){
+    const q = (document.getElementById("invBuscar").value||"").toLowerCase().trim();
+    const est = document.getElementById("invEstado").value;
+    const marca = document.getElementById("invMarca").value;
+    const dias = document.getElementById("invDias").value;
+    const filtrado = inv.filter(v=>{
+      if(q && !((v.marca+" "+v.modelo+" "+v.id).toLowerCase().includes(q))) return false;
+      if(est && v.estado!==est) return false;
+      if(marca && v.marca!==marca) return false;
+      if(dias){
+        const [minS,maxS] = dias.split("-");
+        const min = parseInt(minS,10), max = maxS==="+"?Infinity:parseInt(maxS,10);
+        if(v.diasEnStock<min || v.diasEnStock>max) return false;
+      }
+      return true;
+    });
+    tbody.innerHTML = filtrado.map(filaInventario).join("") || `<tr><td colspan="10" class="empty">Ningún vehículo coincide con el filtro.</td></tr>`;
+    if(contador) contador.textContent = filtrado.length+" de "+inv.length+" vehículo(s)";
+  }
+  ["invBuscar"].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener("input", aplicarFiltros); });
+  ["invEstado","invMarca","invDias"].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener("change", aplicarFiltros); });
+  aplicarFiltros();
+  if(tabla){
+    tabla.addEventListener("click", (e)=>{
+      const tr = e.target.closest("[data-goficha]");
+      if(tr){ window._fichaSelect = tr.getAttribute("data-goficha"); goTo("ficha"); }
+    });
+  }
+}
+
+/* ======================================================================
+   RENDER: FICHA
+====================================================================== */
+function renderFicha(){
+  const inv = computeInventory();
+  const activos = inv.filter(v=>v.estado!=="Vendido");
+  const selectedId = window._fichaSelect && inv.find(v=>v.id===window._fichaSelect) ? window._fichaSelect : (activos[0]? activos[0].id : (inv[0]?inv[0].id:null));
+  window._fichaSelect = selectedId;
+
+  if(!selectedId){
+    return `<div class="card empty">No hay vehículos cargados todavía. Agregá uno en la sección Vehículos.</div>`;
+  }
+  const v = inv.find(x=>x.id===selectedId);
+  const cfg = DATA.config;
+  const facturacionActivos = activos.reduce((s,x)=>s+x.precioActual,0);
+  const gananciaActivos = activos.reduce((s,x)=>s+x.gananciaEstimada,0);
+  const margenPonderadoStock = facturacionActivos ? gananciaActivos/facturacionActivos : 0;
+
+  // Ganancia real en USD (ajustada por inflación) — bloque estático, no depende del simulador
+  const inflacionAcumulada = indiceHoy()/v.indiceCompra - 1;
+  const precioNecesarioReal = v.costoTotalHoy/(1-cfg.margenObjetivo);
+  const precioPublicarReal = roundUp(precioNecesarioReal, cfg.redondeo);
+  const gananciaRealObjetivo = precioPublicarReal - v.costoTotalHoy;
+  const gananciaRealObjetivoUSD = gananciaRealObjetivo/cfg.tipoCambio;
+  const diferenciaRealVsActual = precioPublicarReal - v.precioActual;
+  const sentenciaReal = `Con ${fmtPct(inflacionAcumulada)} de inflación acumulada, el costo real hoy es ${fmtARS(v.costoTotalHoy)}. Al precio actual, la ganancia real es ${fmtUSD(v.gananciaRealIPCUSD)}. Para ${fmtPct(cfg.margenObjetivo,0)} de margen real hay que publicarlo a ${fmtARS(precioPublicarReal)} (${fmtUSD(gananciaRealObjetivoUSD)} de ganancia real).`;
+
+  return `
+    <div class="ficha-select">
+      <select id="fichaPicker">
+        ${inv.map(x=>`<option value="${x.id}" ${x.id===selectedId?"selected":""}>${esc(x.marca)} ${esc(x.modelo)} ${x.anio} — ${x.id}${x.estado==="Vendido"?" (vendido)":""}</option>`).join("")}
+      </select>
+      ${pillFor(v.alerta)}
+    </div>
+
+    <div class="card" style="padding:16px 20px; margin-bottom:14px;">
+      <div class="diag-banner">${v.diagnostico || "Sin observaciones."}</div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card metric-block">
+        <h3>DATOS DEL VEHÍCULO</h3>
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+          <div style="width:110px;height:80px;border-radius:8px;overflow:hidden;background:var(--surface-sunken);flex:none;display:flex;align-items:center;justify-content:center;">
+            ${v.foto? `<img src="${v.foto}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:10.5px;color:var(--ink-3);">Sin foto</span>`}
+          </div>
+          <div style="min-width:0;">
+            <label style="font-size:11px; color:var(--ink-3); display:block; margin-bottom:4px;">Foto del vehículo</label>
+            <input type="file" accept="image/*" id="fotoInputFicha" style="font-size:11.5px; max-width:180px;">
+          </div>
+        </div>
+        <div class="metric-row"><span class="k">Marca / modelo</span><span class="v">${esc(v.marca)} ${esc(v.modelo)}</span></div>
+        <div class="metric-row"><span class="k">Año / versión</span><span class="v">${v.anio} · ${esc(v.version)}</span></div>
+        <div class="metric-row"><span class="k">Kilometraje</span><span class="v">${v.km.toLocaleString("es-AR")} km</span></div>
+        <div class="metric-row"><span class="k">Fecha de compra</span><span class="v">${fmtDate(v.fechaCompra)}</span></div>
+        <div class="metric-row"><span class="k">Fecha de ingreso a stock</span><span class="v">${fmtDate(v.fechaIngreso)}</span></div>
+        <div class="metric-row"><span class="k">Días en stock</span><span class="v">${v.diasEnStock}</span></div>
+        <div class="metric-row"><span class="k">Estado</span><span class="v">${v.estado}</span></div>
+        ${v.obs? `<div class="metric-row" style="flex-direction:column; align-items:flex-start; gap:2px;"><span class="k">Observaciones</span><span class="v" style="font-family:inherit; font-weight:400;">${esc(v.obs)}</span></div>`:""}
+      </div>
+
+      <div class="card metric-block">
+        <h3>CAPITAL Y COSTOS</h3>
+        <div class="metric-row"><span class="k">Precio de compra</span><span class="v">${fmtARS(v.precioCompra)}</span></div>
+        <div class="metric-row"><span class="k">Gastos acumulados</span><span class="v">${fmtARS(v.gastosAcum)}</span></div>
+        <div class="metric-row"><span class="k">Costo total</span><span class="v">${fmtARS(v.costoTotal)}</span></div>
+        <div class="metric-row"><span class="k">Capital inmovilizado</span><span class="v">${fmtARS(v.capitalInmovilizado)}</span></div>
+        <div class="metric-row"><span class="k">Capital en USD (ref.)</span><span class="v">${fmtUSD(v.capitalInmovilizado/cfg.tipoCambio)}</span></div>
+        <div class="metric-row"><span class="k">Gastos / precio de compra</span><span class="v">${fmtPct(v.gastosRatio)}</span></div>
+        <div class="metric-row"><span class="k">Costo diario de inmovilización</span><span class="v">${fmtARS(v.costoDiario)}</span></div>
+        <div class="metric-row"><span class="k">Gastos registrados</span><span class="v">${v.cantidadGastos}</span></div>
+      </div>
+
+      <div class="card metric-block">
+        <h3>PRECIOS Y RENTABILIDAD</h3>
+        <div class="metric-row"><span class="k">Precio objetivo</span><span class="v">${fmtARS(v.precioObjetivo)}</span></div>
+        <div class="metric-row"><span class="k">Precio actual publicado</span><span class="v">${fmtARS(v.precioActual)}</span></div>
+        ${(()=>{ const ref = buscarReferencia(v.marca, v.modelo, v.anio); if(!ref) return ""; const dif = v.precioActual? (v.precioActual/ref.precio - 1) : null; return `<div class="metric-row"><span class="k"><strong style="color:var(--accent);" title="${esc(ref.fuente||"")}">VALOR DE REVISTA</strong>${ref.exacto?"":" (año "+ref.anioRef+" ajustado)"}</span><span class="v" style="color:var(--accent);">${fmtARS(ref.precio)}</span></div>
+        <div class="metric-row"><span class="k">Precio publicado vs. REVISTA</span><span class="v" style="color:${dif<0?'var(--warning)':'var(--good)'};">${dif!==null?(dif>=0?"+":"")+fmtPct(dif):"—"}</span></div>
+        ${ref.fuente? `<div style="font-size:10.5px; color:var(--ink-3); margin-top:2px;">Fuente: ${ref.url?`<a href="${esc(ref.url)}" target="_blank" rel="noopener">${esc(ref.fuente)} ↗</a>`:esc(ref.fuente)}</div>` : ""}`; })()}
+        <div class="metric-row"><span class="k">Variación vs. precio objetivo</span><span class="v" style="color:${v.varVsObjetivo<0?'var(--critical)':'var(--ink)'};">${v.varVsObjetivo!==null?fmtPct(v.varVsObjetivo):"—"}</span></div>
+        <div class="metric-row"><span class="k">Margen esperado</span><span class="v">${fmtPct(v.margenEsperado)}</span></div>
+        <div class="metric-row"><span class="k">Margen actual</span><span class="v">${fmtPct(v.margenActual)}</span></div>
+        <div class="metric-row"><span class="k">Margen vs. promedio del stock</span><span class="v" style="color:${(v.margenActual-margenPonderadoStock)<0?'var(--critical)':'var(--good)'};">${fmtPct(v.margenActual-margenPonderadoStock)}</span></div>
+        <div class="metric-row">
+          <span class="k">Ganancia estimada</span>
+          <span class="v" style="text-align:right; color:${v.gananciaEstimada<0?'var(--critical)':'var(--good)'};">
+            ${fmtARS(v.gananciaEstimada)}
+            <div style="font-size:11px; font-weight:500; color:var(--ink-3);">${fmtUSD(v.gananciaEstimada/cfg.tipoCambio)}</div>
+          </span>
+        </div>
+        ${v.estado==="Vendido"? `<div class="metric-row"><span class="k">Margen real de venta</span><span class="v">${fmtPct(v.margenReal)}</span></div>
+        <div class="metric-row"><span class="k">Precio final de venta</span><span class="v">${fmtARS(v.venta.precioFinal)}</span></div>
+        <div class="metric-row">
+          <span class="k">Ganancia real</span>
+          <span class="v" style="text-align:right; color:${(v.venta.precioFinal-v.costoTotal)<0?'var(--critical)':'var(--good)'};">
+            ${fmtARS(v.venta.precioFinal-v.costoTotal)}
+            <div style="font-size:11px; font-weight:500; color:var(--ink-3);">${fmtUSD((v.venta.precioFinal-v.costoTotal)/cfg.tipoCambio)}</div>
+          </span>
+        </div>` : ""}
+      </div>
+
+      <div class="card metric-block" id="simuladorBlock">
+        <h3>SIMULADOR DE PRECIO</h3>
+        <div class="field" style="margin-bottom:10px;">
+          <label for="margenDeseado">Margen deseado sobre precio de venta</label>
+          <input type="number" id="margenDeseado" min="0" max="90" step="1" value="${Math.round(cfg.margenObjetivo*100)}">
+        </div>
+        <div class="metric-row"><span class="k">Precio necesario (exacto)</span><span class="v" id="precioExacto">—</span></div>
+        <div class="metric-row"><span class="k">Precio a publicar (redondeado)</span><span class="v" id="precioSugerido" style="font-size:16px;">—</span></div>
+        <div class="metric-row"><span class="k">Diferencia vs. precio actual</span><span class="v" id="diferenciaPrecio">—</span></div>
+        <div class="metric-row"><span class="k">Ajuste sobre precio actual</span><span class="v" id="ajustePrecio">—</span></div>
+        <div class="metric-row">
+          <span class="k">Ganancia a ese precio</span>
+          <span class="v" style="text-align:right;">
+            <span id="gananciaSugerida">—</span>
+            <div style="font-size:11px; font-weight:500; color:var(--ink-3);" id="gananciaSugeridaUSD">—</div>
+          </span>
+        </div>
+        <div class="section-note" style="margin:10px 0 8px;">Fórmula: costo total ÷ (1 − margen deseado), redondeado al múltiplo de ${fmtARS(cfg.redondeo)}.</div>
+        <div style="border-top:1px solid var(--border); margin-top:2px; padding-top:10px;">
+          <div class="metric-row"><span class="k">Precio de equilibrio (margen 0%)</span><span class="v">${fmtARS(v.precioEquilibrio)}</span></div>
+          <div class="metric-row"><span class="k">Precio p/ margen mínimo (${fmtPct(cfg.margenMinimo,0)})</span><span class="v">${fmtARS(v.precioParaMargenMinimo)}</span></div>
+        </div>
+        <div class="diag-banner" style="margin-top:12px; font-size:12px;" id="simSentence"></div>
+      </div>
+    </div>
+
+    <div class="card metric-block" style="margin-top:14px;">
+      <h3>GANANCIA REAL EN USD (ajustada por inflación)</h3>
+      <div class="grid grid-2">
+        <div>
+          <div class="metric-row"><span class="k">Inflación acumulada desde la compra</span><span class="v">${fmtPct(inflacionAcumulada)}</span></div>
+          <div class="metric-row"><span class="k">Costo total a pesos de hoy</span><span class="v">${fmtARS(v.costoTotalHoy)}</span></div>
+          <div class="metric-row"><span class="k">Margen real hoy (precio actual)</span><span class="v" style="color:${v.margenRealIPC<0?'var(--critical)':'var(--good)'};">${v.margenRealIPC!==null?fmtPct(v.margenRealIPC):"—"}</span></div>
+          <div class="metric-row">
+            <span class="k">Ganancia real hoy</span>
+            <span class="v" style="text-align:right; color:${v.gananciaRealIPC<0?'var(--critical)':'var(--good)'};">
+              ${fmtARS(v.gananciaRealIPC)}
+              <div style="font-size:11px; font-weight:500; color:var(--ink-3);">${fmtUSD(v.gananciaRealIPCUSD)}</div>
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="metric-row"><span class="k">Precio necesario (margen real objetivo, ${fmtPct(cfg.margenObjetivo,0)})</span><span class="v">${fmtARS(precioNecesarioReal)}</span></div>
+          <div class="metric-row"><span class="k">Precio a publicar (redondeado)</span><span class="v">${fmtARS(precioPublicarReal)}</span></div>
+          <div class="metric-row"><span class="k">Diferencia vs. precio actual</span><span class="v">${diferenciaRealVsActual>=0?"+":""}${fmtARS(diferenciaRealVsActual)}</span></div>
+          <div class="metric-row">
+            <span class="k">Ganancia real objetivo</span>
+            <span class="v" style="text-align:right; color:var(--good);">
+              ${fmtARS(gananciaRealObjetivo)}
+              <div style="font-size:11px; font-weight:500; color:var(--ink-3);">${fmtUSD(gananciaRealObjetivoUSD)}</div>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="diag-banner" style="margin-top:12px; font-size:12px;">${sentenciaReal}</div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px; align-items:start;">
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Detalle de gastos</div>
+        <div class="section-note">${v.gastosVehiculo.length? v.gastosVehiculo.length+" gasto(s) registrados para esta unidad" : "Sin gastos registrados todavía"}</div>
+        ${v.gastosVehiculo.length? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th class="num">Importe</th></tr></thead>
+            <tbody>
+              ${v.gastosVehiculo.slice().sort((a,b)=>d(a.fecha)-d(b.fecha)).map(g=>`
+                <tr><td>${fmtDate(g.fecha)}</td><td>${esc(g.categoria)}</td><td>${esc(g.desc)}</td><td class="num">${fmtARS(g.importe)}</td></tr>`).join("")}
+            </tbody>
+            <tfoot><tr style="font-weight:600;"><td colspan="3" style="padding:10px 12px;">Total gastos</td><td class="num" style="padding:10px 12px;">${fmtARS(v.gastosAcum)}</td></tr></tfoot>
+          </table>
+        </div>` : `<div class="empty">Cargá un gasto en la sección Gastos para verlo acá.</div>`}
+      </div>
+
+      <div class="card" style="padding:18px 20px;">
+        <div class="section-title">Historial de precio publicado</div>
+        <div class="section-note">${v.historial.length? v.historial.length+" cambio(s) de precio registrados" : "No hubo cambios de precio: sigue publicado al precio objetivo"}</div>
+        <div id="chartFicha"></div>
+        ${v.historial.length? `
+        <div class="table-wrap" style="margin-top:14px;">
+          <table>
+            <thead><tr><th>Fecha</th><th class="num">Anterior</th><th class="num">Nuevo</th><th class="num">Variación</th><th>Motivo</th></tr></thead>
+            <tbody>
+              ${v.historial.map((p,i)=>{
+                const anterior = i===0? v.precioObjetivo : v.historial[i-1].nuevoPrecio;
+                const variacion = anterior? p.nuevoPrecio/anterior-1 : null;
+                return `<tr><td>${fmtDate(p.fecha)}</td><td class="num">${fmtARS(anterior)}</td><td class="num">${fmtARS(p.nuevoPrecio)}</td><td class="num" style="color:${variacion<0?'var(--critical)':'var(--good)'};">${variacion!==null?fmtPct(variacion):"—"}</td><td style="font-size:12px;">${esc(p.motivo)}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px; align-items:start;">
+      <div class="card metric-block">
+        <h3>SIMULADOR DE FINANCIACIÓN (CUOTAS)</h3>
+        <div class="form-grid" style="margin-bottom:6px;">
+          <div class="field"><label>Monto a financiar</label><input type="number" id="finMonto" min="0" value="${v.precioActual||0}"></div>
+          <div class="field"><label>Cantidad de cuotas</label><input type="number" id="finCuotas" min="1" max="60" value="12"></div>
+          <div class="field"><label>Tasa mensual</label><input type="number" id="finTasa" min="0" max="30" step="0.1" value="${Math.round(cfg.tasaFinanciacionMensual*1000)/10}"></div>
+        </div>
+        <div class="metric-row"><span class="k">Cuota mensual estimada</span><span class="v" id="finCuota" style="font-size:16px;">—</span></div>
+        <div class="metric-row"><span class="k">Total a pagar</span><span class="v" id="finTotal">—</span></div>
+        <div class="metric-row"><span class="k">Total de intereses</span><span class="v" id="finInteres">—</span></div>
+        <div class="section-note" style="margin-top:8px;">Interés directo sobre el capital total (no sobre saldo decreciente): cuota = (monto + monto × tasa × cuotas) ÷ cuotas.</div>
+      </div>
+      <div class="card metric-block">
+        <h3>INTERESADOS EN ESTE VEHÍCULO</h3>
+        ${(()=>{ const int = DATA.interesados.filter(i=>i.idVehiculo===v.id).slice().sort((a,b)=>d(b.fecha)-d(a.fecha));
+          if(!int.length) return `<div class="empty">Sin interesados registrados. Cargalos en la sección Interesados.</div>`;
+          return int.map(i=>`<div style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between;"><strong style="font-size:13px;">${esc(i.nombre)}</strong><span style="font-size:11.5px; color:var(--ink-3);">${fmtDate(i.fecha)}</span></div>
+            <div style="font-size:12px; color:var(--ink-2);">${esc(i.telefono)}${i.obs?" · "+esc(i.obs):""}</div>
+          </div>`).join(""); })()}
+      </div>
+    </div>
+  `;
+}
+function afterRenderFicha(){
+  const picker = document.getElementById("fichaPicker");
+  if(picker){
+    picker.addEventListener("change", ()=>{ window._fichaSelect = picker.value; renderPane(); });
+  }
+  const inv = computeInventory();
+  const v = inv.find(x=>x.id===window._fichaSelect);
+  if(!v) return;
+
+  const points = [{x:d(v.fechaIngreso), y:v.precioObjetivo, label:"Precio objetivo inicial"}]
+    .concat(v.historial.map(p=>({x:d(p.fecha), y:p.nuevoPrecio, label:p.motivo})));
+  if(v.estado==="Vendido"){ points.push({x:d(v.venta.fechaVenta), y:v.venta.precioFinal, label:"Venta"}); }
+  const chartEl = document.getElementById("chartFicha");
+  if(chartEl) lineChart(chartEl, points, {h:180});
+
+  const input = document.getElementById("margenDeseado");
+  const out = document.getElementById("precioSugerido");
+  const outExacto = document.getElementById("precioExacto");
+  const outDif = document.getElementById("diferenciaPrecio");
+  const outAjuste = document.getElementById("ajustePrecio");
+  const outG = document.getElementById("gananciaSugerida");
+  const outGUSD = document.getElementById("gananciaSugeridaUSD");
+  const outSentence = document.getElementById("simSentence");
+  function updateSim(){
+    let m = parseFloat(input.value);
+    if(isNaN(m)) m = 0;
+    m = Math.max(0, Math.min(90, m))/100;
+    const exacto = v.costoTotal/(1-m);
+    const precio = roundUp(exacto, DATA.config.redondeo);
+    const ganancia = precio - v.costoTotal;
+    const diferencia = precio - v.precioActual;
+    const ajuste = v.precioActual ? diferencia/v.precioActual : 0;
+    const recorte = v.costoTotal - v.precioActual*(1-m);
+    out.textContent = fmtARS(precio);
+    if(outExacto) outExacto.textContent = fmtARS(exacto);
+    if(outDif) outDif.innerHTML = (diferencia>=0?"+":"")+fmtARS(diferencia);
+    if(outAjuste) outAjuste.innerHTML = `<span style="color:${ajuste>0?'var(--critical)':'var(--good)'};">${ajuste>=0?"+":""}${fmtPct(ajuste)}</span>`;
+    outG.textContent = fmtARS(ganancia);
+    if(outGUSD) outGUSD.textContent = fmtUSD(ganancia/DATA.config.tipoCambio);
+    if(outSentence){
+      if(diferencia<=0){
+        outSentence.textContent = `✅ Al precio actual (${fmtARS(v.precioActual)}) ya se alcanza ese margen: no hace falta subir precio.`;
+      }else if(recorte>0){
+        outSentence.textContent = `⚠️ Para lograr ${fmtPct(m,0)} hay que vender a ${fmtARS(precio)}: subir ${fmtARS(diferencia)} (${ajuste>=0?"+":""}${fmtPct(ajuste,0)}) o recortar ${fmtARS(recorte)} de costos manteniendo el precio actual.`;
+      }else{
+        outSentence.textContent = `⚠️ Para lograr ${fmtPct(m,0)} hay que vender a ${fmtARS(precio)}: subir ${fmtARS(diferencia)} (${ajuste>=0?"+":""}${fmtPct(ajuste,0)}).`;
+      }
+    }
+  }
+  if(input){ input.addEventListener("input", updateSim); updateSim(); }
+
+  const fotoInputFicha = document.getElementById("fotoInputFicha");
+  if(fotoInputFicha){
+    fotoInputFicha.addEventListener("change", ()=>{
+      const file = fotoInputFicha.files[0];
+      if(!file) return;
+      resizeImageToDataURL(file, 640, (dataUrl)=>{
+        if(!dataUrl){ toast("No se pudo procesar la imagen"); return; }
+        const veh = DATA.vehiculos.find(x=>x.id===v.id);
+        if(veh){ veh.foto = dataUrl; saveData(); toast("Foto actualizada"); renderPane(); }
+      });
+    });
+  }
+
+  const finMonto = document.getElementById("finMonto");
+  const finCuotas = document.getElementById("finCuotas");
+  const finTasa = document.getElementById("finTasa");
+  const finCuotaOut = document.getElementById("finCuota");
+  const finTotalOut = document.getElementById("finTotal");
+  const finInteresOut = document.getElementById("finInteres");
+  function updateFin(){
+    const monto = parseFloat(finMonto.value)||0;
+    const cuotas = parseInt(finCuotas.value,10)||1;
+    const tasa = (parseFloat(finTasa.value)||0)/100;
+    const r = calcularCuota(monto, cuotas, tasa);
+    finCuotaOut.textContent = fmtARS(r.cuota);
+    finTotalOut.textContent = fmtARS(r.total);
+    finInteresOut.textContent = fmtARS(r.interes);
+  }
+  if(finMonto && finCuotas && finTasa){
+    [finMonto,finCuotas,finTasa].forEach(el=>el.addEventListener("input", updateFin));
+    updateFin();
+  }
+}
+
+/* ======================================================================
+   RENDER: VEHÍCULOS (carga)
+====================================================================== */
+function renderVehiculos(){
+  return `
+    <div class="card" style="padding:18px 20px; margin-bottom:16px;">
+      <div class="section-title">Alta de vehículo</div>
+      <div class="section-note">Se agrega un vehículo nuevo. Inventario, Ficha y Panel se recalculan solos.</div>
+      <form id="formVehiculo">
+        <div class="form-grid">
+          <div class="field"><label>Marca</label><input required name="marca" placeholder="Toyota"></div>
+          <div class="field"><label>Modelo</label><input required name="modelo" placeholder="Corolla"></div>
+          <div class="field"><label>Año</label><input required type="number" name="anio" placeholder="2021" min="1990" max="2027"></div>
+          <div class="field"><label>Versión</label><input name="version" placeholder="XEI 1.8 CVT"></div>
+          <div class="field"><label>Km</label><input required type="number" name="km" placeholder="62000" min="0"></div>
+          <div class="field"><label>Fecha de compra</label><input required type="date" name="fechaCompra"></div>
+          <div class="field"><label>Fecha de ingreso a stock</label><input required type="date" name="fechaIngreso"></div>
+          <div class="field"><label>Precio de compra</label><input required type="number" name="precioCompra" placeholder="19800000" min="0"></div>
+          <div class="field"><label>Precio objetivo</label><input required type="number" name="precioObjetivo" placeholder="22500000" min="0"></div>
+          <div class="field"><label>Estado</label><select name="estado">${ESTADOS.map(e=>`<option>${e}</option>`).join("")}</select></div>
+          <div class="field"><label>Foto (opcional)</label><input type="file" accept="image/*" id="fotoInputAlta"></div>
+        </div>
+        <div class="field" style="margin-bottom:6px;"><label>Observaciones</label><input name="obs" placeholder="Opcional"></div>
+        <div id="refSugerida" style="margin-bottom:8px; font-size:13px; font-weight:700; color:var(--accent);"></div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit">Agregar vehículo</button>
+          <span class="form-msg" id="msgVehiculo"></span>
+        </div>
+      </form>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th></th><th>ID</th><th>Vehículo</th><th class="num">Km</th><th>F. compra</th><th>F. ingreso</th><th class="num">Compra</th><th class="num">Objetivo</th><th>Estado</th></tr></thead>
+        <tbody>
+          ${DATA.vehiculos.slice().reverse().map(v=>`
+            <tr><td>${v.foto?`<img src="${v.foto}" style="width:32px;height:24px;object-fit:cover;border-radius:4px;">`:`<div style="width:32px;height:24px;border-radius:4px;background:var(--surface-sunken);"></div>`}</td><td class="mono">${v.id}</td><td>${esc(v.marca)} ${esc(v.modelo)} ${v.anio}</td><td class="num">${v.km.toLocaleString("es-AR")}</td>
+            <td>${fmtDate(v.fechaCompra)}</td><td>${fmtDate(v.fechaIngreso)}</td><td class="num">${fmtARS(v.precioCompra)}</td><td class="num">${fmtARS(v.precioObjetivo)}</td><td>${esc(v.estado)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderVehiculos(){
+  const form = document.getElementById("formVehiculo");
+  let fotoPendiente = null;
+  const fotoInput = document.getElementById("fotoInputAlta");
+  if(fotoInput){
+    fotoInput.addEventListener("change", ()=>{
+      const file = fotoInput.files[0];
+      if(!file) return;
+      resizeImageToDataURL(file, 640, (dataUrl)=>{ fotoPendiente = dataUrl; });
+    });
+  }
+  const refBox = document.getElementById("refSugerida");
+  function actualizarRef(){
+    if(!refBox) return;
+    const marca = form.marca.value, modelo = form.modelo.value, anio = form.anio.value;
+    const ref = (marca && modelo && anio) ? buscarReferencia(marca, modelo, anio) : null;
+    refBox.innerHTML = ref ? `💡 VALOR DE REVISTA: ${fmtARS(ref.precio)}${ref.exacto?"":" (ajustado desde "+ref.anioRef+")"}${ref.fuente?` <span style="font-weight:400; color:var(--ink-3); font-size:11.5px;">— ${esc(ref.fuente)}</span>`:""}` : "";
+  }
+  ["marca","modelo","anio"].forEach(n=>{ if(form[n]) form[n].addEventListener("input", actualizarRef); });
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const f = new FormData(form);
+    const id = uid("V", DATA.vehiculos, "id");
+    DATA.vehiculos.push({
+      id, marca:f.get("marca").trim(), modelo:f.get("modelo").trim(), anio:parseInt(f.get("anio"),10),
+      version:f.get("version").trim(), km:parseInt(f.get("km"),10),
+      fechaCompra:f.get("fechaCompra"), fechaIngreso:f.get("fechaIngreso"),
+      precioCompra:parseFloat(f.get("precioCompra")), precioObjetivo:parseFloat(f.get("precioObjetivo")),
+      estado:f.get("estado"), obs:f.get("obs").trim(), foto:fotoPendiente,
+    });
+    saveData();
+    toast(id+" agregado al inventario");
+    render();
+  });
+}
+
+/* ======================================================================
+   RENDER: GASTOS (carga)
+====================================================================== */
+function renderGastos(){
+  const activos = DATA.vehiculos.filter(v=>!DATA.ventas.find(x=>x.idVehiculo===v.id));
+  return `
+    <div class="card" style="padding:18px 20px; margin-bottom:16px;">
+      <div class="section-title">Registrar gasto</div>
+      <div class="section-note">Cada gasto queda registrado como un movimiento nuevo. Se suma automáticamente al costo total del vehículo.</div>
+      <form id="formGasto">
+        <div class="form-grid">
+          <div class="field"><label>Vehículo</label><select required name="idVehiculo">${activos.map(v=>`<option value="${v.id}">${v.id} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join("")}</select></div>
+          <div class="field"><label>Fecha</label><input required type="date" name="fecha"></div>
+          <div class="field"><label>Categoría</label><select required name="categoria">${CATEGORIAS.map(c=>`<option>${c}</option>`).join("")}</select></div>
+          <div class="field"><label>Importe</label><input required type="number" name="importe" min="0" placeholder="150000"></div>
+        </div>
+        <div class="field" style="margin-bottom:14px;"><label>Descripción</label><input name="desc" placeholder="Opcional"></div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit">Agregar gasto</button>
+          <span class="form-msg" id="msgGasto"></span>
+        </div>
+      </form>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Vehículo</th><th>Fecha</th><th>Categoría</th><th>Descripción</th><th class="num">Importe</th><th class="num">Índice IPC del mes</th><th class="num">Importe a pesos de hoy</th></tr></thead>
+        <tbody>
+          ${DATA.gastos.slice().reverse().slice(0,60).map(g=>`
+            <tr><td class="mono">${g.id}</td><td>${g.idVehiculo}</td><td>${fmtDate(g.fecha)}</td><td>${esc(g.categoria)}</td><td>${esc(g.desc)}</td><td class="num">${fmtARS(g.importe)}</td><td class="num mono" style="color:var(--ink-3);">${ipcIndiceEnMes(g.fecha).toLocaleString("es-AR",{maximumFractionDigits:2})}</td><td class="num">${fmtARS(importeGastoHoy(g))}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderGastos(){
+  const form = document.getElementById("formGasto");
+  if(!form) return;
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const f = new FormData(form);
+    const id = uid("G", DATA.gastos, "id");
+    DATA.gastos.push({id, idVehiculo:f.get("idVehiculo"), fecha:f.get("fecha"), categoria:f.get("categoria"), desc:f.get("desc").trim(), importe:parseFloat(f.get("importe"))});
+    saveData();
+    toast("Gasto "+id+" cargado");
+    render();
+  });
+}
+
+/* ======================================================================
+   RENDER: PRECIOS (carga)
+====================================================================== */
+function renderPrecios(){
+  const inv = computeInventory().filter(v=>v.estado!=="Vendido");
+  const historial = DATA.precios.slice().reverse().slice(0,60);
+  const vigentePorVehiculo = {};
+  DATA.precios.forEach(p=>{
+    const actual = vigentePorVehiculo[p.idVehiculo];
+    if(!actual || d(p.fecha)>d(actual.fecha)) vigentePorVehiculo[p.idVehiculo] = p;
+  });
+  return `
+    <div class="card" style="padding:18px 20px; margin-bottom:16px;">
+      <div class="section-title">Registrar cambio de precio</div>
+      <div class="section-note">El precio anterior y la variación se calculan solos a partir del último precio vigente.</div>
+      <form id="formPrecio">
+        <div class="form-grid">
+          <div class="field"><label>Vehículo</label><select required name="idVehiculo">${inv.map(v=>`<option value="${v.id}">${v.id} — ${esc(v.marca)} ${esc(v.modelo)} (actual ${fmtARS(v.precioActual)})</option>`).join("")}</select></div>
+          <div class="field"><label>Fecha</label><input required type="date" name="fecha"></div>
+          <div class="field"><label>Nuevo precio</label><input required type="number" name="nuevoPrecio" min="0" placeholder="21000000"></div>
+        </div>
+        <div class="field" style="margin-bottom:14px;"><label>Motivo</label><input required name="motivo" placeholder="Reducción para acelerar rotación"></div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit">Registrar precio</button>
+          <span class="form-msg" id="msgPrecio"></span>
+        </div>
+      </form>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Vehículo</th><th>Fecha</th><th class="num">Precio anterior</th><th class="num">Nuevo precio</th><th class="num">Variación</th><th>Vigente</th><th>Motivo</th></tr></thead>
+        <tbody>
+          ${historial.map(p=>{
+            const anteriores = DATA.precios.filter(x=>x.idVehiculo===p.idVehiculo && d(x.fecha)<d(p.fecha)).sort((a,b)=>d(b.fecha)-d(a.fecha));
+            const veh = DATA.vehiculos.find(v=>v.id===p.idVehiculo);
+            const anterior = anteriores.length? anteriores[0].nuevoPrecio : (veh?veh.precioObjetivo:null);
+            const variacion = anterior? (p.nuevoPrecio/anterior - 1) : null;
+            const esVigente = vigentePorVehiculo[p.idVehiculo] && vigentePorVehiculo[p.idVehiculo].id===p.id;
+            return `<tr><td class="mono">${p.id}</td><td>${p.idVehiculo}</td><td>${fmtDate(p.fecha)}</td><td class="num">${fmtARS(anterior)}</td><td class="num">${fmtARS(p.nuevoPrecio)}</td><td class="num" style="color:${variacion<0?'var(--critical)':'var(--good)'};">${variacion!==null?fmtPct(variacion):"—"}</td><td>${esVigente?'<span class="pill pill-normal"><span class="dot"></span>Sí</span>':'<span class="pill pill-neutral">No</span>'}</td><td>${esc(p.motivo)}</td></tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderPrecios(){
+  const form = document.getElementById("formPrecio");
+  if(!form) return;
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const f = new FormData(form);
+    const id = uid("P", DATA.precios, "id");
+    DATA.precios.push({id, idVehiculo:f.get("idVehiculo"), fecha:f.get("fecha"), nuevoPrecio:parseFloat(f.get("nuevoPrecio")), motivo:f.get("motivo").trim()});
+    saveData();
+    toast("Precio actualizado ("+id+")");
+    render();
+  });
+}
+
+/* ======================================================================
+   RENDER: VENTAS (carga)
+====================================================================== */
+function renderVentas(){
+  const inv = computeInventory().filter(v=>v.estado!=="Vendido");
+  const vendidos = computeInventory().filter(v=>v.estado==="Vendido");
+  return `
+    <div class="card" style="padding:18px 20px; margin-bottom:16px;">
+      <div class="section-title">Registrar venta</div>
+      <div class="section-note">Al guardar, el vehículo pasa a "Vendido" y sale del capital inmovilizado automáticamente.</div>
+      <form id="formVenta">
+        <div class="form-grid">
+          <div class="field"><label>Vehículo</label><select required name="idVehiculo">${inv.map(v=>`<option value="${v.id}">${v.id} — ${esc(v.marca)} ${esc(v.modelo)} (costo ${fmtARS(v.costoTotal)})</option>`).join("")}</select></div>
+          <div class="field"><label>Fecha de venta</label><input required type="date" name="fechaVenta"></div>
+          <div class="field"><label>Precio final</label><input required type="number" name="precioFinal" min="0" placeholder="21000000"></div>
+          <div class="field"><label>Gastos finales</label><input type="number" name="gastosFinales" min="0" value="0"></div>
+          <div class="field"><label>Cliente</label><input required name="cliente" placeholder="Nombre"></div>
+          <div class="field"><label>Vendedor</label><input required name="vendedor" placeholder="Nombre"></div>
+        </div>
+        <div class="field" style="margin-bottom:14px;"><label>Observaciones</label><input name="obs" placeholder="Opcional"></div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit">Registrar venta</button>
+          <span class="form-msg" id="msgVenta"></span>
+        </div>
+      </form>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Vehículo</th><th>Fecha</th><th class="num">Precio final</th><th class="num">Costo total</th><th class="num">Ganancia real</th><th class="num">Margen real</th><th>Cliente</th><th>Vendedor</th><th>Observaciones</th></tr></thead>
+        <tbody>
+          ${vendidos.length? vendidos.slice().reverse().map(v=>{
+            const gananciaReal = v.venta.precioFinal - v.costoTotal;
+            return `<tr><td class="mono">${v.venta.id}</td><td>${esc(v.marca)} ${esc(v.modelo)} ${v.anio}</td><td>${fmtDate(v.venta.fechaVenta)}</td>
+            <td class="num">${fmtARS(v.venta.precioFinal)}</td><td class="num">${fmtARS(v.costoTotal)}</td>
+            <td class="num"><div style="color:${gananciaReal<0?'var(--critical)':'var(--good)'};">${fmtARS(gananciaReal)}</div><div style="font-size:10.5px; color:var(--ink-3);">${fmtUSD(gananciaReal/DATA.config.tipoCambio)}</div></td>
+            <td class="num" style="color:${v.margenReal<0?'var(--critical)':'var(--good)'};">${fmtPct(v.margenReal)}</td>
+            <td>${esc(v.venta.cliente)}</td><td>${esc(v.venta.vendedor)}</td><td style="font-size:12px; color:var(--ink-2);">${esc(v.venta.obs)||"—"}</td></tr>`;
+          }).join("") : `<tr><td colspan="10" class="empty">Todavía no hay ventas registradas.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderVentas(){
+  const form = document.getElementById("formVenta");
+  if(!form) return;
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const f = new FormData(form);
+    const id = uid("VT", DATA.ventas, "id");
+    DATA.ventas.push({
+      id, idVehiculo:f.get("idVehiculo"), fechaVenta:f.get("fechaVenta"),
+      precioFinal:parseFloat(f.get("precioFinal")), gastosFinales:parseFloat(f.get("gastosFinales")||0),
+      cliente:f.get("cliente").trim(), vendedor:f.get("vendedor").trim(), obs:f.get("obs").trim(),
+    });
+    saveData();
+    toast("Venta "+id+" registrada — el vehículo salió de stock");
+    render();
+  });
+}
+
+/* ======================================================================
+   RENDER: INTERESADOS (mini CRM)
+====================================================================== */
+function renderInteresados(){
+  const inv = computeInventory().filter(v=>v.estado!=="Vendido");
+  const lista = DATA.interesados.slice().reverse();
+  return `
+    <div class="card" style="padding:18px 20px; margin-bottom:16px;">
+      <div class="section-title">Registrar interesado</div>
+      <div class="section-note">Seguimiento simple de quién preguntó por qué unidad — no reemplaza un CRM, pero ordena el dato.</div>
+      <form id="formInteresado">
+        <div class="form-grid">
+          <div class="field"><label>Vehículo</label><select required name="idVehiculo">${inv.map(v=>`<option value="${v.id}">${v.id} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join("")}</select></div>
+          <div class="field"><label>Nombre</label><input required name="nombre" placeholder="Nombre y apellido"></div>
+          <div class="field"><label>Teléfono</label><input required name="telefono" placeholder="11-1234-5678"></div>
+          <div class="field"><label>Fecha</label><input required type="date" name="fecha"></div>
+        </div>
+        <div class="field" style="margin-bottom:14px;"><label>Observaciones</label><input name="obs" placeholder="Opcional"></div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit">Agregar interesado</button>
+          <span class="form-msg" id="msgInteresado"></span>
+        </div>
+      </form>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Vehículo</th><th>Nombre</th><th>Teléfono</th><th>Fecha</th><th>Observaciones</th></tr></thead>
+        <tbody>
+          ${lista.length? lista.map(i=>{
+            const veh = DATA.vehiculos.find(v=>v.id===i.idVehiculo);
+            return `<tr><td class="mono">${i.id}</td><td>${veh?esc(veh.marca)+" "+esc(veh.modelo)+" "+veh.anio:i.idVehiculo}</td><td>${esc(i.nombre)}</td><td>${esc(i.telefono)}</td><td>${fmtDate(i.fecha)}</td><td style="font-size:12px; color:var(--ink-2);">${esc(i.obs)||"—"}</td></tr>`;
+          }).join("") : `<tr><td colspan="6" class="empty">Todavía no hay interesados registrados.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function afterRenderInteresados(){
+  const form = document.getElementById("formInteresado");
+  if(!form) return;
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const f = new FormData(form);
+    const id = uid("I", DATA.interesados, "id");
+    DATA.interesados.push({id, idVehiculo:f.get("idVehiculo"), nombre:f.get("nombre").trim(), telefono:f.get("telefono").trim(), fecha:f.get("fecha"), obs:f.get("obs").trim()});
+    saveData();
+    toast("Interesado "+id+" cargado");
+    render();
+  });
+}
+
+/* ======================================================================
+   RENDER: CONFIG
+====================================================================== */
+const CONFIG_FIELDS = [
+  {key:"diasVerde", label:"Días considerados normales", desc:"Semáforo verde en Inventario y en la Ficha.", unit:"días"},
+  {key:"diasAmarillo", label:"Umbral de atención", desc:"Dispara la tarjeta \"capital en unidades añejas\".", unit:"días"},
+  {key:"diasRojo", label:"Umbral crítico", desc:"Dispara la alerta de vehículos críticos del panel.", unit:"días"},
+  {key:"margenMinimo", label:"Margen mínimo aceptable", desc:"Por debajo de esto, el diagnóstico marca alerta.", unit:"%", pct:true},
+  {key:"margenObjetivo", label:"Margen objetivo", desc:"Usado en el simulador y en \"precio para margen objetivo\".", unit:"%", pct:true},
+  {key:"toleranciaCaidaMargen", label:"Tolerancia de caída de margen", desc:"Recién avisa cuando la caída supera esto.", unit:"%", pct:true},
+  {key:"umbralGastosAltos", label:"Umbral de gastos altos por auto", desc:"A partir de este monto, el diagnóstico marca el auto como caro.", unit:"$"},
+  {key:"toleranciaDesvioPrecio", label:"Tolerancia de desvío de precio", desc:"Cuánto puede desviarse el precio publicado antes de alertar.", unit:"%", pct:true},
+  {key:"redondeo", label:"Redondeo del precio sugerido", desc:"El simulador redondea hacia arriba a este múltiplo.", unit:"$"},
+  {key:"capacidad", label:"Capacidad del inventario", desc:"Lugares preparados en Inventario.", unit:"vehículos"},
+  {key:"tipoCambio", label:"Tipo de cambio a usar (ARS por USD)", desc:"Convierte a dólares las tarjetas del panel y la Ficha.", unit:"ARS/USD"},
+  {key:"tasaFinanciacionMensual", label:"Tasa mensual por defecto (financiación)", desc:"Tasa que trae cargada el simulador de cuotas de la Ficha (se puede cambiar caso a caso).", unit:"%", pct:true},
+];
+const FX_FIELDS = [
+  {key:"tipoCambioOficial", label:"Referencia: oficial al público (BNA venta)"},
+  {key:"tipoCambioMayorista", label:"Referencia: mayorista (cierre)"},
+  {key:"tipoCambioBlue", label:"Referencia: blue (venta)"},
+];
+function renderConfig(){
+  return `
+    <div class="card" style="padding:6px 20px;">
+      ${CONFIG_FIELDS.map(f=>`
+        <div class="config-row">
+          <div class="meta"><div class="name">${f.label}</div><div class="desc">${f.desc}</div></div>
+          <input type="number" data-cfg="${f.key}" data-pct="${!!f.pct}" value="${f.pct? Math.round(DATA.config[f.key]*100*100)/100 : DATA.config[f.key]}" step="${f.pct?0.1:1}">
+        </div>`).join("")}
+    </div>
+
+    <div class="section-title" style="margin:22px 0 2px;">Tipo de cambio</div>
+    <div class="section-note">Solo el primero (arriba) se usa para calcular las tarjetas en dólares. Estos quedan como referencia para no perder de vista la brecha.</div>
+    <div class="card" style="padding:6px 20px;">
+      ${FX_FIELDS.map(f=>`
+        <div class="config-row">
+          <div class="meta"><div class="name">${f.label}</div></div>
+          <input type="number" data-cfg="${f.key}" value="${DATA.config[f.key]}" step="1">
+        </div>`).join("")}
+      <div class="config-row">
+        <div class="meta"><div class="name">Fecha de la cotización</div><div class="desc">Actualizala a mano cuando cambies el tipo de cambio.</div></div>
+        <input type="date" data-cfg="fechaCotizacion" data-raw="true" value="${DATA.config.fechaCotizacion}" style="width:150px;">
+      </div>
+    </div>
+
+    <div class="section-title" style="margin:22px 0 2px;">Índice de precios al consumidor (IPC INDEC — nivel general, total nacional)</div>
+    <div class="section-note">Cada valor cita su fuente oficial. Se usa para llevar gastos e inventario a pesos de hoy (ver Gastos, Inventario y Ficha).</div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Mes</th><th class="num">Variación mensual</th><th class="num">Índice (jul-25 = 100)</th><th>Fuente</th></tr></thead>
+        <tbody>
+          ${ipcIndices().map(r=>`
+            <tr${r.proyeccion?' style="background:var(--warning-wash);"':""}>
+              <td>${mesLabel(r.mes)}${r.proyeccion?' <span class="pill pill-observar"><span class="dot"></span>Proyección</span>':""}</td>
+              <td class="num mono">${r.variacion===null?"—":fmtPct(r.variacion)}</td>
+              <td class="num mono">${r.indice.toLocaleString("es-AR",{maximumFractionDigits:2})}</td>
+              <td style="font-size:12px; max-width:280px;">${
+                r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.fuente)}">${esc(r.fuente.split(" — ")[0].replace(/\.$/,""))} ↗</a>`
+                : r.fuente ? `<span title="${esc(r.fuente)}" style="color:var(--warning); cursor:help;">⚠️ Proyección, no dato oficial</span>`
+                : `<span style="color:var(--ink-3);">Mes base</span>`
+              }</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="padding:14px 20px; margin-top:10px;">
+      <div class="config-row" style="border-bottom:none;">
+        <div class="meta">
+          <div class="name">Variación estimada de ${mesLabel(DATA.config.ipcSerie[DATA.config.ipcSerie.length-1].mes)} (proyección editable)</div>
+          <div class="desc">El INDEC publica este dato a mediados del mes siguiente. Por defecto se usa la variación de julio (2,1%) como estimador — reemplazala cuando salga el dato real.</div>
+        </div>
+        <input type="number" id="ipcProyeccionInput" step="0.1" value="${Math.round(DATA.config.ipcSerie[DATA.config.ipcSerie.length-1].variacion*1000)/10}">
+      </div>
+      <div class="form-actions" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" id="btnActualizarIPC">Actualizar proyección</button>
+        <span class="form-msg" id="msgIPC"></span>
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-accent" id="btnGuardarConfig">Guardar configuración</button>
+      <span class="form-msg" id="msgConfig"></span>
+    </div>
+
+    <div class="section-title" style="margin:26px 0 2px; font-size:15px; color:var(--accent);">VALOR DE REVISTA</div>
+    <div class="section-note">Tabla propia y editable — no se conecta en vivo a InfoAuto ni a ningún sitio externo (ni InfoAuto ni InfoUsados ofrecen consulta gratis/programática, y el Artifact tampoco puede llamar a sitios externos en vivo). Estos valores de partida se cargaron a mano el 28/08/2026 a partir de la <a href="https://www.autocosmos.com.ar/guiadeprecios" target="_blank" rel="noopener">Guía de Precios de Autocosmos</a> (que cita a la Cámara del Comercio Automotor, CCA, como fuente oficial). Hay que actualizarla a mano periódicamente — hoy no existe forma de que se actualice sola.</div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Marca</th><th>Modelo</th><th class="num">Año</th><th class="num">Valor de revista</th><th>Fuente</th><th></th></tr></thead>
+        <tbody id="tbodyReferencias">
+          ${DATA.referencias.map((r,i)=>`
+            <tr><td>${esc(r.marca)}</td><td>${esc(r.modelo)}</td><td class="num">${r.anio}</td>
+            <td class="num"><input type="number" data-ref-idx="${i}" value="${r.precio}" style="width:130px; text-align:right;"></td>
+            <td style="font-size:11.5px; max-width:220px;">${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.fuente||"")}">${esc((r.fuente||"Fuente").split(" — ")[0])} ↗</a>`:esc(r.fuente||"—")}</td>
+            <td><button class="btn btn-ghost btn-sm" data-ref-del="${i}">Quitar</button></td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="padding:14px 20px; margin-top:10px;">
+      <div class="form-grid" style="margin-bottom:8px;">
+        <div class="field"><label>Marca</label><input id="refMarca" placeholder="Toyota"></div>
+        <div class="field"><label>Modelo</label><input id="refModelo" placeholder="Corolla"></div>
+        <div class="field"><label>Año</label><input id="refAnio" type="number" placeholder="2022"></div>
+        <div class="field"><label>Valor de revista</label><input id="refPrecio" type="number" placeholder="23000000"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" id="btnRefAgregar">Agregar fila</button>
+        <button class="btn btn-accent btn-sm" id="btnRefGuardar">Guardar VALOR DE REVISTA</button>
+        <span class="form-msg" id="msgRef"></span>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin:26px 0 2px;">Copia de seguridad</div>
+    <div class="section-note">Todos los datos viven en este navegador. Descargá un backup periódicamente para no perder nada si se borra la caché.</div>
+    <div class="card" style="padding:16px 20px;">
+      <div class="form-actions">
+        <button class="btn btn-accent btn-sm" id="btnBackupDescargar">Descargar backup completo (JSON)</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;">Restaurar desde archivo<input type="file" accept=".json,application/json" id="inputRestore" style="display:none;"></label>
+        <span class="form-msg" id="msgBackup"></span>
+      </div>
+      <div class="section-note" style="margin:14px 0 6px;">Exportar a Excel (CSV, separado por “;”) — una tabla por archivo:</div>
+      <div class="form-actions" style="flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="btnCsvInventario">Inventario (con cálculos)</button>
+        <button class="btn btn-ghost btn-sm" id="btnCsvVehiculos">Vehículos</button>
+        <button class="btn btn-ghost btn-sm" id="btnCsvGastos">Gastos</button>
+        <button class="btn btn-ghost btn-sm" id="btnCsvPrecios">Precios</button>
+        <button class="btn btn-ghost btn-sm" id="btnCsvVentas">Ventas</button>
+      </div>
+      <div id="backupFallback" style="display:none; margin-top:12px;">
+        <div class="section-note" style="margin-bottom:6px;">No se pudo ofrecer la descarga automática acá — copiá este texto y guardalo en un archivo:</div>
+        <textarea id="backupTextarea" readonly style="width:100%; height:140px; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:8px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface-sunken); color:var(--ink);"></textarea>
+      </div>
+    </div>
+  `;
+}
+function afterRenderConfig(){
+  document.getElementById("btnGuardarConfig").addEventListener("click", ()=>{
+    document.querySelectorAll("[data-cfg]").forEach(inp=>{
+      const key = inp.getAttribute("data-cfg");
+      const pct = inp.getAttribute("data-pct")==="true";
+      if(inp.getAttribute("data-raw")==="true"){ DATA.config[key] = inp.value; return; }
+      let val = parseFloat(inp.value);
+      if(isNaN(val)) return;
+      DATA.config[key] = pct? val/100 : val;
+    });
+    saveData();
+    toast("Configuración actualizada — todo el sistema se recalculó");
+    document.getElementById("msgConfig").textContent = "Guardado ✓";
+    setTimeout(()=>{ const m=document.getElementById("msgConfig"); if(m) m.textContent=""; },1800);
+  });
+  const btnIPC = document.getElementById("btnActualizarIPC");
+  if(btnIPC){
+    btnIPC.addEventListener("click", ()=>{
+      const inp = document.getElementById("ipcProyeccionInput");
+      const val = parseFloat(inp.value);
+      if(isNaN(val)) return;
+      DATA.config.ipcSerie[DATA.config.ipcSerie.length-1].variacion = val/100;
+      saveData();
+      toast("Proyección de IPC actualizada — se recalculó todo el sistema");
+      render();
+    });
+  }
+
+  document.querySelectorAll("[data-ref-del]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const idx = parseInt(b.getAttribute("data-ref-del"),10);
+      DATA.referencias.splice(idx,1);
+      saveData();
+      toast("Fila quitada del VALOR DE REVISTA");
+      render();
+    });
+  });
+  const btnRefAgregar = document.getElementById("btnRefAgregar");
+  if(btnRefAgregar){
+    btnRefAgregar.addEventListener("click", ()=>{
+      const marca = document.getElementById("refMarca").value.trim();
+      const modelo = document.getElementById("refModelo").value.trim();
+      const anio = parseInt(document.getElementById("refAnio").value,10);
+      const precio = parseFloat(document.getElementById("refPrecio").value);
+      if(!marca || !modelo || isNaN(anio) || isNaN(precio)){ toast("Completá marca, modelo, año y precio"); return; }
+      DATA.referencias.push({marca, modelo, anio, precio});
+      saveData();
+      toast("Fila agregada al VALOR DE REVISTA");
+      render();
+    });
+  }
+  const btnRefGuardar = document.getElementById("btnRefGuardar");
+  if(btnRefGuardar){
+    btnRefGuardar.addEventListener("click", ()=>{
+      document.querySelectorAll("[data-ref-idx]").forEach(inp=>{
+        const idx = parseInt(inp.getAttribute("data-ref-idx"),10);
+        const val = parseFloat(inp.value);
+        if(!isNaN(val) && DATA.referencias[idx]) DATA.referencias[idx].precio = val;
+      });
+      saveData();
+      toast("VALOR DE REVISTA actualizado");
+      const m = document.getElementById("msgRef");
+      if(m){ m.textContent = "Guardado ✓"; setTimeout(()=>{ if(m) m.textContent=""; },1800); }
+    });
+  }
+
+  const btnBackup = document.getElementById("btnBackupDescargar");
+  if(btnBackup){
+    btnBackup.addEventListener("click", async ()=>{
+      const json = JSON.stringify(DATA, null, 2);
+      const fecha = todayDate().toISOString().slice(0,10);
+      const ok = await tryDownloadsSave("backup_erp_autos_"+fecha+".json", json);
+      const fallback = document.getElementById("backupFallback");
+      if(ok){
+        toast("Backup descargado");
+        if(fallback) fallback.style.display = "none";
+      }else{
+        mostrarFallback(json);
+      }
+    });
+  }
+  const fechaArchivo = todayDate().toISOString().slice(0,10);
+  const btnCsvInv = document.getElementById("btnCsvInventario");
+  if(btnCsvInv) btnCsvInv.addEventListener("click", ()=>{
+    const inv = computeInventory();
+    descargarCSV("inventario_"+fechaArchivo+".csv",
+      ["ID","Marca","Modelo","Año","Estado","Días en stock","Costo total","Precio actual","Ganancia estimada","Margen actual","Margen real (IPC)","Ganancia real USD","Diagnóstico"],
+      inv.map(v=>[v.id,v.marca,v.modelo,v.anio,v.estado,v.diasEnStock,v.costoTotal,v.precioActual,v.gananciaEstimada,fmtPct(v.margenActual),v.margenRealIPC!==null?fmtPct(v.margenRealIPC):"",Math.round(v.gananciaRealIPCUSD),v.diagnostico])
+    );
+  });
+  const btnCsvVeh = document.getElementById("btnCsvVehiculos");
+  if(btnCsvVeh) btnCsvVeh.addEventListener("click", ()=>{
+    descargarCSV("vehiculos_"+fechaArchivo+".csv",
+      ["ID","Marca","Modelo","Año","Versión","Km","Fecha compra","Fecha ingreso","Precio compra","Precio objetivo","Estado","Observaciones"],
+      DATA.vehiculos.map(v=>[v.id,v.marca,v.modelo,v.anio,v.version,v.km,v.fechaCompra,v.fechaIngreso,v.precioCompra,v.precioObjetivo,v.estado,v.obs])
+    );
+  });
+  const btnCsvGas = document.getElementById("btnCsvGastos");
+  if(btnCsvGas) btnCsvGas.addEventListener("click", ()=>{
+    descargarCSV("gastos_"+fechaArchivo+".csv",
+      ["ID","ID Vehículo","Fecha","Categoría","Descripción","Importe"],
+      DATA.gastos.map(g=>[g.id,g.idVehiculo,g.fecha,g.categoria,g.desc,g.importe])
+    );
+  });
+  const btnCsvPre = document.getElementById("btnCsvPrecios");
+  if(btnCsvPre) btnCsvPre.addEventListener("click", ()=>{
+    descargarCSV("precios_"+fechaArchivo+".csv",
+      ["ID","ID Vehículo","Fecha","Nuevo precio","Motivo"],
+      DATA.precios.map(p=>[p.id,p.idVehiculo,p.fecha,p.nuevoPrecio,p.motivo])
+    );
+  });
+  const btnCsvVen = document.getElementById("btnCsvVentas");
+  if(btnCsvVen) btnCsvVen.addEventListener("click", ()=>{
+    descargarCSV("ventas_"+fechaArchivo+".csv",
+      ["ID","ID Vehículo","Fecha venta","Precio final","Gastos finales","Cliente","Vendedor","Observaciones"],
+      DATA.ventas.map(x=>[x.id,x.idVehiculo,x.fechaVenta,x.precioFinal,x.gastosFinales,x.cliente,x.vendedor,x.obs])
+    );
+  });
+  const inputRestore = document.getElementById("inputRestore");
+  if(inputRestore){
+    inputRestore.addEventListener("change", ()=>{
+      const file = inputRestore.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        try{
+          const parsed = JSON.parse(e.target.result);
+          if(!parsed || !Array.isArray(parsed.vehiculos) || !parsed.config) throw new Error("formato inesperado");
+          DATA = migrarData(parsed);
+          saveData();
+          toast("Datos restaurados desde el archivo");
+          render();
+        }catch(err){
+          toast("El archivo no tiene el formato esperado — no se restauró nada");
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+}
+
+/* ======================================================================
+   PANE DISPATCH
+====================================================================== */
+const RENDERERS = {
+  dashboard: {render:renderDashboard, after:afterRenderDashboard},
+  inventario:{render:renderInventario, after:afterRenderInventario},
+  ficha:     {render:renderFicha, after:afterRenderFicha},
+  vehiculos: {render:renderVehiculos, after:afterRenderVehiculos},
+  gastos:    {render:renderGastos, after:afterRenderGastos},
+  precios:   {render:renderPrecios, after:afterRenderPrecios},
+  ventas:    {render:renderVentas, after:afterRenderVentas},
+  interesados:{render:renderInteresados, after:afterRenderInteresados},
+  config:    {render:renderConfig, after:afterRenderConfig},
+};
+
+function renderPane(){
+  const panes = document.getElementById("panes");
+  const r = RENDERERS[currentSection];
+  panes.innerHTML = `<div class="pane">${r.render()}</div>`;
+  if(r.after) r.after();
+}
+
+function render(){
+  renderNav();
+  const s = SECTIONS.find(x=>x.id===currentSection);
+  document.getElementById("pagetitle").textContent = s.title;
+  document.getElementById("pagesub").textContent = s.sub;
+  renderPane();
+  const inv = computeInventory();
+  const capital = inv.filter(v=>v.estado!=="Vendido").reduce((s,v)=>s+v.capitalInmovilizado,0);
+  document.getElementById("sidebarfoot").innerHTML = `Capital inmovilizado<br><strong style="color:var(--ink); font-family:'IBM Plex Mono',monospace;">${fmtARS(capital)}</strong>`;
+  const fxBadge = document.getElementById("fxBadge");
+  if(fxBadge) fxBadge.innerHTML = `<span class="dot" style="background:var(--accent);"></span>USD $${DATA.config.tipoCambio.toLocaleString("es-AR")} · ${fmtDate(DATA.config.fechaCotizacion)}`;
+}
+
+document.getElementById("btnReset").addEventListener("click", ()=>{
+  if(confirm("Esto reemplaza los datos actuales por los datos de ejemplo originales. ¿Continuar?")) resetData();
+});
+
+render();
+</script>
