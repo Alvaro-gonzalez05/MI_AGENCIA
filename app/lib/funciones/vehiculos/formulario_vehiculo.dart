@@ -556,25 +556,28 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
               child: InkWell(
                 onTap: () => setState(() => _v = _v.copiar(estado: e)),
                 borderRadius: BorderRadius.circular(Curva.md),
+                // Sin Center ni alignment: cualquiera de los dos estira el
+                // Container hasta las constraints maximas y los tres botones
+                // ocupan todo el ancho en vez de quedar uno al lado del otro.
                 child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: Esp.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Esp.lg,
+                    vertical: Esp.md - 1,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(Curva.md),
                     border: Border.all(
                       color: _v.estado == e ? p.acento : p.borde,
                     ),
                   ),
-                  child: Center(
-                    child: Text(
-                      e.etiqueta,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: _v.estado == e
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        color: _v.estado == e ? p.acento : p.tinta2,
-                      ),
+                  child: Text(
+                    e.etiqueta,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _v.estado == e
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: _v.estado == e ? p.acento : p.tinta2,
                     ),
                   ),
                 ),
