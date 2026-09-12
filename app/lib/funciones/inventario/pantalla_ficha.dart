@@ -195,25 +195,30 @@ class _Destacado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
-        const SizedBox(height: 2),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            valor,
-            style: TextStyle(
-              fontFamily: TemaApp.mono,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: color ?? p.tinta,
+    return Padding(
+      // Separacion entre columnas: sin esto, en movil el precio y el margen
+      // quedan pegados y se leen como un solo numero.
+      padding: const EdgeInsets.only(right: Esp.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valor,
+              style: TextStyle(
+                fontFamily: TemaApp.mono,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: color ?? p.tinta,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

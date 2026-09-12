@@ -13,13 +13,32 @@ convierte en una app multi-agencia con backend propio, para Windows y Android.
 
 | Pieza | Estado |
 |---|---|
-| Esquema de base de datos multi-tenant | escrito, **sin aplicar** (falta acceso a la cuenta Supabase nueva) |
-| Motor de cálculo portado a SQL | escrito |
-| Integración BCRA | endpoints verificados en vivo, función pendiente |
-| Integración ArgAutos (valor de revista) | API verificada en vivo, función pendiente |
-| App Flutter | pendiente — falta instalar el toolchain |
+| Esquema multi-tenant (25 tablas, 6 vistas, 65 políticas RLS) | escrito y ejecutado contra Postgres; **falta aplicarlo en Supabase** |
+| Motor de cálculo portado a SQL | **verificado**: 273 valores comparados contra el JS original, coincidencia total |
+| Toolchain Flutter | instalado y funcionando |
+| App: tema, shell, navegación, login | funcionando |
+| App: panel, inventario, ficha, interesados | funcionando con datos reales del cliente |
+| App: vehículos, gastos, precios, ventas, campañas, configuración, agencias | **pendientes** — la navegación existe y cada una explica en pantalla qué hará |
+| APK Android | **compila** (release 51,5 MB) |
+| Ejecutable de Windows | **no compila** — falta Visual Studio con C++ (requiere administrador) |
+| Integración BCRA | endpoints verificados en vivo, Edge Function pendiente |
+| Integración ArgAutos (valor de revista) | API verificada en vivo, falta la API key |
+| Email marketing | tablas listas, falta elegir proveedor |
 
-Los dos bloqueos están detallados en [`docs/SETUP.md`](docs/SETUP.md).
+Todo lo que falta, con los pasos exactos, está en
+[`docs/PENDIENTE.md`](docs/PENDIENTE.md).
+
+## Arrancar
+
+```powershell
+.\scripts\dev.ps1 run -d chrome      # app en el navegador, con hot reload
+.\scripts\dev.ps1 build apk --release
+.\scripts\dev.ps1 test
+```
+
+Sin credenciales de Supabase la app arranca en **modo demo**, contra los datos
+reales del sistema original del cliente cargados en memoria. Es lo que permite
+recorrerla entera hoy, antes de que exista la base.
 
 ---
 
@@ -70,13 +89,22 @@ Son cosas distintas y conviene no confundirlas:
 
 ```
 mi-agencia/
-├── app/                      # proyecto Flutter (pendiente de crear)
+├── app/                          # proyecto Flutter
+│   └── lib/
+│       ├── core/                 # tema, formato, router, sesión, config
+│       ├── dominio/              # modelos y motor de cálculo
+│       ├── datos/                # repositorio (demo y Supabase)
+│       ├── ui/                   # componentes y shell adaptativo
+│       └── funciones/            # una carpeta por pantalla
 ├── supabase/
-│   ├── migrations/           # 0001..0010, se aplican en orden
-│   └── functions/            # Edge Functions (BCRA, ArgAutos, email, índices)
+│   ├── migrations/               # 0001..0010, se aplican en orden
+│   ├── migraciones_completas.sql # las 10 en un archivo, para el SQL Editor
+│   └── functions/                # Edge Functions (pendientes)
+├── tests/                        # verificación del SQL contra el JS original
 ├── docs/
 ├── scripts/
-│   └── setup-flutter.ps1     # instala el toolchain en D:
+│   ├── dev.ps1                   # entorno de desarrollo — usar siempre este
+│   └── setup-flutter.ps1         # instalación del toolchain en D:
 └── referencia/
     └── rotacion_original.html
 ```

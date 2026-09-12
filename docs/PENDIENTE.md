@@ -129,6 +129,9 @@ consumirse desde Edge Functions, nunca desde la app.
 - **Sin ícono ni splash** propios: está el de la plantilla de Flutter.
 - **Sin firma de release** para Android: el APK sale firmado con la clave de
   debug. Para subir a Play Store hay que generar un keystore.
+- **El APK pesa 51,5 MB** porque incluye las tres arquitecturas en un solo
+  archivo. Con `--split-per-abi` salen tres de ~20 MB, y Play Store elige la
+  que corresponde. Para repartir el APK a mano conviene el universal.
 
 ---
 

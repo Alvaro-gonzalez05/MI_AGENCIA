@@ -27,6 +27,10 @@ dependencies:
   # Backend.
   supabase_flutter: ^2.11.1
 
+  # Lo referencian plugins que traen IconData de Cupertino. Sin el, el paso
+  # de tree-shaking de iconos del build release falla.
+  cupertino_icons: ^1.0.8
+
   # Formato de numeros y fechas en es-AR ($ y separador de miles con punto).
   intl: ^0.20.2
 
