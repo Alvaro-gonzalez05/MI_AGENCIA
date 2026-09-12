@@ -1,6 +1,6 @@
 -- =====================================================================
 -- MI AGENCIA — esquema completo
--- Las 10 migraciones de supabase/migrations/ concatenadas en orden.
+-- Las migraciones de supabase/migrations/ concatenadas en orden.
 -- Generado automaticamente: no editar a mano, editar las migraciones.
 --
 -- Para usarlo: pegar entero en el SQL Editor de Supabase y ejecutar.
@@ -1493,10 +1493,16 @@ create policy agencias_delete on public.agencias for delete to authenticated
 
 -- Blinda los campos comerciales: aunque el owner pase el RLS del update,
 -- no puede darse a si mismo un plan mejor ni extender su vencimiento.
+--
+-- La guarda `auth.uid() is not null` deja pasar al administrador. Sin ella, ni
+-- el SQL Editor ni service_role pueden tocar estos campos, porque
+-- es_desarrollador() depende de auth.uid() y sin JWT devuelve false. Es seguro
+-- porque el RLS ya filtro quien llega hasta aca: con uid nulo ninguna policy
+-- da true, asi que el unico que pasa es service_role.
 create or replace function public.proteger_campos_comerciales()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.es_desarrollador() then
+  if auth.uid() is not null and not public.es_desarrollador() then
     new.activa        := old.activa;
     new.plan          := old.plan;
     new.vigente_hasta := old.vigente_hasta;
@@ -1530,10 +1536,14 @@ create policy perfiles_update on public.perfiles for update to authenticated
   with check (id = auth.uid() or public.es_desarrollador());
 
 -- Nadie se autoasciende a desarrollador desde la app.
+--
+-- Misma guarda que arriba: sin ella quedaba imposible dar de alta al PRIMER
+-- desarrollador, porque el trigger revertia el UPDATE en silencio incluso
+-- corriendolo desde el SQL Editor.
 create or replace function public.proteger_flag_desarrollador()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.es_desarrollador() then
+  if auth.uid() is not null and not public.es_desarrollador() then
     new.es_desarrollador := old.es_desarrollador;
   end if;
   return new;
@@ -1720,3 +1730,102 @@ insert into public.cotizaciones (fecha, tipo, compra, venta, fuente) values
   ('2026-08-21', 'mayorista', 1489, 1499, 'Config del sistema original del cliente'),
   ('2026-08-21', 'blue',      1530, 1550, 'Config del sistema original del cliente')
 on conflict (fecha, tipo) do nothing;
+
+-- >>>>>>>>>>>>>>>>>>>>  0011_endurecer_funciones.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+-- MI AGENCIA — 0011: endurecimiento de funciones
+--
+-- Sale de correr el linter de seguridad de Supabase contra la base real.
+-- Todos los bucles excluyen lo que pertenece a una extension (citext,
+-- pg_trgm, unaccent, pgcrypto): esas funciones son de la extension, no
+-- nuestras, y no somos duenos para alterarlas.
+-- =====================================================================
+
+create or replace function pg_temp.funciones_propias()
+returns setof regprocedure language sql as $fn$
+  select p.oid::regprocedure
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and not exists (
+      select 1 from pg_depend d
+      where d.objid = p.oid and d.deptype = 'e')
+$fn$;
+
+-- 1. search_path fijo en toda funcion propia.
+--
+-- Sin esto, una funcion resuelve los nombres de tabla con el search_path de
+-- quien la llama. En una SECURITY DEFINER eso permite que alguien cree un
+-- objeto homonimo en un esquema propio y logre que la funcion, corriendo con
+-- permisos elevados, opere sobre SU objeto.
+do $$
+declare f regprocedure;
+begin
+  for f in
+    select x from pg_temp.funciones_propias() x
+    join pg_proc p on p.oid = x
+    where p.prokind = 'f'
+      and (p.proconfig is null
+           or not exists (select 1 from unnest(p.proconfig) c
+                           where c like 'search\_path=%'))
+  loop
+    execute format('alter function %s set search_path = public', f);
+  end loop;
+end $$;
+
+-- 2. Nadie sin sesion ejecuta funciones nuestras.
+--
+-- Supabase da EXECUTE por defecto a anon y authenticated sobre todo lo creado
+-- en public, asi que quedaban publicadas como RPC en /rest/v1/rpc/...
+-- Ninguna filtraba datos (con anon, es_desarrollador() da false y
+-- mis_agencias() viene vacia), pero no hay razon para exponerlas.
+do $$
+declare f regprocedure;
+begin
+  for f in select x from pg_temp.funciones_propias() x loop
+    execute format('revoke all on function %s from anon, public', f);
+  end loop;
+end $$;
+
+-- 3. Las funciones de trigger no las llama nadie a mano.
+--
+-- Las invoca Postgres al disparar el trigger. registrar_auditoria() o
+-- handle_nuevo_usuario() no tienen por que ser alcanzables desde la API.
+do $$
+declare f regprocedure;
+begin
+  for f in
+    select x from pg_temp.funciones_propias() x
+    join pg_proc p on p.oid = x
+    where p.prorettype = 'trigger'::regtype
+  loop
+    execute format('revoke all on function %s from anon, authenticated, public', f);
+  end loop;
+end $$;
+
+-- 4. Devolver el permiso a lo que SI tiene que poder llamar la app.
+--
+-- Las funciones de RLS son imprescindibles: las policies las evaluan con el
+-- rol que consulta, asi que sin EXECUTE el usuario no podria leer ni sus
+-- propios datos. El linter las sigue marcando como "ejecutables por usuarios
+-- logueados", y es correcto que lo esten: ninguna devuelve datos ajenos
+-- (es_desarrollador() responde por el que llama, mis_agencias() lista las
+-- suyas, puede_ver_agencia() responde sobre su propio acceso).
+grant execute on function public.es_desarrollador()               to authenticated;
+grant execute on function public.mis_agencias()                   to authenticated;
+grant execute on function public.puede_ver_agencia(uuid)          to authenticated;
+grant execute on function public.tiene_rol(uuid, rol_membresia[]) to authenticated;
+grant execute on function public.puede_editar(uuid)               to authenticated;
+grant execute on function public.puede_administrar(uuid)          to authenticated;
+
+-- Lectura que la app consume o va a consumir.
+grant execute on function public.ipc_indice_en(date)                 to authenticated;
+grant execute on function public.ipc_indice_hoy()                    to authenticated;
+grant execute on function public.cotizacion_vigente(tipo_cotizacion) to authenticated;
+grant execute on function public.siguiente_codigo_vehiculo(uuid)     to authenticated;
+grant execute on function public.diagnostico_vehiculo(uuid)          to authenticated;
+grant execute on function public.evolucion_mensual(uuid, int)        to authenticated;
+grant execute on function
+  public.semaforo_de_situacion(smallint, smallint, boolean, boolean, smallint)
+  to authenticated;

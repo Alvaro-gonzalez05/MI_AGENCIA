@@ -71,10 +71,16 @@ create policy agencias_delete on public.agencias for delete to authenticated
 
 -- Blinda los campos comerciales: aunque el owner pase el RLS del update,
 -- no puede darse a si mismo un plan mejor ni extender su vencimiento.
+--
+-- La guarda `auth.uid() is not null` deja pasar al administrador. Sin ella, ni
+-- el SQL Editor ni service_role pueden tocar estos campos, porque
+-- es_desarrollador() depende de auth.uid() y sin JWT devuelve false. Es seguro
+-- porque el RLS ya filtro quien llega hasta aca: con uid nulo ninguna policy
+-- da true, asi que el unico que pasa es service_role.
 create or replace function public.proteger_campos_comerciales()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.es_desarrollador() then
+  if auth.uid() is not null and not public.es_desarrollador() then
     new.activa        := old.activa;
     new.plan          := old.plan;
     new.vigente_hasta := old.vigente_hasta;
@@ -108,10 +114,14 @@ create policy perfiles_update on public.perfiles for update to authenticated
   with check (id = auth.uid() or public.es_desarrollador());
 
 -- Nadie se autoasciende a desarrollador desde la app.
+--
+-- Misma guarda que arriba: sin ella quedaba imposible dar de alta al PRIMER
+-- desarrollador, porque el trigger revertia el UPDATE en silencio incluso
+-- corriendolo desde el SQL Editor.
 create or replace function public.proteger_flag_desarrollador()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.es_desarrollador() then
+  if auth.uid() is not null and not public.es_desarrollador() then
     new.es_desarrollador := old.es_desarrollador;
   end if;
   return new;

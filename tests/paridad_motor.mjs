@@ -99,10 +99,12 @@ const js = computeInventory();
 const porCodigo = Object.fromEntries(sql.rows.map(r => [r.codigo, r]));
 
 // Campos que deben coincidir: nombre JS -> nombre SQL.
+// `diasEnStock` y `costoDiario` NO entran aca: divergen a proposito y se
+// verifican aparte, mas abajo. Compararlos a ciegas hacia que el test
+// pasara a la manana y fallara a la tarde.
 const CAMPOS = [
   ['costoTotal', 'costo_total'],
   ['gastosAcum', 'gastos_acum'],
-  ['diasEnStock', 'dias_en_stock'],
   ['precioActual', 'precio_actual'],
   ['capitalInmovilizado', 'capital_inmovilizado'],
   ['gananciaEstimada', 'ganancia_estimada'],
@@ -114,7 +116,6 @@ const CAMPOS = [
   ['ajusteNecesario', 'ajuste_necesario'],
   ['varVsObjetivo', 'var_vs_objetivo'],
   ['gastosRatio', 'gastos_ratio'],
-  ['costoDiario', 'costo_diario'],
   ['costoTotalHoy', 'costo_total_hoy'],
   ['gananciaRealIPC', 'ganancia_real_ipc'],
   ['margenRealIPC', 'margen_real_ipc'],
@@ -150,6 +151,54 @@ for (const v of js) {
     }
   }
 }
+
+
+// ---------------------------------------------------------------------
+// Diferencia intencional documentada (ver docs/MOTOR_DE_CALCULO.md):
+//
+// El original hacia Math.round((hoy - ingreso) / 86400000) con `hoy`
+// incluyendo la hora, asi que despues del mediodia redondeaba para arriba: una
+// unidad mostraba 105 dias a la manana y 106 a la tarde. El SQL resta fechas
+// calendario y es estable todo el dia.
+//
+// Aca no se compara, se AFIRMA que la divergencia es exactamente esa y ninguna
+// otra. Es la unica forma de que el test no sea una moneda al aire.
+// ---------------------------------------------------------------------
+const DIA_MS = 86400000;
+let erroresDias = 0;
+
+for (const v of js) {
+  const r = porCodigo[v.id];
+  if (!r) continue;
+
+  const ingreso = new Date(v.fechaIngreso + 'T00:00:00');
+  const fin = v.venta ? new Date(v.venta.fechaVenta + 'T00:00:00') : new Date();
+  const diasCalendario = Math.floor((fin - ingreso) / DIA_MS);
+
+  if (Number(r.dias_en_stock) !== diasCalendario) {
+    console.log(`  ${v.id}.dias_en_stock: sql=${r.dias_en_stock}, el calendario dice ${diasCalendario}`);
+    erroresDias++;
+  }
+
+  const brecha = v.diasEnStock - diasCalendario;
+  if (brecha !== 0 && brecha !== 1) {
+    console.log(`  ${v.id}.diasEnStock: el original difiere en ${brecha} dias (solo se admite 0 o 1)`);
+    erroresDias++;
+  }
+
+  const esperado = diasCalendario > 0
+    ? Number(r.costo_total) / diasCalendario
+    : Number(r.costo_total);
+  if (Math.abs(Number(r.costo_diario) - esperado) / Math.max(1, esperado) > TOL) {
+    console.log(`  ${v.id}.costo_diario: sql=${r.costo_diario}, esperado ${esperado}`);
+    erroresDias++;
+  }
+}
+
+diffs += erroresDias;
+console.log(erroresDias === 0
+  ? '\nDias en stock: la unica diferencia con el original es el redondeo de medio dia, como se documento.'
+  : `\n${erroresDias} problema(s) en el calculo de dias en stock.`);
 
 console.log(`\n${comparados} valores comparados en ${js.length} vehiculos.`);
 console.log(diffs === 0
