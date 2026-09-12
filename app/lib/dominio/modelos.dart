@@ -90,6 +90,7 @@ class VehiculoInventario {
     required this.alerta,
     required this.fechaIngreso,
     required this.precioCompra,
+    required this.precioObjetivo,
     required this.costoTotal,
     required this.gastosAcum,
     required this.cantidadGastos,
@@ -106,6 +107,8 @@ class VehiculoInventario {
     required this.gananciaRealUsd,
     this.version,
     this.km,
+    this.fechaCompra,
+    this.patente,
     this.margenReal,
     this.fechaVenta,
     this.precioFinal,
@@ -124,7 +127,15 @@ class VehiculoInventario {
   final AlertaRotacion alerta;
   final DateTime fechaIngreso;
 
+  /// Necesarias para poder editar la unidad sin inventar valores.
+  final DateTime? fechaCompra;
+  final String? patente;
+
   final double precioCompra;
+
+  /// El precio al que se apunto al darla de alta. No confundir con
+  /// [precioActual], que es el ultimo publicado y cambia con el tiempo.
+  final double precioObjetivo;
   final double gastosAcum;
   final int cantidadGastos;
   final double costoTotal;

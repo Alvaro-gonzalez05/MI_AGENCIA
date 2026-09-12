@@ -53,14 +53,18 @@ abstract final class Motor {
       _indiceEn(DateTime.now(), indices);
 
   /// Reconstruye el inventario completo con todo calculado.
+  ///
+  /// `extras` son las unidades cargadas durante la sesion en modo demo: se
+  /// calculan igual que las de la semilla, no como un caso aparte.
   static List<VehiculoInventario> inventario({
     ConfigAgencia cfg = const ConfigAgencia(),
+    List<VehiculoSemilla> extras = const [],
   }) {
     final indices = _indices();
     final idxHoy = _indiceHoy(indices);
     final hoy = DateTime.now();
 
-    return DatosDemo.vehiculos.map((v) {
+    return [...DatosDemo.vehiculos, ...extras].map((v) {
       final venta = DatosDemo.ventas
           .where((x) => x.codigo == v.codigo)
           .firstOrNull;
@@ -135,7 +139,9 @@ abstract final class Motor {
         estado: estado,
         alerta: alerta,
         fechaIngreso: v.fechaIngreso,
+        fechaCompra: v.fechaCompra,
         precioCompra: v.precioCompra,
+        precioObjetivo: v.precioObjetivo,
         gastosAcum: gastosAcum,
         cantidadGastos: gastos.length,
         costoTotal: costoTotal,

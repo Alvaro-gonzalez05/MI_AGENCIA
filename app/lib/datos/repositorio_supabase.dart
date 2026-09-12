@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../dominio/alta_vehiculo.dart';
 import '../dominio/modelos.dart';
 import 'repositorio.dart';
 
@@ -126,6 +127,106 @@ class RepositorioSupabase implements Repositorio {
   }
 
   // -------------------------------------------------------------------
+  // Escritura
+  // -------------------------------------------------------------------
+
+  /// La agencia del usuario. Se resuelve en la base y no se guarda en el
+  /// cliente: si viniera del cliente, bastaria con editarlo para escribir en
+  /// la agencia de otro. El RLS lo rechazaria igual, pero mejor no llegar.
+  Future<String> _miAgencia() async {
+    final fila = await _db
+        .from('membresias')
+        .select('agencia_id')
+        .eq('activa', true)
+        .limit(1)
+        .maybeSingle();
+    if (fila == null) {
+      throw Exception(
+        'Tu usuario no está asignado a ninguna agencia. '
+        'Pedile al administrador que te dé acceso.',
+      );
+    }
+    return fila['agencia_id'] as String;
+  }
+
+  @override
+  Future<String> siguienteCodigo() async {
+    final agencia = await _miAgencia();
+    final r = await _db.rpc<String>(
+      'siguiente_codigo_vehiculo',
+      params: {'p_agencia': agencia},
+    );
+    return r;
+  }
+
+  @override
+  Future<String> crearVehiculo(AltaVehiculo v) async {
+    final agencia = await _miAgencia();
+    final fila = await _db
+        .from('vehiculos')
+        .insert({
+          'agencia_id': agencia,
+          'codigo': v.codigo ?? await siguienteCodigo(),
+          ..._camposEditables(v),
+        })
+        .select('id')
+        .single();
+    return fila['id'] as String;
+  }
+
+  @override
+  Future<void> actualizarVehiculo(AltaVehiculo v) async {
+    if (v.id == null) throw ArgumentError('Falta el id del vehiculo a editar.');
+    await _db.from('vehiculos').update(_camposEditables(v)).eq('id', v.id!);
+  }
+
+  @override
+  Future<void> eliminarVehiculo(String id) async {
+    // Baja logica: la unidad desaparece del inventario pero conserva su
+    // historial de gastos, precios y ventas. Borrarla de verdad se llevaria
+    // por cascada la trazabilidad de operaciones ya cerradas.
+    await _db
+        .from('vehiculos')
+        .update({'deleted_at': DateTime.now().toIso8601String()})
+        .eq('id', id);
+  }
+
+  /// Solo lo que el usuario carga. Todo lo demas (costos, margenes, dias en
+  /// stock) lo deriva la base: mandarlo desde el cliente seria pisar el motor
+  /// de calculo con numeros de dudosa procedencia.
+  static Map<String, dynamic> _camposEditables(AltaVehiculo v) => {
+    'marca': v.marca.trim(),
+    'modelo': v.modelo.trim(),
+    'anio': v.anio,
+    'version': _oNulo(v.version),
+    'km': v.km,
+    'patente': _oNulo(v.patente)?.toUpperCase(),
+    'fecha_compra': _soloFecha(v.fechaCompra!),
+    'fecha_ingreso': _soloFecha(v.fechaIngreso!),
+    'precio_compra': v.precioCompra,
+    'precio_objetivo': v.precioObjetivo,
+    'estado': _deEstado(v.estado),
+    'observaciones': _oNulo(v.observaciones),
+  };
+
+  static String? _oNulo(String s) => s.trim().isEmpty ? null : s.trim();
+
+  /// La columna es `date`: mandar un timestamp con hora hace que Postgres lo
+  /// trunque segun zona horaria y la fecha se puede correr un dia.
+  static String _soloFecha(DateTime f) =>
+      '${f.year.toString().padLeft(4, '0')}-'
+      '${f.month.toString().padLeft(2, '0')}-'
+      '${f.day.toString().padLeft(2, '0')}';
+
+  static String _deEstado(EstadoVehiculo e) => switch (e) {
+    EstadoVehiculo.enStock => 'en_stock',
+    EstadoVehiculo.enPreparacion => 'en_preparacion',
+    EstadoVehiculo.reservado => 'reservado',
+    EstadoVehiculo.vendido => 'vendido',
+    EstadoVehiculo.dadoDeBaja => 'dado_de_baja',
+  };
+
+  // -------------------------------------------------------------------
   // Conversores
   //
   // Postgres devuelve numeric como STRING en JSON, para no perder precision.
@@ -179,7 +280,10 @@ class RepositorioSupabase implements Repositorio {
       estado: _aEstado(f['estado'] as String?),
       alerta: AlertaRotacion.desde(f['alerta'] as String? ?? 'normal'),
       fechaIngreso: _fecha(f['fecha_ingreso']) ?? DateTime.now(),
+      fechaCompra: _fecha(f['fecha_compra']),
+      patente: f['patente'] as String?,
       precioCompra: _decimal(f['precio_compra']) ?? 0,
+      precioObjetivo: _decimal(f['precio_objetivo']) ?? 0,
       gastosAcum: _decimal(f['gastos_acum']) ?? 0,
       cantidadGastos: _entero(f['cantidad_gastos']) ?? 0,
       costoTotal: _decimal(f['costo_total']) ?? 0,

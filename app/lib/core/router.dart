@@ -8,6 +8,7 @@ import '../funciones/inventario/pantalla_ficha.dart';
 import '../funciones/inventario/pantalla_inventario.dart';
 import '../funciones/pantalla_pendiente.dart';
 import '../funciones/panel/pantalla_panel.dart';
+import '../funciones/vehiculos/pantalla_vehiculos.dart';
 import '../ui/shell/secciones.dart';
 import '../ui/shell/shell_adaptativo.dart';
 import 'sesion.dart';
@@ -68,20 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Secciones.vehiculos.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.vehiculos,
-              puntos: [
-                'Alta de unidades con autocompletado de marca, modelo y versión '
-                    'desde el catálogo de ArgAutos (6.163 versiones espejadas '
-                    'en nuestra base).',
-                'Al elegir la versión y el año, trae solo el valor de revista y '
-                    'lo compara con el precio de compra.',
-                'Carga de fotos desde la cámara del celular, guardadas en '
-                    'Supabase Storage y aisladas por agencia.',
-                'Edición y baja lógica: una unidad dada de baja conserva todo '
-                    'su historial de gastos y precios.',
-              ],
-            ),
+            builder: (_, _) => const PantallaVehiculos(),
           ),
           GoRoute(
             path: Secciones.gastos.ruta,
