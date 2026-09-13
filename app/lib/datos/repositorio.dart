@@ -64,6 +64,18 @@ abstract interface class Repositorio {
   /// recalcula solo: el motor lee esta config en cada consulta.
   Future<void> guardarConfig(ConfigAgencia c);
 
+  /// La agencia del usuario: nombre, CUIT, contacto.
+  ///
+  /// No es lo mismo que [config], que son los umbrales del motor de calculo.
+  /// Esto es la identidad: lo que sale en el encabezado y en los informes.
+  Future<Agencia?> miAgencia();
+
+  /// Guarda los datos de la propia agencia. Solo el dueno puede.
+  ///
+  /// Plan, vencimiento y estado no entran: los blinda un trigger de la base
+  /// para que nadie se mejore el plan solo.
+  Future<void> guardarDatosAgencia(DatosAgencia d);
+
   // --- Solo para la cuenta de desarrollador ---
 
   Future<List<Agencia>> agencias();
@@ -348,6 +360,45 @@ class RepositorioDemo implements Repositorio {
     _config = c;
   }
 
+  Agencia _miAgencia = Agencia(
+    id: 'demo',
+    nombre: 'Agencia Demo',
+    slug: 'demo',
+    activa: true,
+    plan: 'basico',
+    localidad: 'Godoy Cruz',
+    provincia: 'Mendoza',
+    creadaEl: DateTime(2026, 9, 12),
+  );
+
+  @override
+  Future<Agencia?> miAgencia() async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    return _miAgencia;
+  }
+
+  @override
+  Future<void> guardarDatosAgencia(DatosAgencia d) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final a = _miAgencia;
+    _miAgencia = Agencia(
+      id: a.id,
+      nombre: d.nombre.trim(),
+      slug: a.slug,
+      activa: a.activa,
+      plan: a.plan,
+      cuit: d.cuitLimpio.isEmpty ? null : d.cuitLimpio,
+      emailContacto: d.emailContacto.trim().isEmpty
+          ? null
+          : d.emailContacto.trim(),
+      telefono: d.telefono.trim().isEmpty ? null : d.telefono.trim(),
+      localidad: d.localidad.trim().isEmpty ? null : d.localidad.trim(),
+      provincia: d.provincia.trim().isEmpty ? null : d.provincia.trim(),
+      vigenteHasta: a.vigenteHasta,
+      creadaEl: a.creadaEl,
+    );
+  }
+
   @override
   Future<List<Agencia>> agencias() async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -563,6 +614,11 @@ final interesadosProvider = FutureProvider<List<Interesado>>(
 
 final configAsyncProvider = FutureProvider<ConfigAgencia>(
   (ref) => ref.watch(repositorioProvider).config(),
+);
+
+/// La agencia del usuario. La leen el encabezado y el informe crediticio.
+final miAgenciaProvider = FutureProvider<Agencia?>(
+  (ref) => ref.watch(repositorioProvider).miAgencia(),
 );
 
 /// La config se lee sincrona porque casi todas las pantallas la necesitan para

@@ -2,44 +2,48 @@
 
 Estado al 13/09/2026. Ordenado por lo que desbloquea más cosas.
 
+**La base quedó vacía y lista para cargar.** Se borraron los datos de
+ejemplo (13 unidades, gastos, precios, ventas e interesados) y quedó la
+agencia, tu usuario, los umbrales del motor, la serie IPC y las
+cotizaciones. El primer código de unidad vuelve a ser V001.
+
 Lo que **ya está terminado y verificado** está en [README.md](../README.md);
 esto es sólo lo que falta.
 
 ---
 
-## Lo primero que tenés que hacer: cargar 3 secretos en GitHub
+## Los secretos de GitHub: ya están cargados
 
-El código ya está en <https://github.com/Alvaro-gonzalez05/MI_AGENCIA>, y los
-workflows compilan los instaladores solos. Pero para que la app salga apuntando
-a tu base y no en modo demo, faltan dos valores.
+Verificado sobre el APK publicado de la 0.3.1: trae adentro la URL del
+proyecto y la publishable key, así que la app instalada habla con la base
+real y no está en modo demo. Los tres secretos son:
 
-**Settings → Secrets and variables → Actions → New repository secret**, tres veces:
-
-| Nombre | Valor |
+| Nombre | Para qué |
 |---|---|
-| `SUPABASE_URL` | `https://zthpwqcoirrpvslambhz.supabase.co` |
+| `SUPABASE_URL` | a qué proyecto apunta la app |
 | `SUPABASE_ANON_KEY` | la publishable key (`sb_publishable_...`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | la secret key (`sb_secret_...`) o la `service_role` legacy. Supabase → Project Settings → API Keys |
+| `SUPABASE_SERVICE_ROLE_KEY` | solo el workflow, para subir los instaladores a Storage |
 
-Las dos primeras son públicas por diseño (viajan dentro de la app), pero van
-como secretos igual: así cambiar de proyecto no obliga a tocar código.
+Las dos primeras son públicas por diseño: viajan dentro de la app y el RLS es
+lo que protege los datos, no el secreto de la key. Comprobado: sin sesión, esa
+key no puede leer ni una fila de `vehiculos` ni de `v_inventario`.
 
-La tercera **no es pública**: da acceso total al proyecto. Solo la usa el
-workflow para subir los instaladores a Storage; nunca entra en la app.
+La tercera **no es pública**: da acceso total al proyecto y nunca entra en la
+app.
 
-Si no los cargás, el build igual funciona: sale en modo demo contra los datos
+Si alguna vez faltaran, el build no falla: sale en modo demo contra los datos
 de ejemplo.
 
 ## Publicar una versión
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 Eso dispara el workflow, que compila y publica en Releases:
 
-- `MiAgencia-Setup-0.1.0.exe` — instalador de Windows
+- `MiAgencia-Setup-0.4.0.exe` — instalador de Windows
 - `MiAgencia-Windows-portable.zip` — para PCs sin permisos de instalación
 - `MiAgencia-Android-arm64.apk` y `-arm32.apk`
 
@@ -107,7 +111,7 @@ Android y web funcionan sin nada de esto.
 | ~~**Precios**~~ | **Hecho.** Falta el gráfico de evolución del precio contra el costo. |
 | ~~**Ventas**~~ | **Hecho.** |
 | ~~**Campañas**~~ | **Hecho.** Falta desplegar la Edge Function y cargar la API key de Resend. |
-| ~~**Configuración**~~ | **Hecho.** Falta la gestión de usuarios de la agencia. |
+| ~~**Configuración**~~ | **Hecho**, incluidos los datos de la agencia (nombre, CUIT, contacto). Falta la gestión de usuarios. |
 | ~~**Agencias**~~ | **Hecho.** |
 | ~~**Interesados**~~ | **Hecho, incluido el semáforo del BCRA y el informe en PDF.** |
 
@@ -162,6 +166,10 @@ consumirse desde Edge Functions, nunca desde la app.
 ### Detalles chicos
 
 - **El tema no se recuerda** al cerrar la app. Falta `shared_preferences`.
+- **`v_dashboard` devuelve nulos con la agencia vacía** (los `sum()` sobre cero
+  filas). Hoy no molesta porque la app calcula los totales en Dart desde el
+  inventario y no lee esa vista; si alguna vez se lee, hay que ponerle
+  `coalesce`.
 - **`flutter pub get` en tu máquina avisa de symlinks** desde que entró
   `printing` (el paquete del PDF): sin Modo Desarrollador, Windows no deja
   crear los symlinks que Flutter usa para los plugins nativos. Las
@@ -170,7 +178,13 @@ consumirse desde Edge Functions, nunca desde la app.
   runner de GitHub no pasa.
 - **Sin gráficos todavía**: el panel muestra una barra apilada de antigüedad,
   pero falta la evolución mensual. `Motor.evolucion()` ya calcula los datos.
-- **Sin ícono ni splash** propios: está el de la plantilla de Flutter.
+- ~~**Sin ícono propio**~~ **Hecho.** La "M" de Mi Agencia en la tipografía de
+  la app sobre negro, con el punto del semáforo. Lo dibuja
+  `scripts/generar_icono.py` y lo baja a todos los tamaños
+  `dart run flutter_launcher_icons`, así que retocarlo es cambiar un número y
+  correr dos comandos, no exportar catorce archivos a mano. Incluye el ícono
+  adaptativo de Android (el que el launcher recorta en círculo o gota).
+- **Sin splash** propio: está el de la plantilla de Flutter.
 - **Sin firma de release** para Android: el APK sale firmado con la clave de
   debug. Para subir a Play Store hay que generar un keystore.
 - **El APK pesa 51,5 MB** porque incluye las tres arquitecturas en un solo
@@ -196,7 +210,7 @@ consumirse desde Edge Functions, nunca desde la app.
 
 ```powershell
 .\scripts\dev.ps1 analyze     # 0 problemas
-.\scripts\dev.ps1 test        # 121 tests
+.\scripts\dev.ps1 test        # 142 tests
 cd tests; npm test            # esquema + semáforo + paridad del motor
 ```
 
@@ -210,3 +224,30 @@ El último es el importante. Aplica las 13 migraciones a un Postgres real y:
   migraciones sueltas.
 
 Si tocás una fórmula del SQL y se rompe la paridad, ahí saltás.
+
+---
+
+## Cómo se ve el paso de una sección a otra
+
+Antes la pantalla nueva entraba con un fundido **encima** de la vieja, y durante
+un instante se veían las dos encimadas. Eso es lo que se sentía tosco.
+
+La causa, medida y no supuesta: al saltar entre secciones hermanas, go_router
+**reemplaza** la ruta, y la pantalla que se va no corre ninguna animación de
+salida — se queda en opacidad 1 hasta que desaparece. Como las pantallas de
+sección son transparentes (el fondo lo pone el shell), cualquier fundido de
+entrada la deja asomando por debajo.
+
+Se probó cruzarlas con un `AnimatedSwitcher` en el shell, para tenerlas bajo un
+mismo controlador. No se puede: el hijo de un `ShellRoute` es un `Navigator` con
+`GlobalKey`, y dos vivos a la vez revientan.
+
+Así que ahora **entre secciones no hay animación de página**: el cambio es
+instantáneo y el movimiento lo pone `Aparecer`, que escalona las tarjetas al
+entrar (un poco más rápido que antes, porque ahora es la única animación que se
+ve). La ficha de una unidad sí entra de costado, porque es una ruta hija y ahí
+sí hay un push de verdad.
+
+Está en `app/lib/core/transiciones.dart`, y lo que se afirma de todo esto está
+en `app/test/transiciones_test.dart` — incluido el caso que lo causaba, para
+que no vuelva.

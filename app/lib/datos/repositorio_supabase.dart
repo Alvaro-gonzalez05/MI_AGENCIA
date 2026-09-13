@@ -435,6 +435,55 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
+  Future<Agencia?> miAgencia() async {
+    // Sin filtro por agencia: el RLS ya devuelve solo la del usuario.
+    final fila = await _db
+        .from('agencias')
+        .select(
+          'id, nombre, slug, activa, plan, cuit, email_contacto, telefono, '
+          'localidad, provincia, vigente_hasta, created_at',
+        )
+        .limit(1)
+        .maybeSingle();
+    if (fila == null) return null;
+
+    return Agencia(
+      id: fila['id'] as String,
+      nombre: fila['nombre'] as String,
+      slug: fila['slug'] as String,
+      activa: fila['activa'] as bool? ?? true,
+      plan: fila['plan'] as String? ?? 'basico',
+      cuit: fila['cuit'] as String?,
+      emailContacto: fila['email_contacto'] as String?,
+      telefono: fila['telefono'] as String?,
+      localidad: fila['localidad'] as String?,
+      provincia: fila['provincia'] as String?,
+      vigenteHasta: _fecha(fila['vigente_hasta']),
+      creadaEl: _fecha(fila['created_at']),
+    );
+  }
+
+  @override
+  Future<void> guardarDatosAgencia(DatosAgencia d) async {
+    final agencia = await _miAgencia();
+
+    // Plan, vencimiento, slug y estado no se mandan. No es solo que el
+    // trigger los revierta: mandarlos daria a entender que se pueden cambiar
+    // desde aca, y no es asi por diseno.
+    await _db
+        .from('agencias')
+        .update({
+          'nombre': d.nombre.trim(),
+          'cuit': d.cuitLimpio.isEmpty ? null : d.cuitLimpio,
+          'email_contacto': _oNulo(d.emailContacto),
+          'telefono': _oNulo(d.telefono),
+          'localidad': _oNulo(d.localidad),
+          'provincia': _oNulo(d.provincia),
+        })
+        .eq('id', agencia);
+  }
+
+  @override
   Future<void> guardarConfig(ConfigAgencia c) async {
     final agencia = await _miAgencia();
     await _db

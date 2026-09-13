@@ -95,9 +95,15 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
     final usuario = ref.read(usuarioProvider);
 
     try {
+      // El nombre de la agencia sale del provider y no de la sesion: la
+      // sesion lo leyo al entrar, y si lo cambiaron en Configuracion despues,
+      // el informe saldria con el nombre viejo hasta el proximo login.
+      final agencia =
+          ref.read(miAgenciaProvider).value?.nombre ?? usuario?.agenciaNombre;
+
       final bytes = await InformeCrediticio.generar(
         interesado: _i,
-        agencia: usuario?.agenciaNombre,
+        agencia: agencia,
         generadoPor: usuario?.nombre,
       );
       await Printing.sharePdf(

@@ -24,6 +24,8 @@ convierte en una app multi-agencia con backend propio, para Windows y Android.
 | Integración BCRA | **Edge Function desplegada y andando** |
 | Integración ArgAutos (valor de revista) | API verificada en vivo, falta la API key |
 | Email marketing | pantalla y Edge Function escritas, falta desplegarla y cargar la key de Resend |
+| Ícono de la app | **hecho**, Android (con ícono adaptativo) y Windows |
+| Base del cliente | **vacía y lista para cargar**: se borraron los datos de ejemplo |
 
 Todo lo que falta, con los pasos exactos, está en
 [`docs/PENDIENTE.md`](docs/PENDIENTE.md).
@@ -102,7 +104,7 @@ desde `tests/casos_semaforo.json`, así que no se pueden separar en silencio.
 mi-agencia/
 ├── app/                          # proyecto Flutter
 │   └── lib/
-│       ├── core/                 # tema, formato, router, sesión, config
+│       ├── core/                 # tema, formato, router, transiciones, sesión
 │       ├── dominio/              # modelos y motor de cálculo
 │       ├── datos/                # repositorio (demo y Supabase)
 │       ├── ui/                   # componentes y shell adaptativo
@@ -115,6 +117,7 @@ mi-agencia/
 ├── docs/
 ├── scripts/
 │   ├── dev.ps1                   # entorno de desarrollo — usar siempre este
+│   ├── generar_icono.py          # dibuja el ícono; los tamaños los baja flutter_launcher_icons
 │   └── setup-flutter.ps1         # instalación del toolchain en D:
 └── referencia/
     └── rotacion_original.html

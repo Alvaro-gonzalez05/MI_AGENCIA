@@ -8,6 +8,7 @@ import '../../datos/repositorio.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import 'datos_agencia.dart';
 
 /// Parámetros de la agencia.
 ///
@@ -91,6 +92,8 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
           96,
         ),
         children: [
+          const DatosDeLaAgencia(),
+          const SizedBox(height: Esp.md),
           _bloqueRotacion(inv),
           const SizedBox(height: Esp.md),
           _bloqueMargenes(inv),

@@ -1,3 +1,5 @@
+import 'bcra.dart';
+
 /// Una agencia cliente. Solo la ve y la administra la cuenta de desarrollador.
 class Agencia {
   const Agencia({
@@ -137,10 +139,16 @@ class AltaAgencia {
       e['nombre'] = 'El nombre tiene que tener letras o números.';
     }
 
-    // El CUIT es opcional, pero si lo cargan tiene que ser un CUIT.
+    // El CUIT es opcional, pero si lo cargan tiene que ser un CUIT de verdad.
     final soloDigitos = cuit.replaceAll(RegExp(r'[^0-9]'), '');
     if (cuit.trim().isNotEmpty && soloDigitos.length != 11) {
       e['cuit'] = 'Un CUIT tiene 11 dígitos.';
+    } else if (soloDigitos.isNotEmpty && !cuitValido(soloDigitos)) {
+      // Once digitos cualesquiera no son un CUIT: el ultimo se calcula a
+      // partir de los otros diez, y si no cierra es que hay un error de
+      // tipeo. Vale la pena avisarlo ahora y no cuando el dato ya esta
+      // guardado en una factura.
+      e['cuit'] = 'Ese CUIT no es válido. Revisá los dígitos.';
     }
 
     if (emailContacto.trim().isNotEmpty && !_esEmail(emailContacto)) {
@@ -179,4 +187,84 @@ class Invitacion {
   final String? agenciaNombre;
 
   bool get vencida => expiraEl.isBefore(DateTime.now());
+}
+
+/// Los datos de tu propia agencia, los que se pueden cambiar desde adentro.
+///
+/// No incluye plan, vencimiento, slug ni si esta activa: eso es comercial y lo
+/// maneja la cuenta de plataforma. Un trigger de la base los revierte aunque
+/// alguien los mande igual, asi que esta clase espeja lo que de verdad se
+/// puede tocar en vez de ofrecer campos que van a ser ignorados.
+class DatosAgencia {
+  const DatosAgencia({
+    this.nombre = '',
+    this.cuit = '',
+    this.emailContacto = '',
+    this.telefono = '',
+    this.localidad = '',
+    this.provincia = '',
+  });
+
+  factory DatosAgencia.desde(Agencia a) => DatosAgencia(
+    nombre: a.nombre,
+    cuit: a.cuit ?? '',
+    emailContacto: a.emailContacto ?? '',
+    telefono: a.telefono ?? '',
+    localidad: a.localidad ?? '',
+    provincia: a.provincia ?? '',
+  );
+
+  final String nombre;
+  final String cuit;
+  final String emailContacto;
+  final String telefono;
+  final String localidad;
+  final String provincia;
+
+  DatosAgencia copiar({
+    String? nombre,
+    String? cuit,
+    String? emailContacto,
+    String? telefono,
+    String? localidad,
+    String? provincia,
+  }) => DatosAgencia(
+    nombre: nombre ?? this.nombre,
+    cuit: cuit ?? this.cuit,
+    emailContacto: emailContacto ?? this.emailContacto,
+    telefono: telefono ?? this.telefono,
+    localidad: localidad ?? this.localidad,
+    provincia: provincia ?? this.provincia,
+  );
+
+  String get cuitLimpio => cuit.replaceAll(RegExp(r'[^0-9]'), '');
+
+  Map<String, String> validar() {
+    final e = <String, String>{};
+
+    if (nombre.trim().length < 3) {
+      e['nombre'] = 'Poné el nombre de la agencia.';
+    }
+
+    if (cuitLimpio.isNotEmpty && cuitLimpio.length != 11) {
+      e['cuit'] = 'Un CUIT tiene 11 dígitos.';
+    } else if (cuitLimpio.isNotEmpty && !cuitValido(cuitLimpio)) {
+      e['cuit'] = 'Ese CUIT no es válido. Revisá los dígitos.';
+    }
+
+    if (emailContacto.trim().isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(emailContacto.trim())) {
+      e['emailContacto'] = 'Ese email no parece válido.';
+    }
+
+    return e;
+  }
+
+  bool distintoDe(Agencia a) =>
+      nombre.trim() != a.nombre ||
+      cuitLimpio != (a.cuit ?? '') ||
+      emailContacto.trim() != (a.emailContacto ?? '') ||
+      telefono.trim() != (a.telefono ?? '') ||
+      localidad.trim() != (a.localidad ?? '') ||
+      provincia.trim() != (a.provincia ?? '');
 }
