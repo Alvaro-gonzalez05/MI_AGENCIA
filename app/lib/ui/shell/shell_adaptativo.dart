@@ -46,12 +46,7 @@ class ShellAdaptativo extends ConsumerWidget {
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    Esp.md,
-                    Esp.md,
-                    0,
-                    Esp.md,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(Esp.md, Esp.md, 0, Esp.md),
                   child: _BarraLateral(
                     seccionActual: seccion,
                     usuario: usuario,
@@ -95,10 +90,8 @@ Widget _transicionTitulo(Widget hijo, Animation<double> animacion) =>
       ),
     );
 
-Widget _apilarIzquierda(Widget? actual, List<Widget> previos) => Stack(
-  alignment: Alignment.centerLeft,
-  children: [...previos, ?actual],
-);
+Widget _apilarIzquierda(Widget? actual, List<Widget> previos) =>
+    Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]);
 
 // ---------------------------------------------------------------------------
 // ESCRITORIO
@@ -689,92 +682,92 @@ class _ShellMovil extends ConsumerWidget {
       builder: (ctx) {
         final p = ctx.paleta;
         return SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Más secciones',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: Esp.lg),
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: Esp.md,
-                crossAxisSpacing: Esp.md,
-                childAspectRatio: 0.98,
-                children: [
-                  for (var i = 0; i < resto.length; i++)
-                    Aparecer(
-                      indice: i,
-                      child: _MosaicoSeccion(
-                        seccion: resto[i],
-                        activa: resto[i].id == seccion.id,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          context.go(resto[i].ruta);
-                        },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Más secciones',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: Esp.lg),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: Esp.md,
+                  crossAxisSpacing: Esp.md,
+                  childAspectRatio: 0.98,
+                  children: [
+                    for (var i = 0; i < resto.length; i++)
+                      Aparecer(
+                        indice: i,
+                        child: _MosaicoSeccion(
+                          seccion: resto[i],
+                          activa: resto[i].id == seccion.id,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            context.go(resto[i].ruta);
+                          },
+                        ),
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: Esp.xl),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.only(
-                        left: Esp.lg,
-                        right: Esp.xs,
-                      ),
-                      decoration: ShapeDecoration(
-                        color: p.superficieHundida,
-                        shape: const StadiumBorder(),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Tema',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: p.tinta,
+                  ],
+                ),
+                const SizedBox(height: Esp.xl),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.only(
+                          left: Esp.lg,
+                          right: Esp.xs,
+                        ),
+                        decoration: ShapeDecoration(
+                          color: p.superficieHundida,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Tema',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: p.tinta,
+                                ),
                               ),
                             ),
-                          ),
-                          _BotonTema(colorIcono: p.acentoTexto),
-                        ],
+                            _BotonTema(colorIcono: p.acentoTexto),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: Esp.md),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: p.criticoLavado,
-                      foregroundColor: p.critico,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Esp.lg + 2,
-                        vertical: Esp.md,
+                    const SizedBox(width: Esp.md),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: p.criticoLavado,
+                        foregroundColor: p.critico,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Esp.lg + 2,
+                          vertical: Esp.md,
+                        ),
                       ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ref.read(sesionProvider.notifier).salir();
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: const Text('Salir'),
                     ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      ref.read(sesionProvider.notifier).salir();
-                    },
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('Salir'),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }

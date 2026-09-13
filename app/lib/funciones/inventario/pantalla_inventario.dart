@@ -554,12 +554,7 @@ class _FilaVehiculo extends StatelessWidget {
         : p.bien;
 
     return Tarjeta(
-      padding: const EdgeInsets.fromLTRB(
-        Esp.md,
-        Esp.md,
-        Esp.lg,
-        Esp.md,
-      ),
+      padding: const EdgeInsets.fromLTRB(Esp.md, Esp.md, Esp.lg, Esp.md),
       onTap: () => context.go('/inventario/${v.id}'),
       child: Row(
         children: [

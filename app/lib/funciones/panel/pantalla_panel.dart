@@ -389,9 +389,7 @@ class _DistribucionRotacion extends StatelessWidget {
                           margin: const EdgeInsets.only(right: 3),
                           decoration: BoxDecoration(
                             color: alerta.color(p),
-                            borderRadius: BorderRadius.circular(
-                              Curva.completo,
-                            ),
+                            borderRadius: BorderRadius.circular(Curva.completo),
                           ),
                         ),
                       ),

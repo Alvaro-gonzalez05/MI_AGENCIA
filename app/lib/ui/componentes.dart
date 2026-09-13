@@ -459,9 +459,7 @@ class TarjetaMetrica extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final tinta = resaltada ? p.acentoTinta : p.tinta;
-    final tenue = resaltada
-        ? p.acentoTinta.withValues(alpha: 0.62)
-        : p.tinta3;
+    final tenue = resaltada ? p.acentoTinta.withValues(alpha: 0.62) : p.tinta3;
 
     return Tarjeta(
       onTap: onTap,

@@ -280,10 +280,7 @@ class _EstadoDescarga extends StatelessWidget {
     if (error != null) {
       return Padding(
         padding: const EdgeInsets.only(bottom: Esp.md),
-        child: Text(
-          error!,
-          style: TextStyle(fontSize: 12.5, color: p.critico),
-        ),
+        child: Text(error!, style: TextStyle(fontSize: 12.5, color: p.critico)),
       );
     }
     return const SizedBox.shrink();

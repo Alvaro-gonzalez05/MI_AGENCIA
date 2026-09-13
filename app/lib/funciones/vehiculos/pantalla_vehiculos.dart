@@ -185,10 +185,7 @@ class _Fila extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'Ingresó',
-                style: TextStyle(fontSize: 11, color: p.tinta3),
-              ),
+              Text('Ingresó', style: TextStyle(fontSize: 11, color: p.tinta3)),
               Text(
                 Fmt.fecha(v.fechaIngreso),
                 style: TextStyle(

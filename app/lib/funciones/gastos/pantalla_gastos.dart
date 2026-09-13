@@ -71,7 +71,10 @@ class PantallaGastos extends ConsumerWidget {
               const SizedBox(height: Esp.lg + 2),
               for (var i = 0; i < gastos.length; i++) ...[
                 if (i < 20)
-                  Aparecer(indice: i + 1, child: _Fila(gasto: gastos[i]))
+                  Aparecer(
+                    indice: i + 1,
+                    child: _Fila(gasto: gastos[i]),
+                  )
                 else
                   _Fila(gasto: gastos[i]),
                 const SizedBox(height: Esp.sm + 2),
@@ -169,10 +172,7 @@ class _Resumen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             e.key.etiqueta,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: p.sobreNegro,
-                            ),
+                            style: TextStyle(fontSize: 13, color: p.sobreNegro),
                           ),
                         ),
                         Text(

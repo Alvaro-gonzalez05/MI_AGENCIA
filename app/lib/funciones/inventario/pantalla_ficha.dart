@@ -65,7 +65,10 @@ class _Ficha extends StatelessWidget {
       hueco,
       Aparecer(indice: 1, child: _Costos(vehiculo: v)),
       hueco,
-      Aparecer(indice: 2, child: _GananciaReal(vehiculo: v, cfg: cfg)),
+      Aparecer(
+        indice: 2,
+        child: _GananciaReal(vehiculo: v, cfg: cfg),
+      ),
     ];
 
     final derecha = <Widget>[
@@ -238,11 +241,7 @@ class _Cabecera extends StatelessWidget {
             const SizedBox(height: Esp.xs),
             Text(
               v.observaciones!,
-              style: TextStyle(
-                fontSize: 13,
-                color: p.sobreNegro2,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 13, color: p.sobreNegro2, height: 1.5),
             ),
           ],
         ],

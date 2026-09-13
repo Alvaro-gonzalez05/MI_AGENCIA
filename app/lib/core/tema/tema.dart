@@ -275,9 +275,8 @@ abstract final class TemaApp {
           (e) => e.contains(WidgetState.selected) ? p.acentoTinta : p.tinta3,
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (e) => e.contains(WidgetState.selected)
-              ? p.acento
-              : p.superficieHundida,
+          (e) =>
+              e.contains(WidgetState.selected) ? p.acento : p.superficieHundida,
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
           (e) => e.contains(WidgetState.selected)

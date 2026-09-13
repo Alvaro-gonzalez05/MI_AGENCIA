@@ -170,11 +170,12 @@ Future<void> instalarActualizacion(
       cliente.close();
     }
 
-    await Process.start(
-      destino.path,
-      ['/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CLOSEAPPLICATIONS'],
-      mode: ProcessStartMode.detached,
-    );
+    await Process.start(destino.path, [
+      '/SILENT',
+      '/SUPPRESSMSGBOXES',
+      '/NORESTART',
+      '/CLOSEAPPLICATIONS',
+    ], mode: ProcessStartMode.detached);
     // La app tiene que estar cerrada para que el instalador pueda pisar el
     // ejecutable.
     exit(0);
