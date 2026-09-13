@@ -39,13 +39,21 @@ class Pastilla extends StatelessWidget {
             ),
             const SizedBox(width: Esp.sm - 2),
           ],
-          Text(
-            texto,
-            style: TextStyle(
-              color: color,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
+          // Flexible y no Text pelado: con mainAxisSize.min la pastilla
+          // toma su ancho natural cuando hay lugar, pero adentro de una
+          // columna angosta (el desglose por entidad en un celular) el texto
+          // desbordaba la pastilla en vez de recortarse.
+          Flexible(
+            child: Text(
+              texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
             ),
           ),
         ],
@@ -560,24 +568,35 @@ class FilaDato extends StatelessWidget {
     final p = context.paleta;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Esp.sm),
+      // Los dos lados son flexibles y el valor se queda con la porcion mas
+      // grande. Antes el valor era un Text suelto y tomaba su ancho natural:
+      // alcanzaba con un dato largo ("V007 Toyota Hilux SRX 4x4 automatica")
+      // para desbordar la fila en un celular. Como el valor ya iba alineado a
+      // la derecha, los datos cortos se siguen viendo igual que siempre.
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
+            flex: 5,
             child: Text(
               etiqueta,
               style: TextStyle(fontSize: 13, color: p.tinta2),
             ),
           ),
           const SizedBox(width: Esp.md),
-          Text(
-            valor,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontFamily: mono ? TemaApp.mono : null,
-              fontSize: destacado ? 16 : 13.5,
-              fontWeight: destacado ? FontWeight.w700 : FontWeight.w500,
-              color: valorColor ?? p.tinta,
+          Flexible(
+            flex: 6,
+            child: Text(
+              valor,
+              textAlign: TextAlign.right,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: mono ? TemaApp.mono : null,
+                fontSize: destacado ? 16 : 13.5,
+                fontWeight: destacado ? FontWeight.w700 : FontWeight.w500,
+                color: valorColor ?? p.tinta,
+              ),
             ),
           ),
         ],
