@@ -1,0 +1,65 @@
+name: Formatear codigo
+
+# Corre `dart format` en GitHub y commitea el resultado.
+#
+# Existe porque no todas las maquinas desde las que se trabaja tienen Flutter
+# instalado, y el paso "Formato" de ci.yml falla con cualquier diferencia.
+#
+# Se dispara solo en cada push a main que toque codigo Dart, y tambien a mano
+# desde la pestaña Actions. El commit lo hace github-actions con el
+# GITHUB_TOKEN, que no dispara otros workflows: no hay riesgo de bucle.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/lib/**'
+      - 'app/test/**'
+      - '.github/workflows/formato.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Si llegan dos pushes seguidos, alcanza con formatear el ultimo.
+concurrency:
+  group: formato
+  cancel-in-progress: true
+
+jobs:
+  formatear:
+    name: dart format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Historial completo: el rebase del final lo necesita si main se
+          # movio mientras corria el formato.
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+
+      - working-directory: app
+        run: flutter pub get
+
+      - name: Formatear
+        working-directory: app
+        run: dart format lib test
+
+      - name: Commitear si cambio algo
+        run: |
+          if git diff --quiet; then
+            echo "El codigo ya estaba formateado."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/lib app/test
+          git commit -m "Formatear codigo (dart format)"
+          # Si mientras tanto alguien pusheo otra cosa, se rebasa encima.
+          git pull --rebase origin main
+          git push origin HEAD:main
