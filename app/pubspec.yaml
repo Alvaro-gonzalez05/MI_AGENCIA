@@ -50,6 +50,31 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+  # Genera el icono en todos los tamanos que pide cada plataforma a partir de
+  # los dos PNG maestros. Es dev_dependency: corre una vez al cambiar el
+  # icono y no viaja en la app.
+  flutter_launcher_icons: ^0.14.4
+
+# El icono. Los maestros los dibuja scripts/generar_icono.py; esto los baja a
+# los catorce tamanos que piden Android y Windows:
+#
+#     python scripts/generar_icono.py
+#     cd app && dart run flutter_launcher_icons
+#
+# El icono adaptativo de Android va aparte porque el launcher recorta los
+# bordes con la forma que tenga (circulo, gota, cuadrado redondeado): la
+# marca entra mas chica para que no le corte la cabeza, y el fondo lo pone
+# el sistema con el color plano.
+flutter_launcher_icons:
+  image_path: "assets/icono/icono.png"
+  android: true
+  adaptive_icon_background: "#131315"
+  adaptive_icon_foreground: "assets/icono/icono_frente.png"
+  windows:
+    generate: true
+    image_path: "assets/icono/icono.png"
+    icon_size: 256
+
 flutter:
   uses-material-design: true
 
