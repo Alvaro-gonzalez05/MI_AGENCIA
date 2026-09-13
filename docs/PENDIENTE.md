@@ -106,9 +106,11 @@ Android y web funcionan sin nada de esto.
 | ~~**Gastos**~~ | **Hecho.** Falta adjuntar el comprobante como foto o PDF. |
 | ~~**Precios**~~ | **Hecho.** Falta el gráfico de evolución del precio contra el costo. |
 | ~~**Ventas**~~ | **Hecho.** |
-| **Campañas** | Editor, segmentación y envío. |
-| **Configuración** | Formulario sobre `agencia_config` + gestión de usuarios. |
-| **Agencias** | Panel de desarrollador: alta de agencias e invitaciones. |
+| ~~**Campañas**~~ | **Hecho.** Falta desplegar la Edge Function y cargar la API key de Resend. |
+| ~~**Configuración**~~ | **Hecho.** Falta la gestión de usuarios de la agencia. |
+| ~~**Agencias**~~ | **Hecho.** |
+
+**Las 10 secciones tienen pantalla real.** Ya no queda ninguna de relleno.
 
 ### Repositorio contra Supabase — hecho
 
@@ -126,7 +128,7 @@ campañas, configuración y agencias.
 | `bcra-consulta` | Consulta la Central de Deudores por CUIT y llena `bcra_consultas` | Verificada en vivo: devuelve situación 1-6, montos, días de atraso y banderas de juicio |
 | `sync-catalogo` | Espeja el catálogo de ArgAutos, mensual | Verificada. **Falta la API key** (pedila gratis en argautos.com) |
 | `sync-indices` | Actualiza IPC del INDEC y cotización del dólar | Por integrar |
-| `enviar-campana` | Envío de emails | Falta elegir proveedor (Resend o Brevo) |
+| `enviar-campana` | Envío de emails por Resend | **Escrita.** Falta desplegarla y cargar `RESEND_API_KEY` |
 
 El BCRA no manda cabeceras CORS y ArgAutos limita por IP: las dos **tienen** que
 consumirse desde Edge Functions, nunca desde la app.

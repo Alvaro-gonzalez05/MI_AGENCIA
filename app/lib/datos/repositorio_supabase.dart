@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/agencias.dart';
+import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
@@ -466,6 +467,86 @@ class RepositorioSupabase implements Repositorio {
         agenciaNombre: a?['nombre'] as String?,
       );
     }).toList();
+  }
+
+  @override
+  Future<List<Campana>> campanas() async {
+    final filas = await _db
+        .from('campanas')
+        .select('''
+          id, nombre, asunto, cuerpo_html, estado, total_destinatarios,
+          total_enviados, total_aperturas, total_clicks, enviada_at, created_at
+        ''')
+        .order('created_at', ascending: false)
+        .limit(200);
+
+    return filas
+        .map(
+          (f) => Campana(
+            id: f['id'] as String,
+            nombre: f['nombre'] as String,
+            asunto: f['asunto'] as String,
+            estado: EstadoCampana.desde(f['estado'] as String?),
+            cuerpoHtml: f['cuerpo_html'] as String? ?? '',
+            destinatarios: _entero(f['total_destinatarios']) ?? 0,
+            enviados: _entero(f['total_enviados']) ?? 0,
+            aperturas: _entero(f['total_aperturas']) ?? 0,
+            clicks: _entero(f['total_clicks']) ?? 0,
+            enviadaEl: _fecha(f['enviada_at']),
+            creadaEl: _fecha(f['created_at']),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<String> crearCampana(AltaCampana c) async {
+    final agencia = await _miAgencia();
+    final fila = await _db
+        .from('campanas')
+        .insert({
+          'agencia_id': agencia,
+          'nombre': c.nombre.trim(),
+          'asunto': c.asunto.trim(),
+          'cuerpo_html': c.html,
+          'estado': 'borrador',
+          'created_by': _db.auth.currentUser?.id,
+        })
+        .select('id')
+        .single();
+    return fila['id'] as String;
+  }
+
+  @override
+  Future<int> destinatariosPosibles() async {
+    // Los que pidieron la baja no entran, y eso no es negociable: el filtro
+    // vive tanto aca como en la Edge Function.
+    final filas = await _db
+        .from('clientes')
+        .select('id')
+        .eq('acepta_marketing', true)
+        .not('email', 'is', null)
+        .isFilter('deleted_at', null);
+    return filas.length;
+  }
+
+  @override
+  Future<int> enviarCampana(String campanaId) async {
+    // El envio lo hace el servidor: la API key de Resend no puede viajar
+    // dentro de la app, y Resend tampoco manda cabeceras CORS.
+    final r = await _db.functions.invoke(
+      'enviar-campana',
+      body: {'campana_id': campanaId},
+    );
+
+    final datos = r.data;
+    if (datos is Map && datos['error'] != null) {
+      throw Exception(datos['error'].toString());
+    }
+    if (datos is Map && datos['enviados'] is int) {
+      return datos['enviados'] as int;
+    }
+    return 0;
   }
 
   /// Solo lo que el usuario carga. Todo lo demas (costos, margenes, dias en

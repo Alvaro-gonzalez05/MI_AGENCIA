@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../funciones/agencias/pantalla_agencias.dart';
 import '../funciones/auth/pantalla_login.dart';
+import '../funciones/campanas/pantalla_campanas.dart';
 import '../funciones/configuracion/pantalla_configuracion.dart';
 import '../funciones/gastos/pantalla_gastos.dart';
 import '../funciones/interesados/pantalla_interesados.dart';
 import '../funciones/inventario/pantalla_ficha.dart';
 import '../funciones/inventario/pantalla_inventario.dart';
-import '../funciones/pantalla_pendiente.dart';
 import '../funciones/panel/pantalla_panel.dart';
 import '../funciones/precios/pantalla_precios.dart';
 import '../funciones/ventas/pantalla_ventas.dart';
@@ -90,19 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Secciones.campanas.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.campanas,
-              puntos: [
-                'Armado de campañas de email a la base de interesados.',
-                'Segmentación por semáforo crediticio, interés y marca buscada: '
-                    'por ejemplo, todos los que preguntaron por una pickup y '
-                    'están en verde.',
-                'Envío por Resend o Brevo desde una Edge Function, con '
-                    'seguimiento de aperturas y clics.',
-                'Baja automática: a quien pide no recibir más, no se le vuelve '
-                    'a escribir nunca.',
-              ],
-            ),
+            builder: (_, _) => const PantallaCampanas(),
           ),
           GoRoute(
             path: Secciones.configuracion.ruta,

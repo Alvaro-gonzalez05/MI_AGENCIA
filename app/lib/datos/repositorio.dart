@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/agencias.dart';
+import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
@@ -73,6 +74,19 @@ abstract interface class Repositorio {
   Future<void> cambiarEstadoAgencia(String id, {required bool activa});
 
   Future<List<Invitacion>> invitacionesPendientes();
+
+  // --- Email marketing ---
+
+  Future<List<Campana>> campanas();
+
+  Future<String> crearCampana(AltaCampana c);
+
+  /// Cuantos clientes recibirian la campana. Excluye a los que pidieron la
+  /// baja: eso no es configurable.
+  Future<int> destinatariosPosibles();
+
+  /// Dispara el envio en el servidor. Devuelve cuantos salieron.
+  Future<int> enviarCampana(String campanaId);
 }
 
 /// Implementacion en memoria con los datos de ejemplo del cliente.
@@ -382,6 +396,47 @@ class RepositorioDemo implements Repositorio {
   @override
   Future<List<Invitacion>> invitacionesPendientes() async => const [];
 
+  final List<Campana> _campanas = [];
+
+  @override
+  Future<List<Campana>> campanas() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return List.of(_campanas.reversed);
+  }
+
+  @override
+  Future<String> crearCampana(AltaCampana c) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final id = 'campana-${_campanas.length + 1}';
+    _campanas.add(
+      Campana(
+        id: id,
+        nombre: c.nombre.trim(),
+        asunto: c.asunto.trim(),
+        estado: EstadoCampana.borrador,
+        cuerpoHtml: c.html,
+        creadaEl: DateTime.now(),
+      ),
+    );
+    return id;
+  }
+
+  @override
+  Future<int> destinatariosPosibles() async {
+    // En demo los interesados no tienen email cargado: el numero honesto
+    // es cero, y la pantalla lo explica en vez de inventar un total.
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    return 0;
+  }
+
+  @override
+  Future<int> enviarCampana(String campanaId) async {
+    throw Exception(
+      'El envio real necesita la base conectada y la Edge Function '
+      'desplegada. En modo demo la campana se guarda pero no sale.',
+    );
+  }
+
   @override
   Future<void> eliminarGasto(String id) async {
     _gastosAgregados.removeWhere(
@@ -436,6 +491,14 @@ final preciosProvider = FutureProvider<List<CambioPrecio>>(
 
 final ventasProvider = FutureProvider<List<Venta>>(
   (ref) => ref.watch(repositorioProvider).ventas(),
+);
+
+final campanasProvider = FutureProvider<List<Campana>>(
+  (ref) => ref.watch(repositorioProvider).campanas(),
+);
+
+final destinatariosProvider = FutureProvider<int>(
+  (ref) => ref.watch(repositorioProvider).destinatariosPosibles(),
 );
 
 final agenciasProvider = FutureProvider<List<Agencia>>(
