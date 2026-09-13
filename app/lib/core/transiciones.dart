@@ -84,10 +84,3 @@ abstract final class Transiciones {
 // go_router y Navigator — y cada uno necesita lo suyo, pero el lenguaje de
 // movimiento es el mismo: fundido corto, desplazamiento chico, nada que se
 // apile opaco encima de otra cosa.
-
-// Las pantallas que se abren con el Navigator de siempre (los formularios a
-// pantalla completa, la ficha del interesado) las sigue manejando
-// `TransicionSuave`, en core/tema/tema.dart. Son dos caminos distintos —
-// go_router y Navigator — y cada uno necesita lo suyo, pero el lenguaje de
-// movimiento es el mismo: fundido corto, desplazamiento chico, nada que se
-// apile opaco encima de otra cosa.
