@@ -17,6 +17,7 @@ import '../funciones/vehiculos/pantalla_vehiculos.dart';
 import '../ui/shell/secciones.dart';
 import '../ui/shell/shell_adaptativo.dart';
 import 'sesion.dart';
+import 'transiciones.dart';
 
 /// Permite que go_router reaccione a los cambios de sesion.
 ///
@@ -48,6 +49,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
 
     routes: [
+      // El login vive afuera del shell, asi que no pasa por CambioDeSeccion:
+      // se queda con la transicion de Material, que para entrar y salir de la
+      // app esta bien.
       GoRoute(path: '/login', builder: (_, _) => const PantallaLogin()),
 
       ShellRoute(
@@ -55,50 +59,67 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: Secciones.panel.ruta,
-            builder: (_, _) => const PantallaPanel(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaPanel()),
           ),
           GoRoute(
             path: Secciones.inventario.ruta,
-            builder: (_, _) => const PantallaInventario(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaInventario()),
             routes: [
+              // La ficha SI es un adentro de la lista, asi que entra de
+              // costado en vez de fundirse: el movimiento cuenta de donde
+              // viene y hacia donde vuelve.
               GoRoute(
                 path: ':id',
-                builder: (_, estado) =>
-                    PantallaFicha(id: estado.pathParameters['id']!),
+                pageBuilder: (_, estado) => Transiciones.paginaDetalle(
+                  estado,
+                  PantallaFicha(id: estado.pathParameters['id']!),
+                ),
               ),
             ],
           ),
           GoRoute(
             path: Secciones.interesados.ruta,
-            builder: (_, _) => const PantallaInteresados(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaInteresados()),
           ),
           GoRoute(
             path: Secciones.vehiculos.ruta,
-            builder: (_, _) => const PantallaVehiculos(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaVehiculos()),
           ),
           GoRoute(
             path: Secciones.gastos.ruta,
-            builder: (_, _) => const PantallaGastos(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaGastos()),
           ),
           GoRoute(
             path: Secciones.precios.ruta,
-            builder: (_, _) => const PantallaPrecios(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaPrecios()),
           ),
           GoRoute(
             path: Secciones.ventas.ruta,
-            builder: (_, _) => const PantallaVentas(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaVentas()),
           ),
           GoRoute(
             path: Secciones.campanas.ruta,
-            builder: (_, _) => const PantallaCampanas(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaCampanas()),
           ),
           GoRoute(
             path: Secciones.configuracion.ruta,
-            builder: (_, _) => const PantallaConfiguracion(),
+            pageBuilder: (_, estado) => Transiciones.paginaSeccion(
+              estado,
+              const PantallaConfiguracion(),
+            ),
           ),
           GoRoute(
             path: Secciones.agencias.ruta,
-            builder: (_, _) => const PantallaAgencias(),
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaAgencias()),
           ),
         ],
       ),

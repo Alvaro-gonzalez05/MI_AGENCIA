@@ -68,11 +68,28 @@ class TransicionSuave extends PageTransitionsBuilder {
         ? const Offset(0, 0.06)
         : const Offset(0, 0.015);
 
+    // La pantalla que queda atras se apaga y retrocede un poco mientras la
+    // nueva la tapa. Sin esto las dos se ven igual de vivas y la de adelante
+    // parece pegada encima en vez de estar adelante.
+    final tapada = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+    );
+
     return FadeTransition(
-      opacity: curva,
+      opacity: Tween<double>(begin: 1, end: 0.65).animate(tapada),
       child: SlideTransition(
-        position: Tween(begin: desde, end: Offset.zero).animate(curva),
-        child: child,
+        position: Tween(
+          begin: Offset.zero,
+          end: const Offset(0, -0.012),
+        ).animate(tapada),
+        child: FadeTransition(
+          opacity: curva,
+          child: SlideTransition(
+            position: Tween(begin: desde, end: Offset.zero).animate(curva),
+            child: child,
+          ),
+        ),
       ),
     );
   }

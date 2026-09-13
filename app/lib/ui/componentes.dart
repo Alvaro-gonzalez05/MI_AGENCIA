@@ -172,8 +172,13 @@ class Aparecer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final demora = (indice > 8 ? 8 : indice) * 45;
-    final total = 380 + demora;
+    // Un poco mas rapido y con menos escalones que antes: ahora que el cambio
+    // de seccion no tiene animacion de pagina propia, esta es LA animacion que
+    // se ve al entrar, y la lista entera tiene que terminar de acomodarse
+    // antes de que uno vaya a tocar algo. Con el tope en 6, una lista de
+    // treinta unidades no tarda mas que una de seis.
+    final demora = (indice > 6 ? 6 : indice) * 38;
+    final total = 320 + demora;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
