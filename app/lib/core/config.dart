@@ -19,4 +19,18 @@ abstract final class Config {
   /// de que exista la base, y deja las pantallas probables sin depender de la
   /// red. Cuando se definen las dos variables, se apaga solo.
   static bool get modoDemo => supabaseUrl.isEmpty || supabaseAnonKey.isEmpty;
+
+  /// Version instalada. La pone el workflow de publicacion a partir del tag
+  /// (v0.3.0 -> 0.3.0). En desarrollo queda vacia y no se buscan
+  /// actualizaciones: no tiene sentido ofrecerle un instalador a quien esta
+  /// corriendo el codigo fuente.
+  static const version = String.fromEnvironment('APP_VERSION');
+
+  /// Ficha publica de la ultima version, que escribe el workflow al publicar.
+  static const urlActualizaciones = String.fromEnvironment(
+    'ACTUALIZACIONES_URL',
+    defaultValue:
+        'https://zthpwqcoirrpvslambhz.supabase.co'
+        '/storage/v1/object/public/instaladores/ultima.json',
+  );
 }

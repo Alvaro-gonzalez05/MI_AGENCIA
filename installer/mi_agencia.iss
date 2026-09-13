@@ -67,6 +67,9 @@ Name: "{autodesktop}\{#MiApp}";  Filename: "{app}\{#MiEjecutable}"; Tasks: escri
 [Run]
 Filename: "{app}\{#MiEjecutable}"; Description: "Abrir {#MiApp}"; \
   Flags: nowait postinstall skipifsilent
+; Actualizacion automatica: la app se cierra, corre este instalador en modo
+; silencioso y al terminar se vuelve a abrir sola.
+Filename: "{app}\{#MiEjecutable}"; Flags: nowait; Check: WizardSilent
 
 [UninstallDelete]
 ; Flutter escribe cache y preferencias al costado del ejecutable. Sin esto,

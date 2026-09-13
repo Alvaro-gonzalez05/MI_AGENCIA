@@ -48,6 +48,12 @@ jobs:
         working-directory: app
         run: flutter test
 
+      # La app necesita saber que version es para compararla con la ultima
+      # publicada. Sale del tag: v0.3.0 -> 0.3.0.
+      - name: Version desde el tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       # Si los secretos no estan cargados, la app se compila en MODO DEMO
       # contra los datos de ejemplo. Preferible a que el build falle.
       - name: Compilar APK
@@ -56,6 +62,7 @@ jobs:
           flutter build apk --release --split-per-abi
           --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          --dart-define=APP_VERSION=${{ env.APP_VERSION }}
 
       - name: Renombrar para que se entienda cual bajar
         run: |
@@ -85,12 +92,20 @@ jobs:
         working-directory: app
         run: flutter pub get
 
+      - name: Version desde el tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          "APP_VERSION=$($env:GITHUB_REF_NAME.Substring(1))" |
+            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        shell: pwsh
+
       - name: Compilar Windows
         working-directory: app
         run: >
           flutter build windows --release
           --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          --dart-define=APP_VERSION=${{ env.APP_VERSION }}
 
       - name: Armar el instalador con Inno Setup
         run: |
@@ -124,6 +139,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      # El repo hace falta solo para leer el mensaje del tag (notas de la
+      # version y la marca [obligatoria]).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # checkout convierte los tags anotados en livianos y se pierde el
+      # mensaje: se vuelve a traer el tag tal cual.
+      - name: Traer el tag con su mensaje
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
       - uses: actions/download-artifact@v4
         with:
           path: entrega
@@ -144,6 +170,83 @@ jobs:
             | **Android** (casi todos los celulares desde 2017) | `MiAgencia-Android-arm64.apk` |
             | **Android viejo** (32 bits) | `MiAgencia-Android-arm32.apk` |
 
+            Las apps ya instaladas (desde la 0.3.0) avisan solas que hay una
+            versión nueva y se actualizan con un botón.
+
             > El APK no está firmado con una clave de Play Store, así que Android
             > va a pedir permiso para instalar desde fuera de la tienda. Es
             > esperable mientras la app no esté publicada.
+
+      # Actualizaciones automaticas: sube los instaladores a Storage y
+      # reescribe ultima.json, que es lo que consultan las apps instaladas.
+      #
+      # Para marcar una version como OBLIGATORIA (la app no deja seguir hasta
+      # actualizar), publicarla con un tag anotado que diga [obligatoria]:
+      #   git tag -a v0.4.0 -m "[obligatoria] Cambios en la base"
+      # El resto del mensaje se muestra como notas en el aviso.
+      - name: Subir a Supabase para las actualizaciones automaticas
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "::warning::Faltan los secretos SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY. La version quedo en GitHub, pero las apps instaladas no se van a enterar."
+            exit 0
+          fi
+
+          VERSION="${GITHUB_REF_NAME#v}"
+          BUCKET=instaladores
+          BASE="${SUPABASE_URL%/}/storage/v1"
+          PUBLICA="$BASE/object/public/$BUCKET"
+
+          # Las claves nuevas (sb_secret_...) van solo como apikey; las viejas
+          # (JWT de service_role) ademas como Bearer.
+          AUTH=(-H "apikey: $SUPABASE_SERVICE_KEY")
+          case "$SUPABASE_SERVICE_KEY" in
+            eyJ*) AUTH+=(-H "Authorization: Bearer $SUPABASE_SERVICE_KEY") ;;
+          esac
+
+          # La primera vez crea el bucket. Si ya existe, responde error y se sigue.
+          curl -sS -X POST "$BASE/bucket" "${AUTH[@]}" \
+            -H "Content-Type: application/json" \
+            -d "{\"id\":\"$BUCKET\",\"name\":\"$BUCKET\",\"public\":true}" || true
+          echo
+
+          subir() { # origen destino tipo cache
+            curl -sS --fail-with-body -X POST "$BASE/object/$BUCKET/$2" "${AUTH[@]}" \
+              -H "Content-Type: $3" -H "x-upsert: true" -H "cache-control: $4" \
+              --data-binary "@$1"
+            echo
+          }
+
+          SETUP="$(ls entrega/windows/MiAgencia-Setup-*.exe)"
+          SETUP_NOMBRE="$(basename "$SETUP")"
+          APK=application/vnd.android.package-archive
+          PARA_SIEMPRE="public, max-age=31536000"
+
+          # Primero los instaladores y al final la ficha: una app nunca tiene
+          # que enterarse de una version cuyos archivos todavia no estan.
+          subir "$SETUP" "$VERSION/$SETUP_NOMBRE" application/octet-stream "$PARA_SIEMPRE"
+          subir entrega/android/MiAgencia-Android-arm64.apk "$VERSION/MiAgencia-Android-arm64.apk" "$APK" "$PARA_SIEMPRE"
+          subir entrega/android/MiAgencia-Android-arm32.apk "$VERSION/MiAgencia-Android-arm32.apk" "$APK" "$PARA_SIEMPRE"
+
+          MENSAJE="$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | sed '/-----BEGIN PGP/,$d')"
+          OBLIGATORIA=false
+          if printf '%s' "$MENSAJE" | grep -qi '\[obligatoria\]'; then OBLIGATORIA=true; fi
+          NOTAS="$(printf '%s' "$MENSAJE" | sed 's/\[obligatoria\]//Ig' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg fecha "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg notas "$NOTAS" \
+            --argjson obligatoria "$OBLIGATORIA" \
+            --arg windows "$PUBLICA/$VERSION/$SETUP_NOMBRE" \
+            --arg arm64 "$PUBLICA/$VERSION/MiAgencia-Android-arm64.apk" \
+            --arg arm32 "$PUBLICA/$VERSION/MiAgencia-Android-arm32.apk" \
+            '{version: $version, fecha: $fecha, notas: $notas,
+              obligatoria: $obligatoria, windows: $windows,
+              android_arm64: $arm64, android_arm32: $arm32}' > ultima.json
+          cat ultima.json
+
+          subir ultima.json ultima.json application/json "no-cache, max-age=0"

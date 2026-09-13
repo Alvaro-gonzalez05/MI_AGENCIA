@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sin esto el APK de release no sale a internet: ni Supabase ni la
+         busqueda de actualizaciones. En debug Flutter lo agrega solo, por
+         eso no se notaba. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="mi_agencia"
         android:name="${applicationName}"
@@ -40,6 +44,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher: abrir la descarga de una version nueva. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

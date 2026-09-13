@@ -7,21 +7,25 @@ esto es sólo lo que falta.
 
 ---
 
-## Lo primero que tenés que hacer: cargar 2 secretos en GitHub
+## Lo primero que tenés que hacer: cargar 3 secretos en GitHub
 
 El código ya está en <https://github.com/Alvaro-gonzalez05/MI_AGENCIA>, y los
 workflows compilan los instaladores solos. Pero para que la app salga apuntando
 a tu base y no en modo demo, faltan dos valores.
 
-**Settings → Secrets and variables → Actions → New repository secret**, dos veces:
+**Settings → Secrets and variables → Actions → New repository secret**, tres veces:
 
 | Nombre | Valor |
 |---|---|
 | `SUPABASE_URL` | `https://zthpwqcoirrpvslambhz.supabase.co` |
 | `SUPABASE_ANON_KEY` | la publishable key (`sb_publishable_...`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | la secret key (`sb_secret_...`) o la `service_role` legacy. Supabase → Project Settings → API Keys |
 
-Las dos son públicas por diseño (viajan dentro de la app), pero van como
-secretos igual: así cambiar de proyecto no obliga a tocar código.
+Las dos primeras son públicas por diseño (viajan dentro de la app), pero van
+como secretos igual: así cambiar de proyecto no obliga a tocar código.
+
+La tercera **no es pública**: da acceso total al proyecto. Solo la usa el
+workflow para subir los instaladores a Storage; nunca entra en la app.
 
 Si no los cargás, el build igual funciona: sale en modo demo contra los datos
 de ejemplo.
@@ -40,6 +44,29 @@ Eso dispara el workflow, que compila y publica en Releases:
 - `MiAgencia-Android-arm64.apk` y `-arm32.apk`
 
 Tarda unos 10-15 minutos. Se sigue desde la pestaña **Actions**.
+
+### Actualizaciones automáticas (desde la 0.3.0)
+
+Al terminar, el workflow sube los instaladores al bucket público
+`instaladores` de Supabase Storage y reescribe `instaladores/ultima.json`. Las
+apps instaladas lo consultan al abrir y cada 6 horas; si hay una versión más
+nueva muestran un aviso con el botón **Actualizar**:
+
+- **Windows**: baja el instalador, lo corre en silencio, la app se cierra y
+  se vuelve a abrir actualizada.
+- **Android**: abre la descarga del APK; el usuario confirma la instalación.
+
+Para que una versión sea **obligatoria** (la app no deja seguir hasta
+actualizar), publicala con un tag anotado que diga `[obligatoria]`. El resto
+del mensaje aparece como notas en el aviso:
+
+```bash
+git tag -a v0.4.0 -m "[obligatoria] Cambios en la base de datos"
+git push origin v0.4.0
+```
+
+Sin el secreto `SUPABASE_SERVICE_ROLE_KEY` la versión igual se publica en
+GitHub, pero las apps instaladas no se enteran.
 
 ## Windows: resuelto en la nube, pendiente en tu máquina
 

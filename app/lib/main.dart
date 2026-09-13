@@ -8,6 +8,7 @@ import 'core/config.dart';
 import 'core/router.dart';
 import 'core/tema/control_tema.dart';
 import 'core/tema/tema.dart';
+import 'ui/aviso_actualizacion.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,8 @@ class MiAgencia extends ConsumerWidget {
       title: 'Mi Agencia',
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          CapaActualizacion(child: child ?? const SizedBox.shrink()),
       theme: TemaApp.claro(),
       darkTheme: TemaApp.oscuro(),
       themeMode: ref.watch(temaProvider),

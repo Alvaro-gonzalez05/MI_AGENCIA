@@ -1,7 +1,7 @@
 name: mi_agencia
 description: "ERP para agencias de autos usados"
 publish_to: 'none'
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ^3.13.3
@@ -30,6 +30,10 @@ dependencies:
   # Lo referencian plugins que traen IconData de Cupertino. Sin el, el paso
   # de tree-shaking de iconos del build release falla.
   cupertino_icons: ^1.0.8
+
+  # Abre la descarga de una version nueva en Android. Supabase ya lo trae
+  # como dependencia; se declara porque la app lo usa directamente.
+  url_launcher: ^6.3.1
 
   # Formato de numeros y fechas en es-AR ($ y separador de miles con punto).
   intl: ^0.20.2
