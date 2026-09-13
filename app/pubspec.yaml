@@ -38,6 +38,13 @@ dependencies:
   # Formato de numeros y fechas en es-AR ($ y separador de miles con punto).
   intl: ^0.20.2
 
+  # Informe crediticio en PDF. `pdf` arma el documento y `printing` lo abre,
+  # lo imprime o lo comparte con lo que el sistema tenga: en Windows el
+  # visor de PDF, en Android la hoja de compartir para mandarlo por WhatsApp,
+  # que es como una agencia lo va a usar de verdad.
+  pdf: ^3.11.3
+  printing: ^5.14.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

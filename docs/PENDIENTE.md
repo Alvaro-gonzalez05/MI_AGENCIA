@@ -1,6 +1,6 @@
 # Qué falta
 
-Estado al 12/09/2026. Ordenado por lo que desbloquea más cosas.
+Estado al 13/09/2026. Ordenado por lo que desbloquea más cosas.
 
 Lo que **ya está terminado y verificado** está en [README.md](../README.md);
 esto es sólo lo que falta.
@@ -109,8 +109,34 @@ Android y web funcionan sin nada de esto.
 | ~~**Campañas**~~ | **Hecho.** Falta desplegar la Edge Function y cargar la API key de Resend. |
 | ~~**Configuración**~~ | **Hecho.** Falta la gestión de usuarios de la agencia. |
 | ~~**Agencias**~~ | **Hecho.** |
+| ~~**Interesados**~~ | **Hecho, incluido el semáforo del BCRA y el informe en PDF.** |
 
 **Las 10 secciones tienen pantalla real.** Ya no queda ninguna de relleno.
+
+### Interesados y semáforo crediticio — terminado
+
+La lista filtra por color y muestra en qué punto está cada persona (sin CUIT,
+con CUIT sin consultar, consultada, consulta vencida). Al tocarla se abre la
+ficha, que es donde pasa todo:
+
+- Se escribe el CUIT o CUIL y el botón **Consultar BCRA** lo valida (dígito
+  verificador incluido) antes de gastar la consulta.
+- El semáforo sale grande, con la recomendación escrita y la lista de motivos
+  por los que dio ese color.
+- Abajo, el desglose entidad por entidad (situación 1 a 6, deuda, días de
+  atraso, refinanciaciones, juicio) y los cheques rechazados, separando los
+  pagados de los que siguen impagos.
+- **Descargar informe** arma un PDF con todo lo que la agencia sabe de la
+  persona más el detalle del BCRA. En Windows abre el visor; en Android, la
+  hoja de compartir, que es como se manda por WhatsApp.
+
+La consulta se cachea 30 días porque el BCRA publica una vez por mes; el botón
+**Volver a consultar** saltea el caché cuando la persona regularizó.
+
+Un detalle que importa: el BCRA contesta 404 tanto para "no existe" como para
+"no tiene deudas informadas". El sistema los distingue — consultado y sin
+deudas es **verde**, nunca consultado es **sin datos** — y el informe aclara
+que alguien sin historial crediticio no es lo mismo que alguien que cumple.
 
 ### Repositorio contra Supabase — hecho
 
@@ -121,11 +147,11 @@ ninguna pantalla: hablan con la interfaz, no con Supabase.
 La **escritura** ya está para vehículos, gastos, precios y ventas. Falta la de
 campañas, configuración y agencias.
 
-### Edge Functions (ninguna escrita todavía)
+### Edge Functions
 
-| Función | Qué hace | Estado de la API |
+| Función | Qué hace | Estado |
 |---|---|---|
-| `bcra-consulta` | Consulta la Central de Deudores por CUIT y llena `bcra_consultas` | Verificada en vivo: devuelve situación 1-6, montos, días de atraso y banderas de juicio |
+| `bcra-consulta` | Consulta la Central de Deudores por CUIT y llena `bcra_consultas` | **Desplegada y andando.** Probada contra CUIT reales |
 | `sync-catalogo` | Espeja el catálogo de ArgAutos, mensual | Verificada. **Falta la API key** (pedila gratis en argautos.com) |
 | `sync-indices` | Actualiza IPC del INDEC y cotización del dólar | Por integrar |
 | `enviar-campana` | Envío de emails por Resend | **Escrita.** Falta desplegarla y cargar `RESEND_API_KEY` |
@@ -136,6 +162,12 @@ consumirse desde Edge Functions, nunca desde la app.
 ### Detalles chicos
 
 - **El tema no se recuerda** al cerrar la app. Falta `shared_preferences`.
+- **`flutter pub get` en tu máquina avisa de symlinks** desde que entró
+  `printing` (el paquete del PDF): sin Modo Desarrollador, Windows no deja
+  crear los symlinks que Flutter usa para los plugins nativos. Las
+  dependencias se instalan igual y `analyze`/`test` andan; sólo afecta a
+  `flutter build windows` local, que ya no corría por otros motivos. En el
+  runner de GitHub no pasa.
 - **Sin gráficos todavía**: el panel muestra una barra apilada de antigüedad,
   pero falta la evolución mensual. `Motor.evolucion()` ya calcula los datos.
 - **Sin ícono ni splash** propios: está el de la plantilla de Flutter.
@@ -164,10 +196,17 @@ consumirse desde Edge Functions, nunca desde la app.
 
 ```powershell
 .\scripts\dev.ps1 analyze     # 0 problemas
-.\scripts\dev.ps1 test        # 14 tests
-cd tests; npm test            # migraciones + paridad del motor con el original
+.\scripts\dev.ps1 test        # 121 tests
+cd tests; npm test            # esquema + semáforo + paridad del motor
 ```
 
-El último es el importante: aplica las 10 migraciones a un Postgres real y
-compara 273 valores calculados contra el JavaScript original del cliente. Si
-tocás una fórmula del SQL y se rompe la paridad, ahí saltás.
+El último es el importante. Aplica las 13 migraciones a un Postgres real y:
+
+- compara **247 valores** calculados contra el JavaScript original del cliente;
+- corre el **semáforo crediticio** contra la base y contra el código de la app,
+  con los mismos casos (`tests/casos_semaforo.json`), para que las dos
+  implementaciones no se separen sin que nadie se entere;
+- verifica que `supabase/migraciones_completas.sql` esté al día con las
+  migraciones sueltas.
+
+Si tocás una fórmula del SQL y se rompe la paridad, ahí saltás.

@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/agencias.dart';
+import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
@@ -77,12 +78,21 @@ class RepositorioSupabase implements Repositorio {
   @override
   Future<List<Interesado>> interesados() async {
     // Una sola ida y vuelta: PostgREST resuelve las relaciones anidadas.
+    // Se trae TODO lo que la agencia sabe de la persona porque es lo que
+    // despues se imprime en el informe crediticio, y volver a la base en el
+    // medio de armar un PDF seria pedirlo dos veces por nada.
     final filas = await _db
         .from('oportunidades')
         .select('''
-          id, estado, interes, notas, created_at, proxima_accion_fecha,
-          clientes!inner ( id, nombre, apellido, cuit, email, telefono ),
-          vehiculos ( codigo, marca, modelo )
+          id, estado, interes, notas, created_at,
+          presupuesto_max, necesita_financiacion,
+          entrega_usado, usado_descripcion, usado_valor_estimado,
+          proxima_accion, proxima_accion_fecha,
+          clientes!inner (
+            id, nombre, apellido, cuit, dni, email, telefono, whatsapp,
+            localidad, provincia, origen, notas, acepta_marketing
+          ),
+          vehiculos ( id, codigo, marca, modelo, anio, precio_objetivo )
         ''')
         .order('created_at', ascending: false)
         .limit(500);
@@ -98,7 +108,7 @@ class RepositorioSupabase implements Repositorio {
 
     final semaforos = await _db
         .from('v_clientes_semaforo')
-        .select('cliente_id, semaforo, situacion_maxima')
+        .select()
         .inFilter('cliente_id', idsClientes);
 
     final porCliente = {
@@ -108,27 +118,103 @@ class RepositorioSupabase implements Repositorio {
     return filas.map((f) {
       final cliente = f['clientes'] as Map<String, dynamic>;
       final vehiculo = f['vehiculos'] as Map<String, dynamic>?;
-      final sem = porCliente[cliente['id']];
 
       return Interesado(
         id: f['id'] as String,
+        clienteId: cliente['id'] as String,
         nombre: [
           cliente['nombre'],
           cliente['apellido'],
         ].whereType<String>().where((s) => s.isNotEmpty).join(' '),
-        semaforo: _aSemaforo(sem?['semaforo'] as String?),
         telefono: cliente['telefono'] as String?,
+        whatsapp: cliente['whatsapp'] as String?,
         email: cliente['email'] as String?,
         cuit: cliente['cuit'] as String?,
-        situacionBcra: _entero(sem?['situacion_maxima']),
+        dni: cliente['dni'] as String?,
+        localidad: cliente['localidad'] as String?,
+        provincia: cliente['provincia'] as String?,
+        origen: cliente['origen'] as String?,
+        aceptaMarketing: cliente['acepta_marketing'] != false,
+        vehiculoId: vehiculo?['id'] as String?,
         vehiculoCodigo: vehiculo?['codigo'] as String?,
         vehiculoTitulo: vehiculo == null
             ? null
             : '${vehiculo['marca']} ${vehiculo['modelo']}',
+        vehiculoPrecio: _decimal(vehiculo?['precio_objetivo']),
+        estadoOportunidad: f['estado'] as String?,
+        interes: _entero(f['interes']),
+        presupuestoMax: _decimal(f['presupuesto_max']),
+        necesitaFinanciacion: f['necesita_financiacion'] == true,
+        entregaUsado: f['entrega_usado'] == true,
+        usadoDescripcion: f['usado_descripcion'] as String?,
+        usadoValorEstimado: _decimal(f['usado_valor_estimado']),
+        proximaAccion: f['proxima_accion'] as String?,
+        proximaAccionFecha: _fecha(f['proxima_accion_fecha']),
         notas: f['notas'] as String?,
+        notasCliente: cliente['notas'] as String?,
         fecha: _fecha(f['created_at']),
+        consulta: _aConsulta(porCliente[cliente['id']]),
       );
     }).toList();
+  }
+
+  /// Arma la consulta a partir de una fila de `v_clientes_semaforo`.
+  ///
+  /// Devuelve null cuando a la persona nunca se le consulto el BCRA. Ese caso
+  /// no es "situacion desconocida por error": es que nadie pregunto todavia,
+  /// y la pantalla lo tiene que decir distinto.
+  static ConsultaBcra? _aConsulta(Map<String, dynamic>? fila) {
+    if (fila == null || fila['consultado_at'] == null) return null;
+    return ConsultaBcra.desdeJson(fila);
+  }
+
+  @override
+  Future<void> guardarCuit({
+    required String clienteId,
+    required String cuit,
+  }) async {
+    final limpio = cuit.replaceAll(RegExp(r'\D'), '');
+    if (!cuitValido(limpio)) {
+      throw Exception('Ese CUIT/CUIL no es valido. Revisa los 11 digitos.');
+    }
+    await _db.from('clientes').update({'cuit': limpio}).eq('id', clienteId);
+  }
+
+  @override
+  Future<ConsultaBcra> consultarBcra({
+    required String clienteId,
+    required String cuit,
+    bool forzar = false,
+  }) async {
+    final limpio = cuit.replaceAll(RegExp(r'\D'), '');
+
+    // Se valida aca ademas de en el servidor. No es redundancia inutil: un
+    // CUIT mal tipeado le da 404 el BCRA, y un 404 significa "sin deudas".
+    // Sin esta validacion, un digito de mas pinta de verde a cualquiera.
+    if (!cuitValido(limpio)) {
+      throw Exception('Ese CUIT/CUIL no es valido. Revisa los 11 digitos.');
+    }
+
+    final r = await _db.functions.invoke(
+      'bcra-consulta',
+      body: {'cliente_id': clienteId, 'cuit': limpio, 'forzar': forzar},
+    );
+
+    final datos = r.data;
+    if (datos is! Map) {
+      throw Exception('El servidor no devolvio una respuesta entendible.');
+    }
+    if (datos['error'] != null) throw Exception(datos['error'].toString());
+
+    final consulta = datos['consulta'];
+    if (consulta is! Map) {
+      throw Exception('El servidor no devolvio la consulta.');
+    }
+
+    return ConsultaBcra.desdeJson(
+      consulta.cast<String, dynamic>(),
+      cacheada: datos['cacheada'] == true,
+    );
   }
 
   // -------------------------------------------------------------------
@@ -617,13 +703,6 @@ class RepositorioSupabase implements Repositorio {
     'vendido' => EstadoVehiculo.vendido,
     'dado_de_baja' => EstadoVehiculo.dadoDeBaja,
     _ => EstadoVehiculo.enStock,
-  };
-
-  static SemaforoCrediticio _aSemaforo(String? s) => switch (s) {
-    'verde' => SemaforoCrediticio.verde,
-    'amarillo' => SemaforoCrediticio.amarillo,
-    'rojo' => SemaforoCrediticio.rojo,
-    _ => SemaforoCrediticio.sinDatos,
   };
 
   static VehiculoInventario _aVehiculo(Map<String, dynamic> f) {

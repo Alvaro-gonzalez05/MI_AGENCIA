@@ -5,8 +5,22 @@ import '../../core/formato.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
+import '../../dominio/bcra.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
+import 'ficha_interesado.dart';
+
+/// Filtro de la lista. `null` en [SemaforoCrediticio] significa "todos".
+final _filtroProvider = NotifierProvider<_Filtro, SemaforoCrediticio?>(
+  _Filtro.new,
+);
+
+class _Filtro extends Notifier<SemaforoCrediticio?> {
+  @override
+  SemaforoCrediticio? build() => null;
+
+  void poner(SemaforoCrediticio? s) => state = s;
+}
 
 class PantallaInteresados extends ConsumerWidget {
   const PantallaInteresados({super.key});
@@ -14,6 +28,7 @@ class PantallaInteresados extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asincrono = ref.watch(interesadosProvider);
+    final filtro = ref.watch(_filtroProvider);
     final p = context.paleta;
     final margen = MediaQuery.sizeOf(context).width < Corte.tablet
         ? Esp.lg + 4
@@ -26,8 +41,8 @@ class PantallaInteresados extends ConsumerWidget {
         titulo: 'No se pudieron cargar los interesados',
         descripcion: '$e',
       ),
-      data: (lista) {
-        if (lista.isEmpty) {
+      data: (todos) {
+        if (todos.isEmpty) {
           return const EstadoVacio(
             icono: Icons.people_outline,
             titulo: 'Sin interesados cargados',
@@ -37,28 +52,97 @@ class PantallaInteresados extends ConsumerWidget {
           );
         }
 
-        return ListView(
-          padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xxl),
-          children: [
-            const Aparecer(child: _ExplicacionSemaforo()),
-            const SizedBox(height: Esp.lg + 2),
-            for (var i = 0; i < lista.length; i++) ...[
-              Aparecer(
-                indice: i + 1,
-                child: _TarjetaInteresado(interesado: lista[i]),
-              ),
-              const SizedBox(height: Esp.sm + 2),
+        final lista = filtro == null
+            ? todos
+            : todos.where((i) => i.semaforo == filtro).toList();
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(interesadosProvider),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xxl),
+            children: [
+              const Aparecer(child: _ExplicacionSemaforo()),
+              const SizedBox(height: Esp.lg),
+              Aparecer(indice: 1, child: _Filtros(interesados: todos)),
+              const SizedBox(height: Esp.md),
+
+              if (lista.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Esp.xxl),
+                  child: Center(
+                    child: Text(
+                      'Ningún interesado está en "${filtro!.etiqueta}".',
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
+                    ),
+                  ),
+                ),
+
+              for (var i = 0; i < lista.length; i++) ...[
+                Aparecer(
+                  indice: i + 2,
+                  child: _TarjetaInteresado(interesado: lista[i]),
+                ),
+                const SizedBox(height: Esp.sm + 2),
+              ],
+
+              if (lista.isNotEmpty) ...[
+                const SizedBox(height: Esp.md),
+                Center(
+                  child: Text(
+                    '${lista.length} interesado${lista.length == 1 ? '' : 's'}'
+                    '${filtro == null ? '' : ' de ${todos.length}'}',
+                    style: TextStyle(fontSize: 12, color: p.tinta3),
+                  ),
+                ),
+              ],
             ],
-            const SizedBox(height: Esp.md),
-            Center(
-              child: Text(
-                '${lista.length} interesado${lista.length == 1 ? '' : 's'}',
-                style: TextStyle(fontSize: 12, color: p.tinta3),
-              ),
-            ),
-          ],
+          ),
         );
       },
+    );
+  }
+}
+
+/// Filtros por color, con el conteo de cada uno.
+///
+/// El número al lado del filtro es la respuesta a la pregunta que la agencia
+/// se hace de verdad: "¿a cuántos de los que tengo anotados les puedo
+/// financiar?". Sin el conteo habría que tocar cada filtro para saberlo.
+class _Filtros extends ConsumerWidget {
+  const _Filtros({required this.interesados});
+
+  final List<Interesado> interesados;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final actual = ref.watch(_filtroProvider);
+
+    int contar(SemaforoCrediticio s) =>
+        interesados.where((i) => i.semaforo == s).length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          ChipSeleccion(
+            etiqueta: 'Todos (${interesados.length})',
+            activo: actual == null,
+            onTap: () => ref.read(_filtroProvider.notifier).poner(null),
+          ),
+          for (final s in SemaforoCrediticio.values) ...[
+            const SizedBox(width: Esp.sm),
+            ChipSeleccion(
+              etiqueta: '${s.etiqueta} (${contar(s)})',
+              activo: actual == s,
+              color: s == SemaforoCrediticio.sinDatos ? null : s.color(p),
+              onTap: () => ref
+                  .read(_filtroProvider.notifier)
+                  .poner(actual == s ? null : s),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -209,7 +293,7 @@ class _TarjetaInteresado extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final i = interesado;
-    final sinConsultar = i.semaforo == SemaforoCrediticio.sinDatos;
+    final c = i.consulta;
     final iniciales = i.nombre
         .trim()
         .split(RegExp(r'\s+'))
@@ -219,6 +303,9 @@ class _TarjetaInteresado extends StatelessWidget {
         .join();
 
     return Tarjeta(
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => FichaInteresado(interesado: i))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -261,15 +348,19 @@ class _TarjetaInteresado extends StatelessWidget {
                         color: p.tinta,
                       ),
                     ),
-                    if (i.telefono != null)
-                      Text(
-                        i.telefono!,
-                        style: TextStyle(
-                          fontFamily: TemaApp.mono,
-                          fontSize: 12,
-                          color: p.tinta3,
-                        ),
+                    Text(
+                      [
+                        if (i.telefono != null) i.telefono!,
+                        if (i.cuit != null) formatearCuit(i.cuit!),
+                      ].join('  ·  ').ifEmpty('Sin datos de contacto'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: TemaApp.mono,
+                        fontSize: 12,
+                        color: p.tinta3,
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -281,6 +372,7 @@ class _TarjetaInteresado extends StatelessWidget {
               ),
             ],
           ),
+
           if (i.vehiculoTitulo != null) ...[
             const SizedBox(height: Esp.md),
             Container(
@@ -328,36 +420,101 @@ class _TarjetaInteresado extends StatelessWidget {
               ),
             ),
           ],
+
           if (i.notas != null && i.notas!.isNotEmpty) ...[
             const SizedBox(height: Esp.sm + 2),
             Text(
               i.notas!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
             ),
           ],
-          if (sinConsultar) ...[
-            const SizedBox(height: Esp.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Sin CUIT cargado no se puede consultar el BCRA.',
-                    style: TextStyle(fontSize: 12, color: p.tinta3),
-                  ),
+
+          const SizedBox(height: Esp.md),
+          Divider(color: p.borde, height: 1),
+          const SizedBox(height: Esp.sm + 2),
+          Row(
+            children: [
+              Expanded(child: _Estado(interesado: i)),
+              const SizedBox(width: Esp.sm),
+              Text(
+                c == null ? 'Consultar' : 'Ver ficha',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: p.acentoTexto,
                 ),
-                const SizedBox(width: Esp.sm),
-                OutlinedButton.icon(
-                  // PENDIENTE: abre el formulario de CUIT y llama a la Edge
-                  // Function de BCRA. La UI ya está; falta el backend.
-                  onPressed: null,
-                  icon: const Icon(Icons.search_rounded, size: 16),
-                  label: const Text('Consultar BCRA'),
-                ),
-              ],
-            ),
-          ],
+              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: p.acentoTexto),
+            ],
+          ),
         ],
       ),
     );
   }
+}
+
+/// La línea que resume en qué punto está la evaluación de esta persona.
+class _Estado extends StatelessWidget {
+  const _Estado({required this.interesado});
+
+  final Interesado interesado;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final i = interesado;
+    final c = i.consulta;
+
+    final (IconData icono, String texto, Color color) = switch (c) {
+      null when !i.tieneCuit => (
+        Icons.badge_outlined,
+        'Falta el CUIT para poder consultar el BCRA',
+        p.tinta3,
+      ),
+      null => (
+        Icons.search_rounded,
+        'Tiene CUIT cargado, todavía sin consultar',
+        p.observar,
+      ),
+      _ when c.vencida => (
+        Icons.update_rounded,
+        'Consulta del ${Fmt.fecha(c.consultadoEl)}, conviene actualizarla',
+        p.observar,
+      ),
+      _ when c.sinDeudasInformadas => (
+        Icons.verified_outlined,
+        'Sin deudas informadas al ${Fmt.fecha(c.consultadoEl)}',
+        p.bien,
+      ),
+      _ => (
+        Icons.account_balance_outlined,
+        '${c.entidades.length} '
+            '${c.entidades.length == 1 ? 'entidad' : 'entidades'}'
+            ' · situación ${c.situacionMaxima} · '
+            '${Fmt.pesosCompacto(c.totalDeuda)}',
+        p.tinta3,
+      ),
+    };
+
+    return Row(
+      children: [
+        Icon(icono, size: 15, color: color),
+        const SizedBox(width: Esp.sm),
+        Expanded(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+extension on String {
+  String ifEmpty(String otro) => isEmpty ? otro : this;
 }

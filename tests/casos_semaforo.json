@@ -1,0 +1,124 @@
+{
+  "porQue": [
+    "El semaforo crediticio esta implementado DOS veces: en SQL (la funcion",
+    "public.semaforo_de_situacion mas la regla de v_clientes_semaforo) y en",
+    "Dart (ConsultaBcra.semaforo, en app/lib/dominio/bcra.dart).",
+    "",
+    "No es duplicacion por descuido. La lista de interesados lee la vista, y",
+    "la ficha tiene que pintar el resultado de una consulta recien hecha",
+    "ANTES de que esa fila exista en la vista. Sin la version en Dart, el",
+    "vendedor apretaria 'Consultar' y veria el color viejo hasta recargar.",
+    "",
+    "Este archivo es el contrato entre las dos. Lo leen:",
+    "  tests/semaforo_bcra.mjs   -> lo corre contra Postgres de verdad",
+    "  app/test/bcra_test.dart   -> lo corre contra el codigo de la app",
+    "Si alguien cambia un criterio en un solo lado, uno de los dos falla."
+  ],
+
+  "casos": [
+    {
+      "caso": "nunca se consulto",
+      "consultado": false,
+      "esperado": "sin_datos"
+    },
+    {
+      "caso": "consultado y ninguna entidad informo deuda",
+      "entidades": 0,
+      "esperado": "verde"
+    },
+    {
+      "caso": "situacion 1 en una entidad",
+      "situacion": 1,
+      "entidades": 1,
+      "esperado": "verde"
+    },
+    {
+      "caso": "situacion 2: atrasos de hasta 90 dias, todavia apto",
+      "situacion": 2,
+      "entidades": 3,
+      "esperado": "verde"
+    },
+    {
+      "caso": "situacion 3: cumplimiento deficiente",
+      "situacion": 3,
+      "entidades": 2,
+      "esperado": "amarillo"
+    },
+    {
+      "caso": "situacion 4: dificil recuperacion",
+      "situacion": 4,
+      "entidades": 1,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 5: irrecuperable",
+      "situacion": 5,
+      "entidades": 1,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 6: irrecuperable por disposicion tecnica",
+      "situacion": 6,
+      "entidades": 1,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 1 pero tuvo cheques rechazados y los pago",
+      "situacion": 1,
+      "entidades": 1,
+      "chequesRechazados": true,
+      "chequesSinPagar": 0,
+      "esperado": "amarillo"
+    },
+    {
+      "caso": "situacion 1 con un cheque rechazado SIN pagar",
+      "situacion": 1,
+      "entidades": 1,
+      "chequesRechazados": true,
+      "chequesSinPagar": 1,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 2 con proceso judicial informado",
+      "situacion": 2,
+      "entidades": 2,
+      "procesoJudicial": true,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 1 con 30 dias de atraso: el borde todavia es verde",
+      "situacion": 1,
+      "entidades": 1,
+      "diasAtraso": 30,
+      "esperado": "verde"
+    },
+    {
+      "caso": "situacion 1 con 31 dias de atraso: pasa el umbral",
+      "situacion": 1,
+      "entidades": 1,
+      "diasAtraso": 31,
+      "esperado": "amarillo"
+    },
+    {
+      "caso": "situacion 3 con cheque impago: lo peor manda",
+      "situacion": 3,
+      "entidades": 2,
+      "chequesRechazados": true,
+      "chequesSinPagar": 2,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "situacion 2 con deuda refinanciada: se informa pero no baja el color",
+      "situacion": 2,
+      "entidades": 1,
+      "refinanciaciones": true,
+      "esperado": "verde"
+    },
+    {
+      "caso": "situacion 4 en una sola entidad entre varias normales",
+      "situacion": 4,
+      "entidades": 5,
+      "esperado": "rojo"
+    }
+  ]
+}

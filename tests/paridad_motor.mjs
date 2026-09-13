@@ -128,6 +128,20 @@ const CAMPOS = [
 const TOL = 1e-6;
 let diffs = 0, comparados = 0;
 
+// La regla de alerta del original (ver motor_original.mjs), para poder
+// preguntarle a cada lado si su alerta es coherente con los dias que conto.
+const alertaDe = (dias, estado) =>
+  estado === 'Vendido' ? 'vendido'
+  : dias >= cfg.diasRojo ? 'critico'
+  : dias >= cfg.diasAmarillo ? 'atencion'
+  : dias >= cfg.diasVerde ? 'observar'
+  : 'normal';
+
+// Unidades paradas justo sobre un umbral. No son errores, pero se listan al
+// final: es la explicacion de por que el tablero puede cambiar de color en el
+// medio del dia sin que nadie haya tocado nada.
+const alertasPorElDia = [];
+
 for (const v of js) {
   const r = porCodigo[v.id];
   if (!r) { console.log(`  FALTA en SQL: ${v.id}`); diffs++; continue; }
@@ -135,7 +149,26 @@ for (const v of js) {
     const a = v[kJs], b = r[kSql];
     comparados++;
     if (kJs === 'alerta') {
-      if (a !== b) { console.log(`  ${v.id}.${kJs}: js="${a}" sql="${b}"`); diffs++; }
+      // La alerta sale de los dias en stock, asi que hereda la divergencia de
+      // medio dia del original: una unidad parada justo sobre un umbral cae de
+      // un lado a la manana y del otro a la tarde. Por eso no se comparan las
+      // alertas a ciegas, se comprueba que CADA lado aplique bien la regla a
+      // SU conteo de dias. Si los dos son coherentes con lo que contaron, la
+      // alerta no tiene ningun error propio. Si alguno no lo es, eso si es un
+      // bug, y el test lo dice.
+      if (a !== b) {
+        const jsCoherente = alertaDe(v.diasEnStock, v.estado) === a;
+        const sqlCoherente = alertaDe(Number(r.dias_en_stock), v.estado) === b;
+        if (jsCoherente && sqlCoherente) {
+          alertasPorElDia.push(
+            `${v.id}: js "${a}" con ${v.diasEnStock} dias, sql "${b}" con ${r.dias_en_stock}`,
+          );
+        } else {
+          console.log(`  ${v.id}.${kJs}: js="${a}" sql="${b}"`
+            + `  (la regla no cierra: js=${jsCoherente} sql=${sqlCoherente})`);
+          diffs++;
+        }
+      }
       continue;
     }
     const na = (a === null || a === undefined) ? null : Number(a);
@@ -196,6 +229,13 @@ for (const v of js) {
 }
 
 diffs += erroresDias;
+
+if (alertasPorElDia.length) {
+  console.log(`\nAlertas que dependen del medio dia de diferencia:`);
+  for (const linea of alertasPorElDia) console.log(`  ${linea}`);
+  console.log('  (las dos aplican bien la regla: cambia el conteo de dias, no el criterio)');
+}
+
 console.log(erroresDias === 0
   ? '\nDias en stock: la unica diferencia con el original es el redondeo de medio dia, como se documento.'
   : `\n${erroresDias} problema(s) en el calculo de dias en stock.`);

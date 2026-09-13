@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/tema/colores.dart';
+import 'bcra.dart';
 
 /// Semaforo de ROTACION: cuanto lleva la unidad en el predio contra los
 /// umbrales de la agencia. No confundir con [SemaforoCrediticio], que mide
@@ -201,32 +202,129 @@ class ResumenAgencia {
   final int bajoMargenMinimo;
 }
 
+/// Una persona interesada en una unidad.
+///
+/// Junta las dos tablas que el original tenia en una: la PERSONA (clientes) y
+/// su INTERES en un vehiculo concreto (oportunidades). Trae todo lo que la
+/// agencia sabe del cliente porque es lo que se imprime en el informe: si
+/// faltara un dato habria que volver a la base en el medio de armar el PDF.
 class Interesado {
   const Interesado({
     required this.id,
+    required this.clienteId,
     required this.nombre,
-    required this.semaforo,
     this.telefono,
+    this.whatsapp,
     this.email,
     this.cuit,
+    this.dni,
+    this.localidad,
+    this.provincia,
+    this.origen,
+    this.aceptaMarketing = true,
+    this.vehiculoId,
     this.vehiculoCodigo,
     this.vehiculoTitulo,
-    this.situacionBcra,
+    this.vehiculoPrecio,
+    this.estadoOportunidad,
+    this.interes,
+    this.presupuestoMax,
+    this.necesitaFinanciacion = false,
+    this.entregaUsado = false,
+    this.usadoDescripcion,
+    this.usadoValorEstimado,
+    this.proximaAccion,
+    this.proximaAccionFecha,
     this.notas,
+    this.notasCliente,
     this.fecha,
+    this.consulta,
   });
 
+  /// Id de la oportunidad.
   final String id;
+
+  /// Id de la persona. Es el que necesita la consulta al BCRA: el semaforo es
+  /// una propiedad de la persona, no de su interes en un auto.
+  final String clienteId;
+
   final String nombre;
-  final SemaforoCrediticio semaforo;
   final String? telefono;
+  final String? whatsapp;
   final String? email;
   final String? cuit;
+  final String? dni;
+  final String? localidad;
+  final String? provincia;
+  final String? origen;
+  final bool aceptaMarketing;
+
+  final String? vehiculoId;
   final String? vehiculoCodigo;
   final String? vehiculoTitulo;
-  final int? situacionBcra;
+  final double? vehiculoPrecio;
+
+  final String? estadoOportunidad;
+
+  /// 1 frio .. 5 caliente. Lo pone el vendedor a mano.
+  final int? interes;
+
+  final double? presupuestoMax;
+  final bool necesitaFinanciacion;
+  final bool entregaUsado;
+  final String? usadoDescripcion;
+  final double? usadoValorEstimado;
+  final String? proximaAccion;
+  final DateTime? proximaAccionFecha;
   final String? notas;
+  final String? notasCliente;
   final DateTime? fecha;
+
+  /// La ultima consulta al BCRA, o null si a esta persona nunca se le
+  /// consulto. El semaforo sale de aca y de ningun otro lado.
+  final ConsultaBcra? consulta;
+
+  SemaforoCrediticio get semaforo =>
+      consulta?.semaforo ?? SemaforoCrediticio.sinDatos;
+
+  int? get situacionBcra => consulta?.situacionMaxima;
+
+  bool get tieneCuit => cuit != null && cuit!.isNotEmpty;
+
+  /// Se puede consultar el BCRA, pero todavia no se hizo.
+  bool get pendienteDeConsultar => tieneCuit && consulta == null;
+
+  Interesado copiar({ConsultaBcra? consulta, String? cuit}) => Interesado(
+    id: id,
+    clienteId: clienteId,
+    nombre: nombre,
+    telefono: telefono,
+    whatsapp: whatsapp,
+    email: email,
+    cuit: cuit ?? this.cuit,
+    dni: dni,
+    localidad: localidad,
+    provincia: provincia,
+    origen: origen,
+    aceptaMarketing: aceptaMarketing,
+    vehiculoId: vehiculoId,
+    vehiculoCodigo: vehiculoCodigo,
+    vehiculoTitulo: vehiculoTitulo,
+    vehiculoPrecio: vehiculoPrecio,
+    estadoOportunidad: estadoOportunidad,
+    interes: interes,
+    presupuestoMax: presupuestoMax,
+    necesitaFinanciacion: necesitaFinanciacion,
+    entregaUsado: entregaUsado,
+    usadoDescripcion: usadoDescripcion,
+    usadoValorEstimado: usadoValorEstimado,
+    proximaAccion: proximaAccion,
+    proximaAccionFecha: proximaAccionFecha,
+    notas: notas,
+    notasCliente: notasCliente,
+    fecha: fecha,
+    consulta: consulta ?? this.consulta,
+  );
 }
 
 /// Parametros de la agencia. Espeja `agencia_config`.

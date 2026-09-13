@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/agencias.dart';
+import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
@@ -74,6 +75,27 @@ abstract interface class Repositorio {
   Future<void> cambiarEstadoAgencia(String id, {required bool activa});
 
   Future<List<Invitacion>> invitacionesPendientes();
+
+  // --- BCRA ---
+
+  /// Consulta la situacion crediticia en la Central de Deudores del BCRA.
+  ///
+  /// La hace el servidor, no la app: el BCRA no manda cabeceras CORS, asi
+  /// que un fetch desde el cliente falla siempre. De paso queda el historial
+  /// guardado y cacheado, porque el BCRA publica una vez por mes y volver a
+  /// preguntar antes no trae nada nuevo.
+  ///
+  /// [forzar] saltea ese cache. Sirve para el boton "volver a consultar"
+  /// cuando el vendedor sabe que la persona regularizo su situacion.
+  Future<ConsultaBcra> consultarBcra({
+    required String clienteId,
+    required String cuit,
+    bool forzar = false,
+  });
+
+  /// Guarda el CUIT de una persona. Es lo unico que hace falta para poder
+  /// consultarle el BCRA.
+  Future<void> guardarCuit({required String clienteId, required String cuit});
 
   // --- Email marketing ---
 
@@ -444,6 +466,9 @@ class RepositorioDemo implements Repositorio {
     );
   }
 
+  /// CUIT que se cargaron en esta sesion de demo.
+  final Map<String, String> _cuits = {};
+
   @override
   Future<List<Interesado>> interesados() async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -453,17 +478,44 @@ class RepositorioDemo implements Repositorio {
     // BCRA, asi que el semaforo arranca en "sin consultar", que es la verdad.
     return DatosDemo.interesados.map((i) {
       final v = inv.where((x) => x.codigo == i.codigo).firstOrNull;
+      final id = '${i.codigo}-${i.nombre}';
       return Interesado(
-        id: '${i.codigo}-${i.nombre}',
+        id: id,
+        clienteId: id,
         nombre: i.nombre,
         telefono: i.telefono,
-        semaforo: SemaforoCrediticio.sinDatos,
+        cuit: _cuits[id],
         vehiculoCodigo: i.codigo,
         vehiculoTitulo: v?.titulo,
+        vehiculoPrecio: v?.precioActual,
         notas: i.notas,
         fecha: i.fecha,
       );
     }).toList();
+  }
+
+  @override
+  Future<void> guardarCuit({
+    required String clienteId,
+    required String cuit,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _cuits[clienteId] = cuit.replaceAll(RegExp(r'\D'), '');
+  }
+
+  @override
+  Future<ConsultaBcra> consultarBcra({
+    required String clienteId,
+    required String cuit,
+    bool forzar = false,
+  }) async {
+    // No se inventa una situacion crediticia ni para la demo. Un semaforo
+    // verde falso es exactamente el dato que hace que una agencia financie
+    // a quien no debia: el modo demo dice la verdad, que es que no consulto.
+    throw Exception(
+      'La consulta al BCRA necesita la base conectada. En modo demo no se '
+      'consulta nada, y un resultado inventado seria peor que ninguno.',
+    );
   }
 }
 

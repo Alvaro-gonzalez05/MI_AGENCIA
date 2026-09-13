@@ -13,17 +13,17 @@ convierte en una app multi-agencia con backend propio, para Windows y Android.
 
 | Pieza | Estado |
 |---|---|
-| Esquema multi-tenant (25 tablas, 6 vistas, 65 políticas RLS) | escrito y ejecutado contra Postgres; **falta aplicarlo en Supabase** |
-| Motor de cálculo portado a SQL | **verificado**: 273 valores comparados contra el JS original, coincidencia total |
+| Esquema multi-tenant (25 tablas, 6 vistas, 65 políticas RLS) | **aplicado en Supabase** y verificado |
+| Motor de cálculo portado a SQL | **verificado**: 247 valores comparados contra el JS original, coincidencia total |
 | Toolchain Flutter | instalado y funcionando |
 | App: tema, shell, navegación, login | funcionando |
-| App: panel, inventario, ficha, interesados | funcionando con datos reales del cliente |
-| App: vehículos, gastos, precios, ventas, campañas, configuración, agencias | **pendientes** — la navegación existe y cada una explica en pantalla qué hará |
-| APK Android | **compila** (release 51,5 MB) |
-| Ejecutable de Windows | **no compila** — falta Visual Studio con C++ (requiere administrador) |
-| Integración BCRA | endpoints verificados en vivo, Edge Function pendiente |
+| App: las 10 secciones | **todas con pantalla real**, contra la base de verdad |
+| Semáforo crediticio del BCRA + informe en PDF | **funcionando**, probado contra CUIT reales |
+| APK Android | **compila** (release, tres APK de ~20 MB) |
+| Ejecutable de Windows | **compila en el runner de GitHub**; localmente falta Visual Studio con C++ (requiere administrador) |
+| Integración BCRA | **Edge Function desplegada y andando** |
 | Integración ArgAutos (valor de revista) | API verificada en vivo, falta la API key |
-| Email marketing | tablas listas, falta elegir proveedor |
+| Email marketing | pantalla y Edge Function escritas, falta desplegarla y cargar la key de Resend |
 
 Todo lo que falta, con los pasos exactos, está en
 [`docs/PENDIENTE.md`](docs/PENDIENTE.md).
@@ -83,6 +83,17 @@ Son cosas distintas y conviene no confundirlas:
   cheques rechazados ya pagados, o +30 días de atraso), rojo (situación 4-6, cheques
   impagos o proceso judicial).
 
+Una distinción que parece un detalle y no lo es: el BCRA devuelve 404 tanto
+para un CUIT que no existe como para una persona sin deudas informadas.
+Consultado y sin deudas es **verde**; nunca consultado es **sin datos**. Antes
+los dos daban lo mismo, y a alguien limpio le quedaba el cartel "Sin consultar"
+para siempre.
+
+El criterio está escrito dos veces — en SQL (`semaforo_de_situacion` más la
+regla de la vista) y en Dart (`ConsultaBcra.semaforo`, para pintar una consulta
+recién hecha antes de que exista en la vista). Las dos corren los mismos casos
+desde `tests/casos_semaforo.json`, así que no se pueden separar en silencio.
+
 ---
 
 ## Estructura
@@ -97,9 +108,9 @@ mi-agencia/
 │       ├── ui/                   # componentes y shell adaptativo
 │       └── funciones/            # una carpeta por pantalla
 ├── supabase/
-│   ├── migrations/               # 0001..0010, se aplican en orden
-│   ├── migraciones_completas.sql # las 10 en un archivo, para el SQL Editor
-│   └── functions/                # Edge Functions (pendientes)
+│   ├── migrations/               # 0001..0013, se aplican en orden
+│   ├── migraciones_completas.sql # las 13 en un archivo, para el SQL Editor
+│   └── functions/                # Edge Functions (bcra-consulta, enviar-campana)
 ├── tests/                        # verificación del SQL contra el JS original
 ├── docs/
 ├── scripts/
@@ -123,6 +134,9 @@ mi-agencia/
 | `0008_motor_calculo.sql` | **el motor**: `v_inventario`, `v_dashboard`, evolución mensual |
 | `0009_rls_policies.sql` | políticas RLS y permisos de Storage |
 | `0010_seed_referencia.sql` | serie IPC del INDEC y cotizaciones iniciales |
+| `0011_endurecer_funciones.sql` | `search_path` fijo en las funciones y permisos acotados |
+| `0012_instaladores.sql` | bucket de instaladores para las actualizaciones automáticas |
+| `0013_bcra_semaforo.sql` | el semáforo distingue "sin deudas" de "sin consultar" |
 
 ---
 
@@ -130,7 +144,7 @@ mi-agencia/
 
 | Servicio | Para qué | Costo | Estado |
 |---|---|---|---|
-| [BCRA Central de Deudores](https://api.bcra.gob.ar) | semáforo crediticio del interesado | gratis, sin key | verificado |
+| [BCRA Central de Deudores](https://api.bcra.gob.ar) | semáforo crediticio del interesado | gratis, sin key | **integrado** |
 | [ArgAutos](https://argautos.com) | valor de revista (6.163 versiones) | gratis con key | verificado |
 | BCRA Estadísticas | cotización del dólar | gratis, sin key | por integrar |
 | Resend o Brevo | envío de campañas | free tier | a definir |
