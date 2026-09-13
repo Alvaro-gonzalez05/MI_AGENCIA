@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/agencias.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
@@ -56,6 +57,22 @@ abstract interface class Repositorio {
 
   /// Al guardarla, un trigger de la base saca la unidad del stock.
   Future<void> crearVenta(AltaVenta v);
+
+  /// Guarda los umbrales de la agencia. Al volver, todo el sistema se
+  /// recalcula solo: el motor lee esta config en cada consulta.
+  Future<void> guardarConfig(ConfigAgencia c);
+
+  // --- Solo para la cuenta de desarrollador ---
+
+  Future<List<Agencia>> agencias();
+
+  /// Crea la agencia e invita a su dueño. Devuelve el id de la agencia.
+  Future<String> crearAgencia(AltaAgencia a);
+
+  /// Suspende o reactiva una agencia sin borrarle los datos.
+  Future<void> cambiarEstadoAgencia(String id, {required bool activa});
+
+  Future<List<Invitacion>> invitacionesPendientes();
 }
 
 /// Implementacion en memoria con los datos de ejemplo del cliente.
@@ -85,7 +102,7 @@ class RepositorioDemo implements Repositorio {
   }
 
   @override
-  Future<ConfigAgencia> config() async => const ConfigAgencia();
+  Future<ConfigAgencia> config() async => _config;
 
   @override
   Future<String> siguienteCodigo() async {
@@ -286,6 +303,85 @@ class RepositorioDemo implements Repositorio {
     );
   }
 
+  ConfigAgencia _config = const ConfigAgencia();
+  final List<Agencia> _agencias = [];
+
+  @override
+  Future<void> guardarConfig(ConfigAgencia c) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    _config = c;
+  }
+
+  @override
+  Future<List<Agencia>> agencias() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return [
+      Agencia(
+        id: 'demo',
+        nombre: 'Agencia Demo',
+        slug: 'demo',
+        activa: true,
+        plan: 'basico',
+        localidad: 'Godoy Cruz',
+        provincia: 'Mendoza',
+        miembros: 1,
+        vehiculos: DatosDemo.vehiculos.length + _agregados.length,
+        creadaEl: DateTime(2026, 9, 12),
+      ),
+      ..._agencias,
+    ];
+  }
+
+  @override
+  Future<String> crearAgencia(AltaAgencia a) async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    final id = 'demo-${_agencias.length + 1}';
+    _agencias.add(
+      Agencia(
+        id: id,
+        nombre: a.nombre.trim(),
+        slug: a.slug,
+        activa: true,
+        plan: a.plan,
+        cuit: a.cuitLimpio.isEmpty ? null : a.cuitLimpio,
+        emailContacto: a.emailContacto.trim().isEmpty
+            ? null
+            : a.emailContacto.trim(),
+        localidad: a.localidad.trim().isEmpty ? null : a.localidad.trim(),
+        provincia: a.provincia.trim().isEmpty ? null : a.provincia.trim(),
+        vigenteHasta: a.vigenteHasta,
+        creadaEl: DateTime.now(),
+      ),
+    );
+    return id;
+  }
+
+  @override
+  Future<void> cambiarEstadoAgencia(String id, {required bool activa}) async {
+    final i = _agencias.indexWhere((a) => a.id == id);
+    if (i < 0) return;
+    final a = _agencias[i];
+    _agencias[i] = Agencia(
+      id: a.id,
+      nombre: a.nombre,
+      slug: a.slug,
+      activa: activa,
+      plan: a.plan,
+      cuit: a.cuit,
+      emailContacto: a.emailContacto,
+      telefono: a.telefono,
+      localidad: a.localidad,
+      provincia: a.provincia,
+      vigenteHasta: a.vigenteHasta,
+      creadaEl: a.creadaEl,
+      miembros: a.miembros,
+      vehiculos: a.vehiculos,
+    );
+  }
+
+  @override
+  Future<List<Invitacion>> invitacionesPendientes() async => const [];
+
   @override
   Future<void> eliminarGasto(String id) async {
     _gastosAgregados.removeWhere(
@@ -340,6 +436,10 @@ final preciosProvider = FutureProvider<List<CambioPrecio>>(
 
 final ventasProvider = FutureProvider<List<Venta>>(
   (ref) => ref.watch(repositorioProvider).ventas(),
+);
+
+final agenciasProvider = FutureProvider<List<Agencia>>(
+  (ref) => ref.watch(repositorioProvider).agencias(),
 );
 
 final interesadosProvider = FutureProvider<List<Interesado>>(

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/agencias.dart';
 import '../dominio/gastos.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
@@ -344,6 +345,127 @@ class RepositorioSupabase implements Repositorio {
       'cuotas': v.pideCuotas ? v.cuotas : null,
       'observaciones': _oNulo(v.observaciones),
     });
+  }
+
+  @override
+  Future<void> guardarConfig(ConfigAgencia c) async {
+    final agencia = await _miAgencia();
+    await _db
+        .from('agencia_config')
+        .update({
+          'dias_verde': c.diasVerde,
+          'dias_amarillo': c.diasAmarillo,
+          'dias_rojo': c.diasRojo,
+          'margen_minimo': c.margenMinimo,
+          'margen_objetivo': c.margenObjetivo,
+          'umbral_gastos_altos': c.umbralGastosAltos,
+          'redondeo': c.redondeo,
+          'capacidad': c.capacidad,
+          'tasa_financiacion_mensual': c.tasaFinanciacionMensual,
+        })
+        .eq('agencia_id', agencia);
+  }
+
+  // -------------------------------------------------------------------
+  // Administracion de agencias (solo la cuenta de desarrollador)
+  //
+  // No hace falta chequear el rol aca: el RLS solo deja insertar agencias a
+  // quien tiene es_desarrollador, y un select de un usuario comun devuelve
+  // unicamente las suyas. Filtrar en el cliente seria seguridad de mentira.
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<Agencia>> agencias() async {
+    final filas = await _db
+        .from('agencias')
+        .select('''
+          id, nombre, slug, activa, plan, cuit, email_contacto, telefono,
+          localidad, provincia, vigente_hasta, created_at,
+          membresias ( id ), vehiculos ( id )
+        ''')
+        .order('created_at', ascending: false);
+
+    return filas.map((f) {
+      // PostgREST devuelve las relaciones como listas: se cuentan, no se leen.
+      final miembros = (f['membresias'] as List?)?.length ?? 0;
+      final unidades = (f['vehiculos'] as List?)?.length ?? 0;
+      return Agencia(
+        id: f['id'] as String,
+        nombre: f['nombre'] as String,
+        slug: f['slug'] as String,
+        activa: f['activa'] as bool? ?? true,
+        plan: f['plan'] as String? ?? 'basico',
+        cuit: f['cuit'] as String?,
+        emailContacto: f['email_contacto'] as String?,
+        telefono: f['telefono'] as String?,
+        localidad: f['localidad'] as String?,
+        provincia: f['provincia'] as String?,
+        vigenteHasta: _fecha(f['vigente_hasta']),
+        creadaEl: _fecha(f['created_at']),
+        miembros: miembros,
+        vehiculos: unidades,
+      );
+    }).toList();
+  }
+
+  @override
+  Future<String> crearAgencia(AltaAgencia a) async {
+    final fila = await _db
+        .from('agencias')
+        .insert({
+          'nombre': a.nombre.trim(),
+          'slug': a.slug,
+          'cuit': a.cuitLimpio.isEmpty ? null : a.cuitLimpio,
+          'email_contacto': _oNulo(a.emailContacto),
+          'telefono': _oNulo(a.telefono),
+          'localidad': _oNulo(a.localidad),
+          'provincia': _oNulo(a.provincia),
+          'plan': a.plan,
+          'vigente_hasta': a.vigenteHasta == null
+              ? null
+              : _soloFecha(a.vigenteHasta!),
+          'creada_por': _db.auth.currentUser?.id,
+        })
+        .select('id')
+        .single();
+
+    final id = fila['id'] as String;
+
+    // La invitacion se resuelve sola: cuando esa persona se registre con ese
+    // email, el trigger de auth.users la convierte en membresia de owner.
+    await _db.from('invitaciones').insert({
+      'agencia_id': id,
+      'email': a.emailDueno.trim(),
+      'rol': 'owner',
+      'invitado_por': _db.auth.currentUser?.id,
+    });
+
+    return id;
+  }
+
+  @override
+  Future<void> cambiarEstadoAgencia(String id, {required bool activa}) async {
+    await _db.from('agencias').update({'activa': activa}).eq('id', id);
+  }
+
+  @override
+  Future<List<Invitacion>> invitacionesPendientes() async {
+    final filas = await _db
+        .from('invitaciones')
+        .select('id, email, rol, expira_at, agencias ( nombre )')
+        .isFilter('aceptada_at', null)
+        .order('created_at', ascending: false);
+
+    return filas.map((f) {
+      final a = f['agencias'] as Map<String, dynamic>?;
+      return Invitacion(
+        id: f['id'] as String,
+        email: f['email'] as String,
+        rol: RolMembresia.desde(f['rol'] as String?),
+        expiraEl: _fecha(f['expira_at']) ?? DateTime.now(),
+        agenciaNombre: a?['nombre'] as String?,
+      );
+    }).toList();
   }
 
   /// Solo lo que el usuario carga. Todo lo demas (costos, margenes, dias en

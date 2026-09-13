@@ -72,6 +72,7 @@ class SelectorFecha extends StatelessWidget {
     required this.onCambio,
     this.hayError = false,
     this.desde,
+    this.hasta,
   });
 
   final DateTime? valor;
@@ -81,6 +82,10 @@ class SelectorFecha extends StatelessWidget {
   /// Fecha minima elegible. Sirve para no dejar cargar, por ejemplo, un gasto
   /// anterior al ingreso de la unidad.
   final DateTime? desde;
+
+  /// Fecha maxima. Por defecto es hoy, porque casi todo lo que se carga en la
+  /// app ya paso; la vigencia de una agencia es la excepcion y mira al futuro.
+  final DateTime? hasta;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +97,7 @@ class SelectorFecha extends StatelessWidget {
           context: context,
           initialDate: valor ?? hoy,
           firstDate: desde ?? DateTime(2000),
-          lastDate: hoy,
+          lastDate: hasta ?? hoy,
           locale: const Locale('es', 'AR'),
         );
         if (elegida != null) onCambio(elegida);

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../funciones/agencias/pantalla_agencias.dart';
 import '../funciones/auth/pantalla_login.dart';
+import '../funciones/configuracion/pantalla_configuracion.dart';
 import '../funciones/gastos/pantalla_gastos.dart';
 import '../funciones/interesados/pantalla_interesados.dart';
 import '../funciones/inventario/pantalla_ficha.dart';
@@ -104,31 +106,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Secciones.configuracion.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.configuracion,
-              puntos: [
-                'Umbrales de rotación, margen mínimo y objetivo, redondeo de '
-                    'precios y tasa de financiación.',
-                'Todo el sistema se recalcula solo al guardarlos.',
-                'Serie del IPC del INDEC y cotización del dólar, actualizadas '
-                    'automáticamente.',
-                'Usuarios de la agencia: invitar, asignar rol y dar de baja.',
-              ],
-            ),
+            builder: (_, _) => const PantallaConfiguracion(),
           ),
           GoRoute(
             path: Secciones.agencias.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.agencias,
-              puntos: [
-                'Panel exclusivo de la cuenta de desarrollador.',
-                'Alta de agencias cliente: nombre, CUIT, plan y vencimiento.',
-                'Invitar al dueño de cada agencia por email; al registrarse '
-                    'queda vinculado solo.',
-                'Suspender una agencia sin borrarle los datos.',
-                'Métricas de uso por agencia.',
-              ],
-            ),
+            builder: (_, _) => const PantallaAgencias(),
           ),
         ],
       ),
