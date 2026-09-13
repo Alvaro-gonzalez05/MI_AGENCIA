@@ -60,15 +60,18 @@ abstract final class Motor {
     ConfigAgencia cfg = const ConfigAgencia(),
     List<VehiculoSemilla> extras = const [],
     List<GastoSemilla> gastosExtra = const [],
+    List<PrecioSemilla> preciosExtra = const [],
+    List<VentaSemilla> ventasExtra = const [],
   }) {
     final indices = _indices();
     final idxHoy = _indiceHoy(indices);
     final hoy = DateTime.now();
 
     return [...DatosDemo.vehiculos, ...extras].map((v) {
-      final venta = DatosDemo.ventas
-          .where((x) => x.codigo == v.codigo)
-          .firstOrNull;
+      final venta = [
+        ...DatosDemo.ventas,
+        ...ventasExtra,
+      ].where((x) => x.codigo == v.codigo).firstOrNull;
       final gastos = [
         ...DatosDemo.gastos,
         ...gastosExtra,
@@ -84,7 +87,10 @@ abstract final class Motor {
 
       // Ultimo cambio de precio; si no hubo, rige el precio objetivo de alta.
       final historial =
-          DatosDemo.precios.where((p) => p.codigo == v.codigo).toList()
+          [
+              ...DatosDemo.precios,
+              ...preciosExtra,
+            ].where((p) => p.codigo == v.codigo).toList()
             ..sort((a, b) => a.fecha.compareTo(b.fecha));
       final precioActual = historial.isNotEmpty
           ? historial.last.precio

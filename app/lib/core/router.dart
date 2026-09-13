@@ -9,6 +9,8 @@ import '../funciones/inventario/pantalla_ficha.dart';
 import '../funciones/inventario/pantalla_inventario.dart';
 import '../funciones/pantalla_pendiente.dart';
 import '../funciones/panel/pantalla_panel.dart';
+import '../funciones/precios/pantalla_precios.dart';
+import '../funciones/ventas/pantalla_ventas.dart';
 import '../funciones/vehiculos/pantalla_vehiculos.dart';
 import '../ui/shell/secciones.dart';
 import '../ui/shell/shell_adaptativo.dart';
@@ -78,29 +80,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Secciones.precios.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.precios,
-              puntos: [
-                'Historial completo de cambios de precio por unidad, con motivo.',
-                'El precio anterior lo completa la base sola: el usuario solo '
-                    'escribe el nuevo.',
-                'Gráfico de la evolución del precio contra el costo acumulado.',
-              ],
-            ),
+            builder: (_, _) => const PantallaPrecios(),
           ),
           GoRoute(
             path: Secciones.ventas.ruta,
-            builder: (_, _) => const PantallaPendiente(
-              seccion: Secciones.ventas,
-              puntos: [
-                'Registro de la venta: precio final, gastos de cierre, '
-                    'comprador y vendedor.',
-                'Al guardarla, la unidad sale del stock automáticamente.',
-                'Margen real de la operación, en pesos nominales, ajustado por '
-                    'inflación y en dólares.',
-                'Una unidad no se puede vender dos veces: lo impide la base.',
-              ],
-            ),
+            builder: (_, _) => const PantallaVentas(),
           ),
           GoRoute(
             path: Secciones.campanas.ruta,

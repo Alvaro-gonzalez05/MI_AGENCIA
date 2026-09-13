@@ -66,11 +66,12 @@ class VentaSemilla {
     required this.gastosFinales,
     this.cliente,
     this.vendedor,
+    this.obs,
   });
   final String codigo;
   final DateTime fecha;
   final double precioFinal, gastosFinales;
-  final String? cliente, vendedor;
+  final String? cliente, vendedor, obs;
 }
 
 class InteresadoSemilla {
@@ -610,6 +611,7 @@ abstract final class DatosDemo {
       gastosFinales: 120000,
       cliente: 'M. Fernández',
       vendedor: 'Laura G.',
+      obs: 'Financiación propia 12 cuotas',
     ),
     VentaSemilla(
       codigo: 'V013',
@@ -618,6 +620,7 @@ abstract final class DatosDemo {
       gastosFinales: 90000,
       cliente: 'J. Sosa',
       vendedor: 'Diego R.',
+      obs: 'Cliente recurrente',
     ),
   ];
 

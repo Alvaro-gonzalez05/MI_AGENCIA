@@ -128,7 +128,10 @@ class _Contenido extends ConsumerWidget {
             crossAxisCount: columnas,
             mainAxisSpacing: Esp.md + 2,
             crossAxisSpacing: Esp.md + 2,
-            mainAxisExtent: columnas == 1 ? 150 : 162,
+            // 162 dejaba las tarjetas 5 px cortas y Flutter pintaba la
+            // franja de overflow. El contenido es de alto fijo (todos los
+            // textos van a una linea), asi que alcanza con darle el alto real.
+            mainAxisExtent: columnas == 1 ? 166 : 178,
           ),
           children: [
             for (var i = 0; i < metricas.length; i++)

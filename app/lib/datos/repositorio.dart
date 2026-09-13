@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/gastos.dart';
+import '../dominio/precios.dart';
+import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
@@ -44,6 +46,16 @@ abstract interface class Repositorio {
   Future<void> crearGasto(AltaGasto g);
 
   Future<void> eliminarGasto(String id);
+
+  /// Historial de precios de una unidad, o de toda la agencia.
+  Future<List<CambioPrecio>> cambiosPrecio({String? vehiculoId});
+
+  Future<void> crearCambioPrecio(AltaPrecio p);
+
+  Future<List<Venta>> ventas();
+
+  /// Al guardarla, un trigger de la base saca la unidad del stock.
+  Future<void> crearVenta(AltaVenta v);
 }
 
 /// Implementacion en memoria con los datos de ejemplo del cliente.
@@ -55,6 +67,8 @@ class RepositorioDemo implements Repositorio {
 
   final List<VehiculoSemilla> _agregados = [];
   final List<GastoSemilla> _gastosAgregados = [];
+  final List<PrecioSemilla> _preciosAgregados = [];
+  final List<VentaSemilla> _ventasAgregadas = [];
 
   @override
   Future<List<VehiculoInventario>> inventario({
@@ -177,6 +191,101 @@ class RepositorioDemo implements Repositorio {
     );
   }
 
+  List<VehiculoInventario> _inv() => Motor.inventario(
+    extras: _agregados,
+    gastosExtra: _gastosAgregados,
+    preciosExtra: _preciosAgregados,
+    ventasExtra: _ventasAgregadas,
+  );
+
+  @override
+  Future<List<CambioPrecio>> cambiosPrecio({String? vehiculoId}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final inv = _inv();
+
+    final todos =
+        [
+            ...DatosDemo.precios,
+            ..._preciosAgregados,
+          ].where((x) => vehiculoId == null || x.codigo == vehiculoId).toList()
+          ..sort((a, b) => a.fecha.compareTo(b.fecha));
+
+    // El precio anterior se reconstruye recorriendo en orden cronologico,
+    // que es lo que hace el trigger de la base al insertar.
+    final anteriorPorCodigo = <String, double>{};
+    final resultado = <CambioPrecio>[];
+    for (final x in todos) {
+      final v = inv.where((i) => i.codigo == x.codigo).firstOrNull;
+      final anterior = anteriorPorCodigo[x.codigo] ?? v?.precioObjetivo;
+      resultado.add(
+        CambioPrecio(
+          id: '${x.codigo}-${x.fecha.toIso8601String()}-${x.precio}',
+          vehiculoId: x.codigo,
+          fecha: x.fecha,
+          precioNuevo: x.precio,
+          precioAnterior: anterior,
+          motivo: x.motivo,
+          vehiculoCodigo: x.codigo,
+          vehiculoTitulo: v?.titulo,
+        ),
+      );
+      anteriorPorCodigo[x.codigo] = x.precio;
+    }
+    return resultado.reversed.toList();
+  }
+
+  @override
+  Future<void> crearCambioPrecio(AltaPrecio p) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    _preciosAgregados.add(
+      PrecioSemilla(
+        codigo: p.vehiculoId!,
+        fecha: p.fecha!,
+        precio: p.precioNuevo!,
+        motivo: p.motivo.trim().isEmpty ? null : p.motivo.trim(),
+      ),
+    );
+  }
+
+  @override
+  Future<List<Venta>> ventas() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final inv = _inv();
+    final cfg = const ConfigAgencia();
+
+    return [...DatosDemo.ventas, ..._ventasAgregadas].map((x) {
+      final v = inv.where((i) => i.codigo == x.codigo).firstOrNull;
+      return Venta(
+        id: '${x.codigo}-${x.fecha.toIso8601String()}',
+        vehiculoId: x.codigo,
+        fechaVenta: x.fecha,
+        precioFinal: x.precioFinal,
+        gastosFinales: x.gastosFinales,
+        observaciones: x.obs,
+        vehiculoCodigo: x.codigo,
+        vehiculoTitulo: v?.titulo,
+        costoTotal: v?.costoTotal,
+        costoTotalHoy: v?.costoTotalHoy,
+        diasEnStock: v?.diasEnStock,
+        tipoCambio: cfg.tipoCambio,
+      );
+    }).toList()..sort((a, b) => b.fechaVenta.compareTo(a.fechaVenta));
+  }
+
+  @override
+  Future<void> crearVenta(AltaVenta v) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    _ventasAgregadas.add(
+      VentaSemilla(
+        codigo: v.vehiculoId!,
+        fecha: v.fechaVenta!,
+        precioFinal: v.precioFinal!,
+        gastosFinales: v.gastosFinales,
+        obs: v.observaciones.trim().isEmpty ? null : v.observaciones.trim(),
+      ),
+    );
+  }
+
   @override
   Future<void> eliminarGasto(String id) async {
     _gastosAgregados.removeWhere(
@@ -223,6 +332,14 @@ final gastosProvider = FutureProvider<List<Gasto>>(
 final gastosDeVehiculoProvider = FutureProvider.family<List<Gasto>, String>(
   (ref, vehiculoId) =>
       ref.watch(repositorioProvider).gastos(vehiculoId: vehiculoId),
+);
+
+final preciosProvider = FutureProvider<List<CambioPrecio>>(
+  (ref) => ref.watch(repositorioProvider).cambiosPrecio(),
+);
+
+final ventasProvider = FutureProvider<List<Venta>>(
+  (ref) => ref.watch(repositorioProvider).ventas(),
 );
 
 final interesadosProvider = FutureProvider<List<Interesado>>(

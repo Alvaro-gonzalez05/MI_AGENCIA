@@ -40,7 +40,7 @@ const gastos = DATA_SEED.gastos.map(g => `  GastoSemilla(codigo: ${txt(g.idVehic
 
 const precios = DATA_SEED.precios.map(p => `  PrecioSemilla(codigo: ${txt(p.idVehiculo)}, fecha: DateTime.utc(${p.fecha.split('-').join(', ')}), precio: ${p.nuevoPrecio}, motivo: ${txt(p.motivo)}),`).join('\n');
 
-const ventas = DATA_SEED.ventas.map(s => `  VentaSemilla(codigo: ${txt(s.idVehiculo)}, fecha: DateTime.utc(${s.fechaVenta.split('-').join(', ')}), precioFinal: ${s.precioFinal}, gastosFinales: ${s.gastosFinales}, cliente: ${txt(s.cliente)}, vendedor: ${txt(s.vendedor)}),`).join('\n');
+const ventas = DATA_SEED.ventas.map(s => `  VentaSemilla(codigo: ${txt(s.idVehiculo)}, fecha: DateTime.utc(${s.fechaVenta.split('-').join(', ')}), precioFinal: ${s.precioFinal}, gastosFinales: ${s.gastosFinales}, cliente: ${txt(s.cliente)}, vendedor: ${txt(s.vendedor)}, obs: ${txt(s.obs)}),`).join('\n');
 
 const interesados = DATA_SEED.interesados.map(i => `  InteresadoSemilla(codigo: ${txt(i.idVehiculo)}, nombre: ${txt(i.nombre)}, telefono: ${txt(i.telefono)}, fecha: DateTime.utc(${i.fecha.split('-').join(', ')}), notas: ${txt(i.obs)}),`).join('\n');
 
@@ -91,11 +91,11 @@ class PrecioSemilla {
 }
 
 class VentaSemilla {
-  const VentaSemilla({required this.codigo, required this.fecha, required this.precioFinal, required this.gastosFinales, this.cliente, this.vendedor});
+  const VentaSemilla({required this.codigo, required this.fecha, required this.precioFinal, required this.gastosFinales, this.cliente, this.vendedor, this.obs});
   final String codigo;
   final DateTime fecha;
   final double precioFinal, gastosFinales;
-  final String? cliente, vendedor;
+  final String? cliente, vendedor, obs;
 }
 
 class InteresadoSemilla {

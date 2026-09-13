@@ -104,8 +104,8 @@ Android y web funcionan sin nada de esto.
 |---|---|
 | ~~**Vehículos**~~ | **Hecho.** Falta el autocompletado contra `ref_catalogo` (necesita la API key de ArgAutos) y las fotos a Storage. |
 | ~~**Gastos**~~ | **Hecho.** Falta adjuntar el comprobante como foto o PDF. |
-| **Precios** | Alta de cambio de precio. Gráfico de evolución vs. costo. |
-| **Ventas** | Registro de venta. Al guardarla la unidad sale del stock (ya lo hace un trigger). |
+| ~~**Precios**~~ | **Hecho.** Falta el gráfico de evolución del precio contra el costo. |
+| ~~**Ventas**~~ | **Hecho.** |
 | **Campañas** | Editor, segmentación y envío. |
 | **Configuración** | Formulario sobre `agencia_config` + gestión de usuarios. |
 | **Agencias** | Panel de desarrollador: alta de agencias e invitaciones. |
@@ -116,8 +116,8 @@ Android y web funcionan sin nada de esto.
 `agencia_config`, `oportunidades` y `v_clientes_semaforo`. No hizo falta tocar
 ninguna pantalla: hablan con la interfaz, no con Supabase.
 
-Queda pendiente la **escritura** (altas y ediciones), que llega junto con los
-formularios de cada pantalla.
+La **escritura** ya está para vehículos, gastos, precios y ventas. Falta la de
+campañas, configuración y agencias.
 
 ### Edge Functions (ninguna escrita todavía)
 

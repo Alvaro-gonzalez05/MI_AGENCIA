@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/gastos.dart';
+import '../dominio/precios.dart';
+import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import 'repositorio.dart';
 
@@ -239,6 +241,109 @@ class RepositorioSupabase implements Repositorio {
     // mal cargado no tiene historial que preservar, y dejarlo marcado como
     // borrado obligaria a filtrarlo en cada suma del motor de calculo.
     await _db.from('gastos').delete().eq('id', id);
+  }
+
+  @override
+  Future<List<CambioPrecio>> cambiosPrecio({String? vehiculoId}) async {
+    var consulta = _db.from('cambios_precio').select('''
+          id, vehiculo_id, fecha, precio_anterior, precio_nuevo, motivo,
+          vehiculos!inner ( codigo, marca, modelo )
+        ''');
+
+    if (vehiculoId != null) consulta = consulta.eq('vehiculo_id', vehiculoId);
+
+    final filas = await consulta.order('fecha', ascending: false).limit(500);
+
+    return filas.map((f) {
+      final v = f['vehiculos'] as Map<String, dynamic>?;
+      return CambioPrecio(
+        id: f['id'] as String,
+        vehiculoId: f['vehiculo_id'] as String,
+        fecha: _fecha(f['fecha']) ?? DateTime.now(),
+        precioNuevo: _decimal(f['precio_nuevo']) ?? 0,
+        precioAnterior: _decimal(f['precio_anterior']),
+        motivo: f['motivo'] as String?,
+        vehiculoCodigo: v?['codigo'] as String?,
+        vehiculoTitulo: v == null ? null : '${v['marca']} ${v['modelo']}',
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> crearCambioPrecio(AltaPrecio p) async {
+    final agencia = await _miAgencia();
+    // precio_anterior NO se manda: lo completa un trigger leyendo el ultimo
+    // precio vigente. Calcularlo en el cliente abre la puerta a que dos
+    // vendedores guarden a la vez y uno pise el historial del otro.
+    await _db.from('cambios_precio').insert({
+      'agencia_id': agencia,
+      'vehiculo_id': p.vehiculoId,
+      'fecha': _soloFecha(p.fecha!),
+      'precio_nuevo': p.precioNuevo,
+      'motivo': _oNulo(p.motivo),
+    });
+  }
+
+  @override
+  Future<List<Venta>> ventas() async {
+    final filas = await _db
+        .from('ventas')
+        .select('''
+          id, vehiculo_id, fecha_venta, precio_final, gastos_finales,
+          forma_pago, cuotas, observaciones,
+          vehiculos!inner ( codigo, marca, modelo )
+        ''')
+        .order('fecha_venta', ascending: false)
+        .limit(500);
+
+    if (filas.isEmpty) return const [];
+
+    // Los costos y el ajuste por IPC los calcula la vista, no la app.
+    final ids = filas.map((f) => f['vehiculo_id'] as String).toList();
+    final calculados = await _db
+        .from('v_inventario')
+        .select('id, costo_total, costo_total_hoy, dias_en_stock, tipo_cambio')
+        .inFilter('id', ids);
+
+    final porId = {for (final c in calculados) c['id'] as String: c};
+
+    return filas.map((f) {
+      final v = f['vehiculos'] as Map<String, dynamic>?;
+      final c = porId[f['vehiculo_id']];
+      return Venta(
+        id: f['id'] as String,
+        vehiculoId: f['vehiculo_id'] as String,
+        fechaVenta: _fecha(f['fecha_venta']) ?? DateTime.now(),
+        precioFinal: _decimal(f['precio_final']) ?? 0,
+        gastosFinales: _decimal(f['gastos_finales']) ?? 0,
+        formaPago: f['forma_pago'] as String?,
+        cuotas: _entero(f['cuotas']),
+        observaciones: f['observaciones'] as String?,
+        vehiculoCodigo: v?['codigo'] as String?,
+        vehiculoTitulo: v == null ? null : '${v['marca']} ${v['modelo']}',
+        costoTotal: _decimal(c?['costo_total']),
+        costoTotalHoy: _decimal(c?['costo_total_hoy']),
+        diasEnStock: _entero(c?['dias_en_stock']),
+        tipoCambio: _decimal(c?['tipo_cambio']),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> crearVenta(AltaVenta v) async {
+    final agencia = await _miAgencia();
+    // El estado del vehiculo no se toca desde aca: un trigger lo pasa a
+    // vendido. Y la unicidad de vehiculo_id impide venderlo dos veces.
+    await _db.from('ventas').insert({
+      'agencia_id': agencia,
+      'vehiculo_id': v.vehiculoId,
+      'fecha_venta': _soloFecha(v.fechaVenta!),
+      'precio_final': v.precioFinal,
+      'gastos_finales': v.gastosFinales,
+      'forma_pago': v.formaPago.etiqueta,
+      'cuotas': v.pideCuotas ? v.cuotas : null,
+      'observaciones': _oNulo(v.observaciones),
+    });
   }
 
   /// Solo lo que el usuario carga. Todo lo demas (costos, margenes, dias en

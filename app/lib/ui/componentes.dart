@@ -483,50 +483,54 @@ class TarjetaMetrica extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Esp.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                titulo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: tenue,
-                ),
-              ),
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  valor,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontFamily: TemaApp.mono,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.8,
-                    color: tinta,
-                  ),
-                ),
-              ),
-              if (detalle != null) ...[
-                const SizedBox(height: 2),
+          // Flexible por si el alto del grid queda corto: preferimos que el
+          // bloque encoja antes que ver la franja de overflow de Flutter.
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  detalle!,
+                  titulo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w500,
-                    color: resaltada ? tinta : (detalleColor ?? p.tinta3),
+                    color: tenue,
                   ),
                 ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    valor,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: TemaApp.mono,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.8,
+                      color: tinta,
+                    ),
+                  ),
+                ),
+                if (detalle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    detalle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: resaltada ? tinta : (detalleColor ?? p.tinta3),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
