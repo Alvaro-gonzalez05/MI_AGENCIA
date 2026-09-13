@@ -588,44 +588,10 @@ class _ChipCategoria extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return Material(
-      color: activa ? p.acentoLavado : p.superficieHundida,
-      borderRadius: BorderRadius.circular(Curva.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Curva.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Esp.md,
-            vertical: Esp.md - 2,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Curva.md),
-            border: Border.all(color: activa ? p.acento : p.borde),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                categoria.icono,
-                size: 15,
-                color: activa ? p.acento : p.tinta3,
-              ),
-              const SizedBox(width: Esp.sm - 2),
-              Text(
-                categoria.etiqueta,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: activa ? FontWeight.w600 : FontWeight.w500,
-                  color: activa ? p.acento : p.tinta2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ChipSeleccion(
+    etiqueta: categoria.etiqueta,
+    icono: categoria.icono,
+    activo: activa,
+    onTap: onTap,
+  );
 }

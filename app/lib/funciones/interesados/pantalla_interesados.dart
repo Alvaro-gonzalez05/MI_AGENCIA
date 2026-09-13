@@ -15,6 +15,9 @@ class PantallaInteresados extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asincrono = ref.watch(interesadosProvider);
     final p = context.paleta;
+    final margen = MediaQuery.sizeOf(context).width < Corte.tablet
+        ? Esp.lg + 4
+        : Esp.xxl;
 
     return asincrono.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -35,15 +38,18 @@ class PantallaInteresados extends ConsumerWidget {
         }
 
         return ListView(
-          padding: const EdgeInsets.all(Esp.xl),
+          padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xxl),
           children: [
-            _ExplicacionSemaforo(),
-            const SizedBox(height: Esp.lg),
-            for (final i in lista) ...[
-              _TarjetaInteresado(interesado: i),
-              const SizedBox(height: Esp.sm),
+            const Aparecer(child: _ExplicacionSemaforo()),
+            const SizedBox(height: Esp.lg + 2),
+            for (var i = 0; i < lista.length; i++) ...[
+              Aparecer(
+                indice: i + 1,
+                child: _TarjetaInteresado(interesado: lista[i]),
+              ),
+              const SizedBox(height: Esp.sm + 2),
             ],
-            const SizedBox(height: Esp.lg),
+            const SizedBox(height: Esp.md),
             Center(
               child: Text(
                 '${lista.length} interesado${lista.length == 1 ? '' : 's'}',
@@ -61,42 +67,69 @@ class PantallaInteresados extends ConsumerWidget {
 /// se le financia una compra a alguien, así que el criterio tiene que estar
 /// a la vista y no escondido en la cabeza del que lo programó.
 class _ExplicacionSemaforo extends StatelessWidget {
+  const _ExplicacionSemaforo();
+
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
     return Tarjeta(
-      padding: const EdgeInsets.all(Esp.lg),
+      destacada: true,
+      padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.account_balance_outlined, size: 15, color: p.tinta3),
-              const SizedBox(width: Esp.sm),
-              const EtiquetaSeccion('Semáforo crediticio — BCRA'),
+              IconoEnCirculo(
+                icono: Icons.account_balance_rounded,
+                tamano: 38,
+                color: p.acentoTinta,
+                fondo: p.acento,
+              ),
+              const SizedBox(width: Esp.md),
+              const Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Semáforo crediticio',
+                  descripcion: 'Central de Deudores del BCRA',
+                  sobreNegro: true,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: Esp.md),
-          Wrap(
-            spacing: Esp.xl,
-            runSpacing: Esp.sm,
-            children: [
-              _Criterio(
-                color: p.bien,
-                titulo: 'Apto',
-                detalle: 'Situación 1 o 2, sin cheques rechazados',
-              ),
-              _Criterio(
-                color: p.observar,
-                titulo: 'Con reparos',
-                detalle: 'Situación 3, o más de 30 días de atraso',
-              ),
-              _Criterio(
-                color: p.critico,
-                titulo: 'Riesgo alto',
-                detalle: 'Situación 4 a 6, cheques impagos o juicio',
-              ),
-            ],
+          const SizedBox(height: Esp.lg + 2),
+          LayoutBuilder(
+            builder: (context, restricciones) {
+              final porFila = restricciones.maxWidth >= 700 ? 3 : 1;
+              final ancho =
+                  (restricciones.maxWidth - Esp.sm * (porFila - 1)) / porFila;
+              return Wrap(
+                spacing: Esp.sm,
+                runSpacing: Esp.sm,
+                children: [
+                  for (final (color, titulo, detalle) in [
+                    (p.bien, 'Apto', 'Situación 1 o 2, sin cheques rechazados'),
+                    (
+                      p.observar,
+                      'Con reparos',
+                      'Situación 3, o más de 30 días de atraso',
+                    ),
+                    (
+                      p.critico,
+                      'Riesgo alto',
+                      'Situación 4 a 6, cheques impagos o juicio',
+                    ),
+                  ])
+                    SizedBox(
+                      width: ancho,
+                      child: _Criterio(
+                        color: color,
+                        titulo: titulo,
+                        detalle: detalle,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -117,33 +150,52 @@ class _Criterio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.only(top: 4),
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: Esp.sm),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              titulo,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: p.tinta,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.negroElevado,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: p.negroBorde),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8),
+              ],
             ),
-            Text(detalle, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(width: Esp.sm + 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: p.sobreNegro,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detalle,
+                  style: TextStyle(fontSize: 11.5, color: p.sobreNegro2),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -158,29 +210,40 @@ class _TarjetaInteresado extends StatelessWidget {
     final p = context.paleta;
     final i = interesado;
     final sinConsultar = i.semaforo == SemaforoCrediticio.sinDatos;
+    final iniciales = i.nombre
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((x) => x.isNotEmpty)
+        .take(2)
+        .map((x) => x[0].toUpperCase())
+        .join();
 
     return Tarjeta(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: i.semaforo.lavado(p),
-                  borderRadius: BorderRadius.circular(Curva.md),
+                  shape: BoxShape.circle,
                   border: Border.all(
-                    color: i.semaforo.color(p).withValues(alpha: 0.35),
+                    color: i.semaforo.color(p).withValues(alpha: 0.5),
+                    width: 1.5,
                   ),
                 ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.person_outline,
-                  size: 18,
-                  color: i.semaforo.color(p),
+                child: Text(
+                  iniciales.isEmpty ? '?' : iniciales,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: i.semaforo.color(p),
+                  ),
                 ),
               ),
               const SizedBox(width: Esp.md),
@@ -190,8 +253,10 @@ class _TarjetaInteresado extends StatelessWidget {
                   children: [
                     Text(
                       i.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: p.tinta,
                       ),
@@ -208,6 +273,7 @@ class _TarjetaInteresado extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: Esp.sm),
               Pastilla(
                 texto: i.semaforo.etiqueta,
                 color: i.semaforo.color(p),
@@ -217,37 +283,59 @@ class _TarjetaInteresado extends StatelessWidget {
           ),
           if (i.vehiculoTitulo != null) ...[
             const SizedBox(height: Esp.md),
-            Row(
-              children: [
-                Icon(Icons.directions_car_outlined, size: 14, color: p.tinta3),
-                const SizedBox(width: Esp.sm - 2),
-                Text(
-                  '${i.vehiculoCodigo} · ${i.vehiculoTitulo}',
-                  style: TextStyle(fontSize: 12.5, color: p.tinta2),
-                ),
-                const Spacer(),
-                if (i.fecha != null)
-                  Text(
-                    Fmt.fecha(i.fecha),
-                    style: TextStyle(
-                      fontFamily: TemaApp.mono,
-                      fontSize: 11.5,
-                      color: p.tinta3,
+            Container(
+              padding: const EdgeInsets.fromLTRB(
+                Esp.sm,
+                Esp.sm,
+                Esp.md,
+                Esp.sm,
+              ),
+              decoration: BoxDecoration(
+                color: p.superficieHundida,
+                borderRadius: BorderRadius.circular(Curva.md),
+              ),
+              child: Row(
+                children: [
+                  IconoEnCirculo(
+                    icono: Icons.directions_car_filled_rounded,
+                    tamano: 30,
+                    color: p.tinta,
+                    fondo: p.superficie,
+                  ),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      '${i.vehiculoCodigo} · ${i.vehiculoTitulo}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: p.tinta2,
+                      ),
                     ),
                   ),
-              ],
+                  if (i.fecha != null)
+                    Text(
+                      Fmt.fecha(i.fecha),
+                      style: TextStyle(
+                        fontFamily: TemaApp.mono,
+                        fontSize: 11.5,
+                        color: p.tinta3,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
           if (i.notas != null && i.notas!.isNotEmpty) ...[
-            const SizedBox(height: Esp.sm),
+            const SizedBox(height: Esp.sm + 2),
             Text(
               i.notas!,
               style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
             ),
           ],
           if (sinConsultar) ...[
-            const SizedBox(height: Esp.md),
-            Divider(color: p.borde, height: 1),
             const SizedBox(height: Esp.md),
             Row(
               children: [
@@ -257,11 +345,12 @@ class _TarjetaInteresado extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: p.tinta3),
                   ),
                 ),
+                const SizedBox(width: Esp.sm),
                 OutlinedButton.icon(
                   // PENDIENTE: abre el formulario de CUIT y llama a la Edge
                   // Function de BCRA. La UI ya está; falta el backend.
                   onPressed: null,
-                  icon: const Icon(Icons.search, size: 15),
+                  icon: const Icon(Icons.search_rounded, size: 16),
                   label: const Text('Consultar BCRA'),
                 ),
               ],

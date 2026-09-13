@@ -56,54 +56,70 @@ class _Ficha extends StatelessWidget {
   Widget build(BuildContext context) {
     final ancho = MediaQuery.sizeOf(context).width;
     final dosColumnas = ancho >= Corte.escritorio;
+    final margen = ancho < Corte.tablet ? Esp.lg + 4 : Esp.xxl;
     final v = vehiculo;
+    const hueco = SizedBox(height: Esp.lg);
 
-    final izquierda = [
-      _Cabecera(vehiculo: v),
-      const SizedBox(height: Esp.md),
-      _Costos(vehiculo: v),
-      const SizedBox(height: Esp.md),
-      _GananciaReal(vehiculo: v, cfg: cfg),
+    final izquierda = <Widget>[
+      Aparecer(child: _Cabecera(vehiculo: v)),
+      hueco,
+      Aparecer(indice: 1, child: _Costos(vehiculo: v)),
+      hueco,
+      Aparecer(indice: 2, child: _GananciaReal(vehiculo: v, cfg: cfg)),
     ];
 
-    final derecha = [
-      _SimuladorPrecio(vehiculo: v, cfg: cfg),
-      const SizedBox(height: Esp.md),
-      _SimuladorFinanciacion(vehiculo: v, cfg: cfg),
+    final derecha = <Widget>[
+      Aparecer(
+        indice: dosColumnas ? 1 : 3,
+        child: _SimuladorPrecio(vehiculo: v, cfg: cfg),
+      ),
+      hueco,
+      Aparecer(
+        indice: dosColumnas ? 2 : 4,
+        child: _SimuladorFinanciacion(vehiculo: v, cfg: cfg),
+      ),
     ];
 
     return ListView(
-      padding: const EdgeInsets.all(Esp.xl),
+      padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xxl),
       children: [
-        TextButton.icon(
-          onPressed: () => context.go('/inventario'),
-          icon: const Icon(Icons.arrow_back, size: 16),
-          label: const Text('Inventario'),
+        Row(
+          children: [
+            BotonCircular(
+              icono: Icons.arrow_back_rounded,
+              tooltip: 'Volver al inventario',
+              onTap: () => context.go('/inventario'),
+            ),
+            const SizedBox(width: Esp.md),
+            Text(
+              'Inventario',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: context.paleta.tinta2,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: Esp.sm),
+        const SizedBox(height: Esp.lg),
         if (dosColumnas)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(flex: 3, child: Column(children: izquierda)),
-              const SizedBox(width: Esp.md),
+              const SizedBox(width: Esp.lg),
               Expanded(flex: 2, child: Column(children: derecha)),
             ],
           )
         else
-          Column(
-            children: [
-              ...izquierda,
-              const SizedBox(height: Esp.md),
-              ...derecha,
-            ],
-          ),
-        const SizedBox(height: Esp.xl),
+          Column(children: [...izquierda, hueco, ...derecha]),
       ],
     );
   }
 }
 
+/// Cabecera negra, como la ficha de un auto en una app de alquiler: el
+/// titulo grande, el estado y tres datos clave en mosaicos.
 class _Cabecera extends StatelessWidget {
   const _Cabecera({required this.vehiculo});
   final VehiculoInventario vehiculo;
@@ -112,101 +128,168 @@ class _Cabecera extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final v = vehiculo;
+    final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
 
     return Tarjeta(
-      padding: const EdgeInsets.all(Esp.xl),
+      destacada: true,
+      padding: EdgeInsets.all(angosto ? Esp.lg + 4 : Esp.xl + 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: p.acento,
+                  borderRadius: BorderRadius.circular(Curva.md + 2),
+                ),
+                child: Icon(
+                  Icons.directions_car_filled_rounded,
+                  size: 28,
+                  color: p.acentoTinta,
+                ),
+              ),
+              const SizedBox(width: Esp.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       v.titulo,
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: TextStyle(
+                        fontSize: angosto ? 21 : 26,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.6,
+                        height: 1.2,
+                        color: p.sobreNegro,
+                      ),
                     ),
                     const SizedBox(height: Esp.xs),
                     Text(
                       '${v.codigo} · ${v.subtitulo}'
                       '${v.km != null ? ' · ${Fmt.km(v.km)}' : ''}',
-                      style: TextStyle(fontSize: 13, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.sobreNegro2),
                     ),
                   ],
                 ),
               ),
-              Pastilla(
-                texto: v.alerta.etiqueta,
-                color: v.alerta.color(p),
-                lavado: v.alerta.lavado(p),
-              ),
+              if (!angosto) ...[
+                const SizedBox(width: Esp.md),
+                Pastilla(
+                  texto: v.alerta.etiqueta,
+                  color: v.alerta.color(p),
+                  lavado: v.alerta.color(p).withValues(alpha: 0.18),
+                ),
+              ],
             ],
           ),
-          if (v.observaciones != null && v.observaciones!.isNotEmpty) ...[
-            const SizedBox(height: Esp.lg),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(Esp.md),
-              decoration: BoxDecoration(
-                color: p.superficieHundida,
-                borderRadius: BorderRadius.circular(Curva.md),
-              ),
-              child: Text(
-                v.observaciones!,
-                style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.5),
-              ),
+          if (angosto) ...[
+            const SizedBox(height: Esp.md),
+            Pastilla(
+              texto: v.alerta.etiqueta,
+              color: v.alerta.color(p),
+              lavado: v.alerta.color(p).withValues(alpha: 0.18),
             ),
           ],
-          const SizedBox(height: Esp.lg),
+          const SizedBox(height: Esp.xl),
           Row(
             children: [
               Expanded(
-                child: _Destacado(
+                child: _Mosaico(
+                  icono: Icons.schedule_rounded,
                   etiqueta: 'En stock',
                   valor: Fmt.dias(v.diasEnStock),
                   color: v.alerta.color(p),
                 ),
               ),
+              const SizedBox(width: Esp.sm + 2),
               Expanded(
-                child: _Destacado(
-                  etiqueta: 'Precio publicado',
+                child: _Mosaico(
+                  icono: Icons.sell_rounded,
+                  etiqueta: 'Precio',
                   valor: Fmt.pesos(v.precioActual),
+                  color: p.acento,
                 ),
               ),
+              const SizedBox(width: Esp.sm + 2),
               Expanded(
-                child: _Destacado(
-                  etiqueta: 'Margen actual',
+                child: _Mosaico(
+                  icono: Icons.percent_rounded,
+                  etiqueta: 'Margen',
                   valor: Fmt.porcentaje(v.margenActual),
                   color: v.margenActual < 0 ? p.critico : p.bien,
                 ),
               ),
             ],
           ),
+          if (v.observaciones != null && v.observaciones!.isNotEmpty) ...[
+            const SizedBox(height: Esp.lg),
+            Text(
+              'Observaciones',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: p.sobreNegro,
+              ),
+            ),
+            const SizedBox(height: Esp.xs),
+            Text(
+              v.observaciones!,
+              style: TextStyle(
+                fontSize: 13,
+                color: p.sobreNegro2,
+                height: 1.5,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _Destacado extends StatelessWidget {
-  const _Destacado({required this.etiqueta, required this.valor, this.color});
+class _Mosaico extends StatelessWidget {
+  const _Mosaico({
+    required this.icono,
+    required this.etiqueta,
+    required this.valor,
+    required this.color,
+  });
+
+  final IconData icono;
   final String etiqueta, valor;
-  final Color? color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Padding(
-      // Separacion entre columnas: sin esto, en movil el precio y el margen
-      // quedan pegados y se leen como un solo numero.
-      padding: const EdgeInsets.only(right: Esp.md),
+    return Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.negroElevado,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: p.negroBorde),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icono, size: 15, color: color),
+          ),
+          const SizedBox(height: Esp.sm + 2),
+          Text(
+            etiqueta,
+            style: TextStyle(fontSize: 11.5, color: p.sobreNegro2),
+          ),
           const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -215,9 +298,9 @@ class _Destacado extends StatelessWidget {
               valor,
               style: TextStyle(
                 fontFamily: TemaApp.mono,
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: color ?? p.tinta,
+                color: color,
               ),
             ),
           ),
@@ -241,8 +324,11 @@ class _Costos extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Capital y costos'),
-          const SizedBox(height: Esp.sm),
+          const CabeceraBloque(
+            titulo: 'Capital y costos',
+            descripcion: 'Todo lo invertido en la unidad',
+          ),
+          const SizedBox(height: Esp.md),
           FilaDato(
             etiqueta: 'Precio de compra',
             valor: Fmt.pesos(v.precioCompra),
@@ -251,11 +337,12 @@ class _Costos extends StatelessWidget {
             etiqueta: 'Gastos acumulados (${v.cantidadGastos})',
             valor: Fmt.pesos(v.gastosAcum),
           ),
-          Divider(color: p.borde, height: Esp.lg),
-          FilaDato(
-            etiqueta: 'Costo total',
-            valor: Fmt.pesos(v.costoTotal),
-            destacado: true,
+          _Resaltado(
+            child: FilaDato(
+              etiqueta: 'Costo total',
+              valor: Fmt.pesos(v.costoTotal),
+              destacado: true,
+            ),
           ),
           FilaDato(
             etiqueta: 'Costo a valor de hoy (IPC)',
@@ -285,6 +372,23 @@ class _Costos extends StatelessWidget {
   }
 }
 
+/// Fondo hundido para la fila que resume un bloque.
+class _Resaltado extends StatelessWidget {
+  const _Resaltado({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.symmetric(vertical: Esp.xs),
+    padding: const EdgeInsets.symmetric(horizontal: Esp.md),
+    decoration: BoxDecoration(
+      color: context.paleta.superficieHundida,
+      borderRadius: BorderRadius.circular(Curva.sm + 2),
+    ),
+    child: child,
+  );
+}
+
 class _GananciaReal extends StatelessWidget {
   const _GananciaReal({required this.vehiculo, required this.cfg});
   final VehiculoInventario vehiculo;
@@ -295,14 +399,33 @@ class _GananciaReal extends StatelessWidget {
     final p = context.paleta;
     final v = vehiculo;
     final enRojo = v.gananciaRealIpc < 0;
+    final color = enRojo ? p.critico : p.bien;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Ganancia real ajustada por inflación'),
-          const SizedBox(height: Esp.lg),
+          Row(
+            children: [
+              IconoEnCirculo(
+                icono: enRojo
+                    ? Icons.trending_down_rounded
+                    : Icons.trending_up_rounded,
+                tamano: 38,
+                color: color,
+                fondo: color.withValues(alpha: 0.14),
+              ),
+              const SizedBox(width: Esp.md),
+              const Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Ganancia real',
+                  descripcion: 'Ajustada por inflación',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.lg + 2),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -310,9 +433,11 @@ class _GananciaReal extends StatelessWidget {
                 child: MontoDual(
                   pesos: v.gananciaRealIpc,
                   tipoCambio: cfg.tipoCambio,
-                  color: enRojo ? p.critico : p.bien,
+                  tamano: 24,
+                  color: color,
                 ),
               ),
+              const SizedBox(width: Esp.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,9 +455,9 @@ class _GananciaReal extends StatelessWidget {
                       ),
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
-                        fontSize: 20,
+                        fontSize: 22,
                         fontWeight: FontWeight.w600,
-                        color: enRojo ? p.critico : p.bien,
+                        color: color,
                       ),
                     ),
                   ],
@@ -353,6 +478,31 @@ class _GananciaReal extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Numero grande que anima entre valores al mover un slider.
+class _CifraAnimada extends StatelessWidget {
+  const _CifraAnimada({
+    required this.valor,
+    required this.formato,
+    required this.estilo,
+  });
+
+  final double valor;
+  final String Function(double) formato;
+  final TextStyle estilo;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(end: valor),
+    duration: Duracion.media,
+    curve: Curves.easeOutCubic,
+    builder: (_, x, _) => FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(formato(x), style: estilo),
+    ),
+  );
 }
 
 /// Simulador de precio. Vive en Dart, no en SQL, porque recalcula a cada
@@ -384,7 +534,59 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Simulador de precio'),
+          Row(
+            children: [
+              IconoEnCirculo(
+                icono: Icons.tune_rounded,
+                tamano: 38,
+                color: p.acentoTinta,
+                fondo: p.acento,
+              ),
+              const SizedBox(width: Esp.md),
+              const Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Simulador de precio',
+                  descripcion: 'Elegí el margen y te da el precio',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.lg + 2),
+
+          // Resultado en una pildora amarilla: es lo que se viene a buscar.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Esp.lg + 2),
+            decoration: BoxDecoration(
+              color: p.acento,
+              borderRadius: BorderRadius.circular(Curva.lg),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Precio a publicar',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: p.acentoTinta.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                _CifraAnimada(
+                  valor: sugerido,
+                  formato: Fmt.pesos,
+                  estilo: TextStyle(
+                    fontFamily: TemaApp.mono,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.8,
+                    color: p.acentoTinta,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: Esp.lg),
           Row(
             children: [
@@ -393,13 +595,23 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
                 style: TextStyle(fontSize: 13, color: p.tinta2),
               ),
               const Spacer(),
-              Text(
-                Fmt.porcentaje(_margen, decimales: 0),
-                style: TextStyle(
-                  fontFamily: TemaApp.mono,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: p.acento,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Esp.md,
+                  vertical: 4,
+                ),
+                decoration: ShapeDecoration(
+                  color: p.negro,
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(
+                  Fmt.porcentaje(_margen, decimales: 0),
+                  style: TextStyle(
+                    fontFamily: TemaApp.mono,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: p.acento,
+                  ),
                 ),
               ),
             ],
@@ -410,13 +622,6 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
             max: 0.60,
             divisions: 60,
             onChanged: (x) => setState(() => _margen = x),
-          ),
-          Divider(color: p.borde, height: Esp.lg),
-          FilaDato(
-            etiqueta: 'Precio a publicar',
-            valor: Fmt.pesos(sugerido),
-            destacado: true,
-            valorColor: p.acento,
           ),
           FilaDato(etiqueta: 'Precio exacto', valor: Fmt.pesos(exacto)),
           FilaDato(
@@ -430,21 +635,51 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
             valorColor: ajuste.abs() < 0.02 ? p.tinta2 : p.observar,
           ),
           const SizedBox(height: Esp.sm),
-          Container(
-            padding: const EdgeInsets.all(Esp.md),
-            decoration: BoxDecoration(
-              color: p.acentoLavado,
-              borderRadius: BorderRadius.circular(Curva.md),
-            ),
-            child: Text(
-              ajuste.abs() < 0.02
-                  ? 'El precio actual ya está alineado con ese margen.'
-                  : ajuste > 0
-                  ? 'Habría que subir el precio ${Fmt.porcentaje(ajuste)} '
-                        'para alcanzar ese margen.'
-                  : 'Se puede bajar el precio ${Fmt.porcentaje(ajuste.abs())} '
-                        'y todavía alcanzar ese margen.',
-              style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+          AnimatedSwitcher(
+            duration: Duracion.media,
+            child: Container(
+              key: ValueKey(
+                ajuste.abs() < 0.02
+                    ? 0
+                    : ajuste > 0
+                    ? 1
+                    : -1,
+              ),
+              width: double.infinity,
+              padding: const EdgeInsets.all(Esp.md + 2),
+              decoration: BoxDecoration(
+                color: p.superficieHundida,
+                borderRadius: BorderRadius.circular(Curva.md),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 17,
+                    color: p.tinta2,
+                  ),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      ajuste.abs() < 0.02
+                          ? 'El precio actual ya está alineado con ese margen.'
+                          : ajuste > 0
+                          ? 'Habría que subir el precio '
+                                '${Fmt.porcentaje(ajuste)} para alcanzar ese '
+                                'margen.'
+                          : 'Se puede bajar el precio '
+                                '${Fmt.porcentaje(ajuste.abs())} y todavía '
+                                'alcanzar ese margen.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: p.tinta2,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -480,30 +715,46 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Simulador de financiación'),
+          Row(
+            children: [
+              IconoEnCirculo(
+                icono: Icons.calendar_month_rounded,
+                tamano: 38,
+                color: p.sobreNegro,
+                fondo: p.negro,
+              ),
+              const SizedBox(width: Esp.md),
+              const Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Simulador de financiación',
+                  descripcion: 'Interés directo sobre el capital',
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: Esp.md),
           Text(
-            'Interés directo sobre el capital, que es como se vende en el '
-            'rubro: “$_cuotas cuotas fijas de…”.',
+            'Es como se vende en el rubro: “$_cuotas cuotas fijas de…”.',
             style: TextStyle(fontSize: 12, color: p.tinta3, height: 1.4),
           ),
           const SizedBox(height: Esp.lg),
+          Text('Cuotas', style: TextStyle(fontSize: 13, color: p.tinta2)),
+          const SizedBox(height: Esp.sm),
           Row(
             children: [
-              Text('Cuotas', style: TextStyle(fontSize: 13, color: p.tinta2)),
-              const Spacer(),
-              for (final n in [6, 12, 18, 24])
-                Padding(
-                  padding: const EdgeInsets.only(left: Esp.sm - 2),
+              for (final n in [6, 12, 18, 24]) ...[
+                Expanded(
                   child: _BotonCuota(
                     n: n,
                     activo: _cuotas == n,
                     onTap: () => setState(() => _cuotas = n),
                   ),
                 ),
+                if (n != 24) const SizedBox(width: Esp.sm),
+              ],
             ],
           ),
-          const SizedBox(height: Esp.md),
+          const SizedBox(height: Esp.lg),
           Row(
             children: [
               Text(
@@ -529,13 +780,36 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             divisions: 40,
             onChanged: (x) => setState(() => _tasa = x),
           ),
-          Divider(color: p.borde, height: Esp.lg),
-          FilaDato(
-            etiqueta: 'Cuota mensual',
-            valor: Fmt.pesos(r.cuota),
-            destacado: true,
-            valorColor: p.acento,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Esp.lg + 2),
+            decoration: BoxDecoration(
+              color: p.negro,
+              borderRadius: BorderRadius.circular(Curva.lg),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cuota mensual',
+                  style: TextStyle(fontSize: 12.5, color: p.sobreNegro2),
+                ),
+                const SizedBox(height: 2),
+                _CifraAnimada(
+                  valor: r.cuota,
+                  formato: Fmt.pesos,
+                  estilo: TextStyle(
+                    fontFamily: TemaApp.mono,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    color: p.acento,
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: Esp.sm),
           FilaDato(etiqueta: 'Total a pagar', valor: Fmt.pesos(r.total)),
           FilaDato(
             etiqueta: 'Intereses',
@@ -562,27 +836,30 @@ class _BotonCuota extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Material(
-      color: activo ? p.acentoLavado : p.superficieHundida,
-      borderRadius: BorderRadius.circular(Curva.sm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Curva.sm),
-        child: Container(
-          width: 34,
-          height: 30,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Curva.sm),
-            border: Border.all(color: activo ? p.acento : p.borde),
-          ),
-          child: Text(
-            '$n',
-            style: TextStyle(
-              fontFamily: TemaApp.mono,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: activo ? p.acento : p.tinta2,
+    return AnimatedContainer(
+      duration: Duracion.media,
+      curve: Curves.easeOutCubic,
+      decoration: ShapeDecoration(
+        color: activo ? p.acento : p.superficieHundida,
+        shape: const StadiumBorder(),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: SizedBox(
+            height: 40,
+            child: Center(
+              child: Text(
+                '$n',
+                style: TextStyle(
+                  fontFamily: TemaApp.mono,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: activo ? p.acentoTinta : p.tinta2,
+                ),
+              ),
             ),
           ),
         ),

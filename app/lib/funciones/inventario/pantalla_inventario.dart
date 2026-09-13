@@ -141,6 +141,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
     final lista = ref.watch(inventarioFiltradoProvider);
     final ancho = MediaQuery.sizeOf(context).width;
     final esAncho = ancho >= Corte.escritorio;
+    final margen = ancho < Corte.tablet ? Esp.lg + 4 : Esp.xxl;
 
     // Al cambiar el filtro, volver a la primera pagina.
     ref.listen(filtroProvider, (_, _) => setState(_reiniciarPaginado));
@@ -164,6 +165,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
           ..sort();
 
     final mostrados = lista.take(_visibles).toList();
+    final capital = lista.fold<double>(0, (s, v) => s + v.capitalInmovilizado);
 
     return Column(
       children: [
@@ -171,13 +173,12 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
           buscador: _buscador,
           filtro: filtro,
           marcas: marcas,
-          cantidad: lista.length,
-          total: (asincrono.value ?? const []).length,
+          margen: margen,
         ),
         Expanded(
           child: lista.isEmpty
               ? EstadoVacio(
-                  icono: Icons.search_off,
+                  icono: Icons.search_off_rounded,
                   titulo: 'Sin resultados',
                   descripcion: filtro.hayFiltros
                       ? 'Ninguna unidad coincide con los filtros aplicados.'
@@ -198,9 +199,10 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                 )
               : ListView.separated(
                   controller: _scroll,
-                  padding: const EdgeInsets.all(Esp.xl),
+                  padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xl),
                   itemCount: mostrados.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: Esp.sm),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: Esp.sm + 2),
                   itemBuilder: (context, i) {
                     if (i == mostrados.length) {
                       return _PieLista(
@@ -209,39 +211,69 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       );
                     }
                     final v = mostrados[i];
-                    return esAncho
+                    final fila = esAncho
                         ? _FilaVehiculo(vehiculo: v)
                         : _TarjetaVehiculo(vehiculo: v);
+                    // Solo la primera tanda entra animada: las paginas que
+                    // llegan scrolleando tienen que aparecer ya, sin demora.
+                    if (i >= _tamanoPagina) return fila;
+                    return Aparecer(
+                      // La clave por filtro hace que al filtrar las filas
+                      // entren animadas de nuevo en vez de reciclar las viejas.
+                      key: ValueKey('${v.id}-${identityHashCode(filtro)}'),
+                      indice: i,
+                      child: fila,
+                    );
                   },
                 ),
         ),
         if (mostrados.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Esp.xl,
-              vertical: Esp.sm,
-            ),
-            decoration: BoxDecoration(
-              color: p.superficie,
-              border: Border(top: BorderSide(color: p.borde)),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'Mostrando ${mostrados.length} de ${lista.length}',
-                  style: TextStyle(fontSize: 12, color: p.tinta3),
-                ),
-                const Spacer(),
-                Text(
-                  'Capital: ${Fmt.pesosCompacto(lista.fold<double>(0, (s, v) => s + v.capitalInmovilizado))}',
-                  style: TextStyle(
-                    fontFamily: TemaApp.mono,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: p.tinta2,
+          SafeArea(
+            top: false,
+            bottom: false,
+            child: Container(
+              margin: EdgeInsets.fromLTRB(margen, 0, margen, Esp.md),
+              padding: const EdgeInsets.fromLTRB(
+                Esp.lg + 2,
+                Esp.sm + 2,
+                Esp.sm + 2,
+                Esp.sm + 2,
+              ),
+              decoration: ShapeDecoration(
+                color: p.negro,
+                shape: const StadiumBorder(),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Mostrando ${mostrados.length} de ${lista.length}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, color: p.sobreNegro2),
+                    ),
                   ),
-                ),
-              ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Esp.md + 2,
+                      vertical: 6,
+                    ),
+                    decoration: ShapeDecoration(
+                      color: p.acento,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Text(
+                      'Capital ${Fmt.pesosCompacto(capital)}',
+                      style: TextStyle(
+                        fontFamily: TemaApp.mono,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: p.acentoTinta,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],
@@ -269,13 +301,13 @@ class _PieLista extends StatelessWidget {
         ),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Esp.xl),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: Esp.xl),
       child: Center(
         child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: p.tinta3),
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
         ),
       ),
     );
@@ -287,185 +319,219 @@ class _BarraFiltros extends ConsumerWidget {
     required this.buscador,
     required this.filtro,
     required this.marcas,
-    required this.cantidad,
-    required this.total,
+    required this.margen,
   });
 
   final TextEditingController buscador;
   final FiltroInventario filtro;
   final List<String> marcas;
-  final int cantidad, total;
+  final double margen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final notificador = ref.read(filtroProvider.notifier);
+    final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Esp.xl, vertical: Esp.md),
-      decoration: BoxDecoration(
-        color: p.superficie,
-        border: Border(bottom: BorderSide(color: p.borde)),
+    final buscadorCampo = SizedBox(
+      height: 46,
+      child: TextField(
+        controller: buscador,
+        onChanged: (v) => notificador.poner(filtro.copiar(busqueda: v)),
+        decoration: InputDecoration(
+          hintText: 'Buscar marca, modelo o código',
+          filled: true,
+          fillColor: p.superficie,
+          prefixIcon: Icon(Icons.search_rounded, size: 20, color: p.tinta2),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: Esp.sm),
+          border: _pildora(p.borde),
+          enabledBorder: _pildora(p.borde),
+          focusedBorder: _pildora(p.acentoTexto, ancho: 1.6),
+          suffixIcon: filtro.busqueda.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: () {
+                    buscador.clear();
+                    notificador.poner(filtro.copiar(busqueda: ''));
+                  },
+                ),
+        ),
       ),
+    );
+
+    final chips = <Widget>[
+      ChipSeleccion(
+        etiqueta: 'Solo en stock',
+        icono: Icons.inventory_2_outlined,
+        activo: filtro.soloEnStock,
+        onTap: () =>
+            notificador.poner(filtro.copiar(soloEnStock: !filtro.soloEnStock)),
+      ),
+      for (final a in [
+        AlertaRotacion.critico,
+        AlertaRotacion.atencion,
+        AlertaRotacion.observar,
+        AlertaRotacion.normal,
+      ])
+        ChipSeleccion(
+          etiqueta: a.etiqueta,
+          activo: filtro.alerta == a,
+          color: a.color(p),
+          onTap: () => notificador.poner(
+            filtro.alerta == a
+                ? filtro.copiar(limpiarAlerta: true)
+                : filtro.copiar(alerta: a),
+          ),
+        ),
+      if (marcas.isNotEmpty)
+        Container(
+          height: 40,
+          padding: const EdgeInsets.only(left: Esp.lg - 2, right: Esp.sm),
+          decoration: ShapeDecoration(
+            color: filtro.marca != null ? p.acento : p.superficie,
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: filtro.marca != null ? p.acento : p.borde,
+              ),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: filtro.marca,
+              hint: Text(
+                'Marca',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: p.tinta2,
+                ),
+              ),
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: filtro.marca != null ? p.acentoTinta : p.tinta3,
+              ),
+              isDense: true,
+              borderRadius: BorderRadius.circular(Curva.md),
+              dropdownColor: p.superficieElevada,
+              selectedItemBuilder: (_) => [
+                const SizedBox.shrink(),
+                for (final m in marcas)
+                  Center(
+                    child: Text(
+                      m,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: p.acentoTinta,
+                      ),
+                    ),
+                  ),
+              ],
+              style: TextStyle(fontSize: 13, color: p.tinta),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    'Todas las marcas',
+                    style: TextStyle(fontSize: 13, color: p.tinta2),
+                  ),
+                ),
+                for (final m in marcas)
+                  DropdownMenuItem(value: m, child: Text(m)),
+              ],
+              onChanged: (v) => notificador.poner(
+                v == null
+                    ? filtro.copiar(limpiarMarca: true)
+                    : filtro.copiar(marca: v),
+              ),
+            ),
+          ),
+        ),
+      if (filtro.hayFiltros)
+        TextButton.icon(
+          onPressed: () {
+            buscador.clear();
+            notificador.poner(const FiltroInventario());
+          },
+          icon: const Icon(Icons.close_rounded, size: 16),
+          label: const Text('Limpiar'),
+        ),
+    ];
+
+    // En movil los chips van en una sola fila deslizable: apilados en varias
+    // lineas se comian media pantalla antes del primer vehiculo.
+    if (angosto) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Esp.xs, bottom: Esp.md),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: margen),
+              child: buscadorCampo,
+            ),
+            const SizedBox(height: Esp.md),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: margen),
+                itemCount: chips.length,
+                separatorBuilder: (_, _) => const SizedBox(width: Esp.sm),
+                itemBuilder: (_, i) => chips[i],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.lg),
       child: Wrap(
         spacing: Esp.sm,
         runSpacing: Esp.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SizedBox(
-            width: 260,
-            height: 38,
-            child: TextField(
-              controller: buscador,
-              onChanged: (v) => notificador.poner(filtro.copiar(busqueda: v)),
-              decoration: InputDecoration(
-                hintText: 'Marca, modelo o código',
-                prefixIcon: const Icon(Icons.search, size: 18),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: Esp.sm),
-                suffixIcon: filtro.busqueda.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close, size: 16),
-                        onPressed: () {
-                          buscador.clear();
-                          notificador.poner(filtro.copiar(busqueda: ''));
-                        },
-                      ),
-              ),
-            ),
-          ),
-          _Chip(
-            etiqueta: 'Solo en stock',
-            activo: filtro.soloEnStock,
-            onTap: () => notificador.poner(
-              filtro.copiar(soloEnStock: !filtro.soloEnStock),
-            ),
-          ),
-          for (final a in [
-            AlertaRotacion.critico,
-            AlertaRotacion.atencion,
-            AlertaRotacion.observar,
-            AlertaRotacion.normal,
-          ])
-            _Chip(
-              etiqueta: a.etiqueta,
-              activo: filtro.alerta == a,
-              color: a.color(p),
-              onTap: () => notificador.poner(
-                filtro.alerta == a
-                    ? filtro.copiar(limpiarAlerta: true)
-                    : filtro.copiar(alerta: a),
-              ),
-            ),
-          if (marcas.isNotEmpty)
-            Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: Esp.md),
-              decoration: BoxDecoration(
-                color: p.superficieHundida,
-                borderRadius: BorderRadius.circular(Curva.md),
-                border: Border.all(color: p.borde),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: filtro.marca,
-                  hint: Text(
-                    'Marca',
-                    style: TextStyle(fontSize: 13, color: p.tinta3),
-                  ),
-                  isDense: true,
-                  borderRadius: BorderRadius.circular(Curva.md),
-                  dropdownColor: p.superficieElevada,
-                  style: TextStyle(fontSize: 13, color: p.tinta),
-                  items: [
-                    DropdownMenuItem(
-                      value: null,
-                      child: Text(
-                        'Todas las marcas',
-                        style: TextStyle(fontSize: 13, color: p.tinta2),
-                      ),
-                    ),
-                    for (final m in marcas)
-                      DropdownMenuItem(value: m, child: Text(m)),
-                  ],
-                  onChanged: (v) => notificador.poner(
-                    v == null
-                        ? filtro.copiar(limpiarMarca: true)
-                        : filtro.copiar(marca: v),
-                  ),
-                ),
-              ),
-            ),
-          if (filtro.hayFiltros)
-            TextButton.icon(
-              onPressed: () {
-                buscador.clear();
-                notificador.poner(const FiltroInventario());
-              },
-              icon: const Icon(Icons.close, size: 15),
-              label: const Text('Limpiar'),
-            ),
+          SizedBox(width: 300, child: buscadorCampo),
+          ...chips,
         ],
       ),
     );
   }
+
+  static OutlineInputBorder _pildora(Color color, {double ancho = 1}) =>
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(Curva.completo),
+        borderSide: BorderSide(color: color, width: ancho),
+      );
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.etiqueta,
-    required this.activo,
-    required this.onTap,
-    this.color,
-  });
+/// Mosaico con el icono del auto teñido por el semaforo de rotacion: el
+/// estado se lee antes que cualquier texto.
+class _IconoUnidad extends StatelessWidget {
+  const _IconoUnidad({required this.vehiculo, this.tamano = 48});
 
-  final String etiqueta;
-  final bool activo;
-  final VoidCallback onTap;
-  final Color? color;
+  final VehiculoInventario vehiculo;
+  final double tamano;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    final c = color ?? p.acento;
-    return Material(
-      color: activo ? c.withValues(alpha: 0.14) : p.superficieHundida,
-      borderRadius: BorderRadius.circular(Curva.md),
-      child: InkWell(
-        onTap: onTap,
+    final color = vehiculo.alerta.color(p);
+    return Container(
+      width: tamano,
+      height: tamano,
+      decoration: BoxDecoration(
+        color: vehiculo.alerta.lavado(p),
         borderRadius: BorderRadius.circular(Curva.md),
-        // Sin `alignment`: se lo pusiera, el Container se estira hasta las
-        // constraints maximas y en movil cada chip ocuparia todo el ancho.
-        child: Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: Esp.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Curva.md),
-            border: Border.all(color: activo ? c : p.borde),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (color != null) ...[
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: Esp.sm - 2),
-              ],
-              Text(
-                etiqueta,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: activo ? FontWeight.w600 : FontWeight.w500,
-                  color: activo ? (color ?? p.acento) : p.tinta2,
-                ),
-              ),
-            ],
-          ),
-        ),
+      ),
+      child: Icon(
+        Icons.directions_car_filled_rounded,
+        size: tamano * 0.48,
+        color: color,
       ),
     );
   }
@@ -488,31 +554,17 @@ class _FilaVehiculo extends StatelessWidget {
         : p.bien;
 
     return Tarjeta(
-      padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.md),
+      padding: const EdgeInsets.fromLTRB(
+        Esp.md,
+        Esp.md,
+        Esp.lg,
+        Esp.md,
+      ),
       onTap: () => context.go('/inventario/${v.id}'),
       child: Row(
         children: [
-          // Franja de color: el estado se lee antes que cualquier texto.
-          Container(
-            width: 3,
-            height: 38,
-            decoration: BoxDecoration(
-              color: v.alerta.color(p),
-              borderRadius: BorderRadius.circular(Curva.completo),
-            ),
-          ),
-          const SizedBox(width: Esp.md),
-          SizedBox(
-            width: 48,
-            child: Text(
-              v.codigo,
-              style: TextStyle(
-                fontFamily: TemaApp.mono,
-                fontSize: 12,
-                color: p.tinta3,
-              ),
-            ),
-          ),
+          _IconoUnidad(vehiculo: v),
+          const SizedBox(width: Esp.md + 2),
           Expanded(
             flex: 3,
             child: Column(
@@ -523,13 +575,14 @@ class _FilaVehiculo extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                     color: p.tinta,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  v.subtitulo,
+                  '${v.codigo} · ${v.subtitulo}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: p.tinta3),
@@ -557,14 +610,25 @@ class _FilaVehiculo extends StatelessWidget {
             valor: Fmt.pesosCompacto(v.gananciaRealIpc),
             color: v.gananciaRealIpc < 0 ? p.critico : p.tinta,
           ),
-          const SizedBox(width: Esp.md),
-          Pastilla(
-            texto: v.alerta.etiqueta,
-            color: v.alerta.color(p),
-            lavado: v.alerta.lavado(p),
+          const SizedBox(width: Esp.lg),
+          SizedBox(
+            width: 104,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Pastilla(
+                texto: v.alerta.etiqueta,
+                color: v.alerta.color(p),
+                lavado: v.alerta.lavado(p),
+              ),
+            ),
           ),
-          const SizedBox(width: Esp.sm),
-          Icon(Icons.chevron_right, size: 18, color: p.tinta3),
+          const SizedBox(width: Esp.md),
+          IconoEnCirculo(
+            icono: Icons.arrow_forward_rounded,
+            tamano: 34,
+            color: p.tinta,
+            fondo: p.superficieHundida,
+          ),
         ],
       ),
     );
@@ -585,15 +649,15 @@ class _Columna extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(etiqueta, style: TextStyle(fontSize: 10.5, color: p.tinta3)),
-          const SizedBox(height: 1),
+          Text(etiqueta, style: TextStyle(fontSize: 11, color: p.tinta3)),
+          const SizedBox(height: 2),
           Text(
             valor,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: TemaApp.mono,
-              fontSize: 13,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: color ?? p.tinta,
             ),
@@ -616,12 +680,15 @@ class _TarjetaVehiculo extends StatelessWidget {
     final v = vehiculo;
 
     return Tarjeta(
+      padding: const EdgeInsets.all(Esp.md + 2),
       onTap: () => context.go('/inventario/${v.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              _IconoUnidad(vehiculo: v, tamano: 46),
+              const SizedBox(width: Esp.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,7 +699,8 @@ class _TarjetaVehiculo extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
                         color: p.tinta,
                       ),
                     ),
@@ -654,25 +722,28 @@ class _TarjetaVehiculo extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Esp.md),
-          Divider(color: p.borde, height: 1),
-          const SizedBox(height: Esp.sm),
           Row(
             children: [
               Expanded(
                 child: _MiniDato(
+                  icono: Icons.schedule_rounded,
                   etiqueta: 'En stock',
                   valor: Fmt.dias(v.diasEnStock),
                   color: v.alerta.color(p),
                 ),
               ),
+              const SizedBox(width: Esp.sm),
               Expanded(
                 child: _MiniDato(
+                  icono: Icons.sell_outlined,
                   etiqueta: 'Precio',
                   valor: Fmt.pesosCompacto(v.precioActual),
                 ),
               ),
+              const SizedBox(width: Esp.sm),
               Expanded(
                 child: _MiniDato(
+                  icono: Icons.percent_rounded,
                   etiqueta: 'Margen',
                   valor: Fmt.porcentaje(v.margenActual),
                   color: v.margenActual < 0.10 ? p.observar : p.bien,
@@ -687,28 +758,62 @@ class _TarjetaVehiculo extends StatelessWidget {
 }
 
 class _MiniDato extends StatelessWidget {
-  const _MiniDato({required this.etiqueta, required this.valor, this.color});
+  const _MiniDato({
+    required this.icono,
+    required this.etiqueta,
+    required this.valor,
+    this.color,
+  });
 
+  final IconData icono;
   final String etiqueta, valor;
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(etiqueta, style: TextStyle(fontSize: 10.5, color: p.tinta3)),
-        Text(
-          valor,
-          style: TextStyle(
-            fontFamily: TemaApp.mono,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: color ?? p.tinta,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Esp.sm + 2,
+        vertical: Esp.sm,
+      ),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.sm + 4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icono, size: 12, color: p.tinta3),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5, color: p.tinta3),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valor,
+              style: TextStyle(
+                fontFamily: TemaApp.mono,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: color ?? p.tinta,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

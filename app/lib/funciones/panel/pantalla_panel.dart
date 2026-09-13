@@ -39,13 +39,13 @@ class _Contenido extends ConsumerWidget {
     final r = ref.watch(resumenProvider);
     final cfg = ref.watch(configProvider);
     final ancho = MediaQuery.sizeOf(context).width;
+    final esMovil = ancho < Corte.tablet;
 
-    // Las tarjetas se adaptan solas: 4 en escritorio, 2 en tablet, 1 en movil.
-    final columnas = ancho >= Corte.escritorio
+    // Las tarjetas se adaptan solas: 4 en escritorio, 2 en tablet y movil,
+    // 1 solo en telefonos muy angostos.
+    final columnas = ancho >= 1100
         ? 4
-        : ancho >= Corte.tablet
-        ? 3
-        : ancho >= Corte.movil
+        : ancho >= 360
         ? 2
         : 1;
 
@@ -61,112 +61,120 @@ class _Contenido extends ConsumerWidget {
             .toList()
           ..sort((a, b) => a.margenActual.compareTo(b.margenActual));
 
+    final metricas = [
+      TarjetaMetrica(
+        titulo: 'Capital inmovilizado',
+        valor: Fmt.pesosCompacto(r.capitalInmovilizado),
+        detalle: '${r.unidadesEnStock} unidades en stock',
+        icono: Icons.account_balance_wallet_rounded,
+        resaltada: true,
+        onTap: () => context.go('/inventario'),
+      ),
+      TarjetaMetrica(
+        titulo: 'Ganancia potencial',
+        valor: Fmt.pesosCompacto(r.gananciaPotencial),
+        detalle: 'Margen promedio ${Fmt.porcentaje(r.margenPromedio)}',
+        detalleColor: r.margenPromedio < cfg.margenObjetivo
+            ? p.observar
+            : p.bien,
+        icono: Icons.trending_up_rounded,
+      ),
+      TarjetaMetrica(
+        titulo: 'Días promedio en stock',
+        valor: r.diasPromedioStock.toStringAsFixed(0),
+        detalle: 'Objetivo: menos de ${cfg.diasAmarillo} días',
+        detalleColor: r.diasPromedioStock > cfg.diasAmarillo
+            ? p.atencion
+            : p.bien,
+        icono: Icons.schedule_rounded,
+      ),
+      TarjetaMetrica(
+        titulo: 'Unidades en rojo',
+        valor: '${r.criticos}',
+        detalle: 'Más de ${cfg.diasRojo} días sin venderse',
+        detalleColor: r.criticos > 0 ? p.critico : p.tinta3,
+        icono: Icons.warning_amber_rounded,
+        onTap: () => context.go('/inventario'),
+      ),
+    ];
+
+    final antiguedad = _ListaAtencion(
+      titulo: 'Mayor antigüedad',
+      descripcion: 'Cada día parado cuesta plata',
+      vehiculos: enRojo.take(5).toList(),
+      valor: (v) => Fmt.dias(v.diasEnStock),
+      color: (v) => p.critico,
+    );
+    final margen = _ListaAtencion(
+      titulo: 'Margen bajo el mínimo',
+      descripcion: 'Por debajo de ${Fmt.porcentaje(cfg.margenMinimo)}',
+      vehiculos: bajoMargen.take(5).toList(),
+      valor: (v) => Fmt.porcentaje(v.margenActual),
+      color: (v) => v.margenActual < 0 ? p.critico : p.observar,
+    );
+
     return ListView(
-      padding: const EdgeInsets.all(Esp.xl),
+      padding: EdgeInsets.fromLTRB(
+        esMovil ? Esp.lg + 4 : Esp.xxl,
+        Esp.sm,
+        esMovil ? Esp.lg + 4 : Esp.xl,
+        Esp.xxl,
+      ),
       children: [
-        GridView.count(
-          crossAxisCount: columnas,
+        GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: Esp.md,
-          crossAxisSpacing: Esp.md,
-          childAspectRatio: columnas == 1 ? 3.4 : 1.75,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columnas,
+            mainAxisSpacing: Esp.md + 2,
+            crossAxisSpacing: Esp.md + 2,
+            mainAxisExtent: columnas == 1 ? 150 : 162,
+          ),
           children: [
-            TarjetaMetrica(
-              titulo: 'Capital inmovilizado',
-              valor: Fmt.pesosCompacto(r.capitalInmovilizado),
-              detalle: '${r.unidadesEnStock} unidades en stock',
-              icono: Icons.account_balance_wallet_outlined,
-              onTap: () => context.go('/inventario'),
-            ),
-            TarjetaMetrica(
-              titulo: 'Ganancia potencial',
-              valor: Fmt.pesosCompacto(r.gananciaPotencial),
-              detalle: 'Margen promedio ${Fmt.porcentaje(r.margenPromedio)}',
-              detalleColor: r.margenPromedio < cfg.margenObjetivo
-                  ? p.observar
-                  : p.bien,
-              icono: Icons.trending_up,
-            ),
-            TarjetaMetrica(
-              titulo: 'Días promedio en stock',
-              valor: r.diasPromedioStock.toStringAsFixed(0),
-              detalle: 'Objetivo: menos de ${cfg.diasAmarillo} días',
-              detalleColor: r.diasPromedioStock > cfg.diasAmarillo
-                  ? p.atencion
-                  : p.bien,
-              icono: Icons.schedule,
-            ),
-            TarjetaMetrica(
-              titulo: 'Unidades en rojo',
-              valor: '${r.criticos}',
-              detalle: 'Más de ${cfg.diasRojo} días sin venderse',
-              detalleColor: r.criticos > 0 ? p.critico : p.tinta3,
-              icono: Icons.warning_amber_rounded,
-              onTap: () => context.go('/inventario'),
-            ),
+            for (var i = 0; i < metricas.length; i++)
+              Aparecer(indice: i, child: metricas[i]),
           ],
         ),
 
-        const SizedBox(height: Esp.xl),
-        _GananciaReal(resumen: r, cfg: cfg),
+        const SizedBox(height: Esp.lg + 2),
+        Aparecer(
+          indice: 4,
+          child: _GananciaReal(resumen: r, cfg: cfg),
+        ),
 
-        const SizedBox(height: Esp.xl),
-        _DistribucionRotacion(inventario: inventario, cfg: cfg),
+        const SizedBox(height: Esp.lg + 2),
+        Aparecer(
+          indice: 5,
+          child: _DistribucionRotacion(inventario: inventario, cfg: cfg),
+        ),
 
-        const SizedBox(height: Esp.xl),
+        const SizedBox(height: Esp.lg + 2),
         if (ancho >= Corte.escritorio)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _ListaAtencion(
-                    titulo: 'Mayor antigüedad',
-                    descripcion: 'Cada día parado cuesta plata',
-                    vehiculos: enRojo.take(5).toList(),
-                    valor: (v) => Fmt.dias(v.diasEnStock),
-                    color: (v) => p.critico,
-                  ),
-                ),
-                const SizedBox(width: Esp.md),
-                Expanded(
-                  child: _ListaAtencion(
-                    titulo: 'Margen bajo el mínimo',
-                    descripcion:
-                        'Por debajo de ${Fmt.porcentaje(cfg.margenMinimo)}',
-                    vehiculos: bajoMargen.take(5).toList(),
-                    valor: (v) => Fmt.porcentaje(v.margenActual),
-                    color: (v) => v.margenActual < 0 ? p.critico : p.observar,
-                  ),
-                ),
-              ],
+          Aparecer(
+            indice: 6,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: antiguedad),
+                  const SizedBox(width: Esp.lg + 2),
+                  Expanded(child: margen),
+                ],
+              ),
             ),
           )
         else ...[
-          _ListaAtencion(
-            titulo: 'Mayor antigüedad',
-            descripcion: 'Cada día parado cuesta plata',
-            vehiculos: enRojo.take(5).toList(),
-            valor: (v) => Fmt.dias(v.diasEnStock),
-            color: (v) => p.critico,
-          ),
-          const SizedBox(height: Esp.md),
-          _ListaAtencion(
-            titulo: 'Margen bajo el mínimo',
-            descripcion: 'Por debajo de ${Fmt.porcentaje(cfg.margenMinimo)}',
-            vehiculos: bajoMargen.take(5).toList(),
-            valor: (v) => Fmt.porcentaje(v.margenActual),
-            color: (v) => v.margenActual < 0 ? p.critico : p.observar,
-          ),
+          Aparecer(indice: 6, child: antiguedad),
+          const SizedBox(height: Esp.lg + 2),
+          Aparecer(indice: 7, child: margen),
         ],
-        const SizedBox(height: Esp.xl),
       ],
     );
   }
 }
 
 /// La tarjeta que justifica el producto: lo mismo en nominal y en real.
+/// Va en negro porque es la que hay que leer primero.
 class _GananciaReal extends StatelessWidget {
   const _GananciaReal({required this.resumen, required this.cfg});
 
@@ -187,29 +195,48 @@ class _GananciaReal extends StatelessWidget {
         etiqueta: 'Ganancia nominal',
         valor: Fmt.pesos(resumen.gananciaRealizada),
         nota: 'Lo que dice la suma de las ventas',
-        color: p.tinta,
+        color: p.sobreNegro,
       ),
       _BloqueGanancia(
         etiqueta: 'Ganancia real (IPC)',
         valor: Fmt.pesos(resumen.gananciaRealizadaIpc),
         nota: 'Descontada la inflación del período',
-        color: p.bien,
+        color: p.acento,
+        grande: true,
       ),
       _BloqueGanancia(
         etiqueta: 'En dólares',
         valor: Fmt.dolares(resumen.gananciaRealizadaUsd),
         nota: 'Al tipo de cambio ${Fmt.pesos(cfg.tipoCambio)}',
-        color: p.tinta2,
+        color: p.sobreNegro,
       ),
     ];
 
     return Tarjeta(
-      padding: const EdgeInsets.all(Esp.xl),
+      destacada: true,
+      padding: EdgeInsets.all(angosto ? Esp.lg + 4 : Esp.xl + 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Ganancia de las unidades vendidas'),
-          const SizedBox(height: Esp.lg),
+          Row(
+            children: [
+              IconoEnCirculo(
+                icono: Icons.insights_rounded,
+                tamano: 38,
+                color: p.acentoTinta,
+                fondo: p.acento,
+              ),
+              const SizedBox(width: Esp.md),
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Ganancia de las unidades vendidas',
+                  descripcion: 'Nominal contra real, ajustada por inflación',
+                  sobreNegro: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.xl),
           if (angosto)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,22 +246,27 @@ class _GananciaReal extends StatelessWidget {
             )
           else
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 for (var i = 0; i < bloques.length; i++) ...[
                   Expanded(child: bloques[i]),
                   if (i < bloques.length - 1)
                     Container(
                       width: 1,
-                      height: 54,
+                      height: 58,
                       margin: const EdgeInsets.symmetric(horizontal: Esp.lg),
-                      color: p.borde,
+                      color: p.negroBorde,
                     ),
                 ],
               ],
             ),
-          const SizedBox(height: Esp.lg),
-          BarraProgreso(valor: proporcion, color: p.bien, alto: 5),
+          const SizedBox(height: Esp.xl),
+          BarraProgreso(
+            valor: proporcion,
+            color: p.acento,
+            fondo: p.negroElevado,
+            alto: 10,
+          ),
           const SizedBox(height: Esp.md),
           Text(
             resumen.gananciaRealizada <= 0
@@ -242,7 +274,7 @@ class _GananciaReal extends StatelessWidget {
                 : 'La inflación se llevó ${Fmt.pesos(perdida)} de la ganancia '
                       'nominal: queda ${Fmt.porcentaje(proporcion, decimales: 0)} '
                       'de poder de compra real.',
-            style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.5),
+            style: TextStyle(fontSize: 13, color: p.sobreNegro2, height: 1.5),
           ),
         ],
       ),
@@ -256,10 +288,12 @@ class _BloqueGanancia extends StatelessWidget {
     required this.valor,
     required this.nota,
     required this.color,
+    this.grande = false,
   });
 
   final String etiqueta, valor, nota;
   final Color color;
+  final bool grande;
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +302,7 @@ class _BloqueGanancia extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 12.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 12.5, color: p.sobreNegro2)),
         const SizedBox(height: Esp.xs),
         FittedBox(
           fit: BoxFit.scaleDown,
@@ -277,14 +311,21 @@ class _BloqueGanancia extends StatelessWidget {
             valor,
             style: TextStyle(
               fontFamily: TemaApp.mono,
-              fontSize: 22,
+              fontSize: grande ? 28 : 22,
               fontWeight: FontWeight.w600,
+              letterSpacing: -0.6,
               color: color,
             ),
           ),
         ),
         const SizedBox(height: Esp.xs),
-        Text(nota, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(
+          nota,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: p.sobreNegro2.withValues(alpha: 0.8),
+          ),
+        ),
       ],
     );
   }
@@ -308,27 +349,52 @@ class _DistribucionRotacion extends StatelessWidget {
       (AlertaRotacion.critico, 'Más de ${cfg.diasRojo} días'),
     ];
 
-    final total = enStock.isEmpty ? 1 : enStock.length;
+    int cuantos(AlertaRotacion a) => enStock.where((v) => v.alerta == a).length;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Antigüedad del stock'),
-          const SizedBox(height: Esp.lg),
+          CabeceraBloque(
+            titulo: 'Antigüedad del stock',
+            descripcion:
+                '${enStock.length} unidad${enStock.length == 1 ? '' : 'es'} '
+                'en el predio',
+          ),
+          const SizedBox(height: Esp.lg + 2),
           // Barra apilada: una sola linea dice toda la salud del inventario.
-          ClipRRect(
-            borderRadius: BorderRadius.circular(Curva.completo),
+          // Crece de izquierda a derecha al entrar a la pantalla.
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, t, hijo) => ClipRRect(
+              borderRadius: BorderRadius.circular(Curva.completo),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: t,
+                child: hijo,
+              ),
+            ),
             child: SizedBox(
-              height: 10,
+              height: 14,
               child: Row(
                 children: [
                   for (final (alerta, _) in grupos)
-                    Expanded(
-                      flex: enStock.where((v) => v.alerta == alerta).length,
-                      child: Container(color: alerta.color(p)),
-                    ),
+                    if (cuantos(alerta) > 0)
+                      Expanded(
+                        flex: cuantos(alerta),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 3),
+                          decoration: BoxDecoration(
+                            color: alerta.color(p),
+                            borderRadius: BorderRadius.circular(
+                              Curva.completo,
+                            ),
+                          ),
+                        ),
+                      ),
                   // Evita que la barra colapse cuando no hay nada cargado.
                   if (enStock.isEmpty)
                     Expanded(child: Container(color: p.superficieHundida)),
@@ -336,21 +402,29 @@ class _DistribucionRotacion extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: Esp.lg),
-          Wrap(
-            spacing: Esp.xl,
-            runSpacing: Esp.md,
-            children: [
-              for (final (alerta, rango) in grupos)
-                _ItemLeyenda(
-                  color: alerta.color(p),
-                  etiqueta: alerta.etiqueta,
-                  rango: rango,
-                  cantidad: enStock.where((v) => v.alerta == alerta).length,
-                  porcentaje:
-                      enStock.where((v) => v.alerta == alerta).length / total,
-                ),
-            ],
+          const SizedBox(height: Esp.lg + 2),
+          LayoutBuilder(
+            builder: (context, restricciones) {
+              final porFila = restricciones.maxWidth >= 640 ? 4 : 2;
+              final anchoItem =
+                  (restricciones.maxWidth - Esp.sm * (porFila - 1)) / porFila;
+              return Wrap(
+                spacing: Esp.sm,
+                runSpacing: Esp.sm,
+                children: [
+                  for (final (alerta, rango) in grupos)
+                    SizedBox(
+                      width: anchoItem,
+                      child: _ItemLeyenda(
+                        color: alerta.color(p),
+                        etiqueta: alerta.etiqueta,
+                        rango: rango,
+                        cantidad: cuantos(alerta),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -364,52 +438,64 @@ class _ItemLeyenda extends StatelessWidget {
     required this.etiqueta,
     required this.rango,
     required this.cantidad,
-    required this.porcentaje,
   });
 
   final Color color;
   final String etiqueta, rango;
   final int cantidad;
-  final double porcentaje;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: Esp.sm),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  '$cantidad',
+    return Container(
+      padding: const EdgeInsets.all(Esp.md + 2),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: Esp.sm - 2),
+              Expanded(
+                child: Text(
+                  etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: TemaApp.mono,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: p.tinta,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: p.tinta2,
                   ),
                 ),
-                const SizedBox(width: Esp.sm - 2),
-                Text(
-                  etiqueta,
-                  style: TextStyle(fontSize: 12.5, color: p.tinta2),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.sm - 2),
+          Text(
+            '$cantidad',
+            style: TextStyle(
+              fontFamily: TemaApp.mono,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: p.tinta,
             ),
-            Text(rango, style: TextStyle(fontSize: 11, color: p.tinta3)),
-          ],
-        ),
-      ],
+          ),
+          Text(
+            rango,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: p.tinta3),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -436,62 +522,94 @@ class _ListaAtencion extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          EtiquetaSeccion(titulo),
-          const SizedBox(height: Esp.xs),
-          Text(descripcion, style: TextStyle(fontSize: 12, color: p.tinta3)),
-          const SizedBox(height: Esp.lg),
+          CabeceraBloque(
+            titulo: titulo,
+            descripcion: descripcion,
+            accion: 'Ver todo',
+            onAccion: () => context.go('/inventario'),
+          ),
+          const SizedBox(height: Esp.md),
           if (vehiculos.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: Esp.lg),
+            Container(
+              padding: const EdgeInsets.all(Esp.lg),
+              decoration: BoxDecoration(
+                color: p.bienLavado,
+                borderRadius: BorderRadius.circular(Curva.md),
+              ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, size: 16, color: p.bien),
+                  Icon(Icons.check_circle_rounded, size: 18, color: p.bien),
                   const SizedBox(width: Esp.sm),
                   Text(
                     'Ninguna unidad en esta situación.',
-                    style: TextStyle(fontSize: 13, color: p.tinta2),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: p.tinta2,
+                    ),
                   ),
                 ],
               ),
             )
           else
             for (final v in vehiculos)
-              InkWell(
-                onTap: () => context.go('/inventario/${v.id}'),
-                borderRadius: BorderRadius.circular(Curva.sm),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Esp.sm),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        child: Text(
-                          v.codigo,
-                          style: TextStyle(
-                            fontFamily: TemaApp.mono,
-                            fontSize: 11.5,
-                            color: p.tinta3,
+              Padding(
+                padding: const EdgeInsets.only(top: Esp.sm),
+                child: Material(
+                  color: p.superficieHundida,
+                  borderRadius: BorderRadius.circular(Curva.md),
+                  child: InkWell(
+                    onTap: () => context.go('/inventario/${v.id}'),
+                    borderRadius: BorderRadius.circular(Curva.md),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Esp.sm + 2,
+                        vertical: Esp.sm,
+                      ),
+                      child: Row(
+                        children: [
+                          IconoEnCirculo(
+                            icono: Icons.directions_car_filled_rounded,
+                            tamano: 36,
+                            color: p.tinta,
+                            fondo: p.superficie,
                           ),
-                        ),
+                          const SizedBox(width: Esp.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  v.titulo,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: p.tinta,
+                                  ),
+                                ),
+                                Text(
+                                  v.codigo,
+                                  style: TextStyle(
+                                    fontFamily: TemaApp.mono,
+                                    fontSize: 11.5,
+                                    color: p.tinta3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: Esp.sm),
+                          Pastilla(
+                            texto: valor(v),
+                            color: color(v),
+                            lavado: color(v).withValues(alpha: 0.14),
+                            conPunto: false,
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Text(
-                          v.titulo,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 13.5, color: p.tinta),
-                        ),
-                      ),
-                      Text(
-                        valor(v),
-                        style: TextStyle(
-                          fontFamily: TemaApp.mono,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: color(v),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

@@ -35,101 +35,126 @@ class PantallaPendiente extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(Esp.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Tarjeta(
-            padding: const EdgeInsets.all(Esp.xxl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: p.acentoLavado,
-                        borderRadius: BorderRadius.circular(Curva.md),
-                        border: Border.all(
-                          color: p.acento.withValues(alpha: 0.25),
+          constraints: const BoxConstraints(maxWidth: 580),
+          child: Aparecer(
+            child: Tarjeta(
+              padding: const EdgeInsets.all(Esp.xxl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      IconoEnCirculo(
+                        icono: seccion.icono,
+                        tamano: 56,
+                        color: p.acentoTinta,
+                        fondo: p.acento,
+                      ),
+                      const SizedBox(width: Esp.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              seccion.titulo,
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              seccion.subtitulo,
+                              style: TextStyle(fontSize: 13, color: p.tinta3),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Icon(seccion.icono, color: p.acento, size: 21),
-                    ),
-                    const SizedBox(width: Esp.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            seccion.titulo,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            seccion.subtitulo,
-                            style: TextStyle(fontSize: 12.5, color: p.tinta3),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: Esp.xl),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Esp.md,
-                    vertical: 6,
+                    ],
                   ),
-                  decoration: BoxDecoration(
-                    color: p.observarLavado,
-                    borderRadius: BorderRadius.circular(Curva.completo),
-                    border: Border.all(
-                      color: p.observar.withValues(alpha: 0.3),
+                  const SizedBox(height: Esp.xl),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Esp.md + 2,
+                      vertical: 7,
                     ),
-                  ),
-                  child: Text(
-                    requiereBase
-                        ? 'Pendiente — necesita la base conectada'
-                        : 'Pendiente',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: p.observar,
+                    decoration: ShapeDecoration(
+                      color: p.negro,
+                      shape: const StadiumBorder(),
                     ),
-                  ),
-                ),
-                const SizedBox(height: Esp.xl),
-                const EtiquetaSeccion('Qué va a hacer'),
-                const SizedBox(height: Esp.md),
-                for (final punto in puntos)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Esp.md),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          margin: const EdgeInsets.only(top: 7, right: Esp.md),
-                          decoration: BoxDecoration(
-                            color: p.acento,
-                            shape: BoxShape.circle,
-                          ),
+                        Icon(
+                          Icons.construction_rounded,
+                          size: 14,
+                          color: p.acento,
                         ),
-                        Expanded(
+                        const SizedBox(width: Esp.sm - 2),
+                        Flexible(
                           child: Text(
-                            punto,
+                            requiereBase
+                                ? 'En construcción — necesita la base conectada'
+                                : 'En construcción',
                             style: TextStyle(
-                              fontSize: 13.5,
-                              color: p.tinta2,
-                              height: 1.55,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: p.sobreNegro,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-              ],
+                  const SizedBox(height: Esp.xl),
+                  const EtiquetaSeccion('Qué va a hacer'),
+                  const SizedBox(height: Esp.md),
+                  for (var i = 0; i < puntos.length; i++)
+                    Aparecer(
+                      indice: i + 1,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: Esp.sm),
+                        padding: const EdgeInsets.all(Esp.md + 2),
+                        decoration: BoxDecoration(
+                          color: p.superficieHundida,
+                          borderRadius: BorderRadius.circular(Curva.md),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: p.acento,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  fontFamily: TemaApp.mono,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: p.acentoTinta,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: Esp.md),
+                            Expanded(
+                              child: Text(
+                                puntos[i],
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: p.tinta2,
+                                  height: 1.55,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

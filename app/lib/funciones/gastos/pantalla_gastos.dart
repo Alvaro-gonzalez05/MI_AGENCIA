@@ -14,16 +14,16 @@ class PantallaGastos extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.paleta;
     final asincrono = ref.watch(gastosProvider);
+    final margen = MediaQuery.sizeOf(context).width < Corte.tablet
+        ? Esp.lg + 4
+        : Esp.xxl;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => abrirFormulario(context),
-        backgroundColor: p.acento,
-        foregroundColor: p.acentoTinta,
-        icon: const Icon(Icons.add, size: 20),
+        icon: const Icon(Icons.add_rounded, size: 22),
         label: const Text('Nuevo gasto'),
       ),
       body: asincrono.when(
@@ -59,17 +59,22 @@ class PantallaGastos extends ConsumerWidget {
             ..sort((a, b) => b.value.compareTo(a.value));
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(Esp.xl, Esp.xl, Esp.xl, 96),
+            padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, 104),
             children: [
-              _Resumen(
-                total: total,
-                cantidad: gastos.length,
-                ranking: ranking.take(4).toList(),
+              Aparecer(
+                child: _Resumen(
+                  total: total,
+                  cantidad: gastos.length,
+                  ranking: ranking.take(4).toList(),
+                ),
               ),
-              const SizedBox(height: Esp.lg),
-              for (final g in gastos) ...[
-                _Fila(gasto: g),
-                const SizedBox(height: Esp.sm),
+              const SizedBox(height: Esp.lg + 2),
+              for (var i = 0; i < gastos.length; i++) ...[
+                if (i < 20)
+                  Aparecer(indice: i + 1, child: _Fila(gasto: gastos[i]))
+                else
+                  _Fila(gasto: gastos[i]),
+                const SizedBox(height: Esp.sm + 2),
               ],
             ],
           );
@@ -110,67 +115,95 @@ class _Resumen extends StatelessWidget {
     final p = context.paleta;
 
     return Tarjeta(
+      destacada: true,
       padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const EtiquetaSeccion('Invertido en preparación'),
-          const SizedBox(height: Esp.md),
-          Text(
-            Fmt.pesos(total),
-            style: TextStyle(
-              fontFamily: TemaApp.mono,
-              fontSize: 26,
-              fontWeight: FontWeight.w600,
-              color: p.tinta,
-            ),
+          Row(
+            children: [
+              IconoEnCirculo(
+                icono: Icons.receipt_long_rounded,
+                tamano: 38,
+                color: p.acentoTinta,
+                fondo: p.acento,
+              ),
+              const SizedBox(width: Esp.md),
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Invertido en preparación',
+                  descripcion:
+                      '$cantidad gasto${cantidad == 1 ? '' : 's'} cargado'
+                      '${cantidad == 1 ? '' : 's'}',
+                  sobreNegro: true,
+                ),
+              ),
+            ],
           ),
-          Text(
-            '$cantidad gasto${cantidad == 1 ? '' : 's'} cargado'
-            '${cantidad == 1 ? '' : 's'}',
-            style: TextStyle(fontSize: 12.5, color: p.tinta3),
+          const SizedBox(height: Esp.lg),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              Fmt.pesos(total),
+              style: TextStyle(
+                fontFamily: TemaApp.mono,
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1,
+                color: p.acento,
+              ),
+            ),
           ),
           if (ranking.isNotEmpty) ...[
             const SizedBox(height: Esp.lg),
-            Divider(color: p.borde, height: 1),
-            const SizedBox(height: Esp.md),
             for (final e in ranking)
               Padding(
-                padding: const EdgeInsets.only(bottom: Esp.sm),
-                child: Row(
+                padding: const EdgeInsets.only(bottom: Esp.md),
+                child: Column(
                   children: [
-                    Icon(e.key.icono, size: 15, color: p.tinta3),
-                    const SizedBox(width: Esp.md),
-                    Expanded(
-                      child: Text(
-                        e.key.etiqueta,
-                        style: TextStyle(fontSize: 13, color: p.tinta2),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 52,
-                      child: Text(
-                        Fmt.porcentaje(
-                          total > 0 ? e.value / total : 0,
-                          decimales: 0,
+                    Row(
+                      children: [
+                        Icon(e.key.icono, size: 15, color: p.sobreNegro2),
+                        const SizedBox(width: Esp.sm),
+                        Expanded(
+                          child: Text(
+                            e.key.etiqueta,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: p.sobreNegro,
+                            ),
+                          ),
                         ),
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontFamily: TemaApp.mono,
-                          fontSize: 12,
-                          color: p.tinta3,
+                        Text(
+                          Fmt.porcentaje(
+                            total > 0 ? e.value / total : 0,
+                            decimales: 0,
+                          ),
+                          style: TextStyle(
+                            fontFamily: TemaApp.mono,
+                            fontSize: 12,
+                            color: p.sobreNegro2,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: Esp.md),
+                        Text(
+                          Fmt.pesosCompacto(e.value),
+                          style: TextStyle(
+                            fontFamily: TemaApp.mono,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: p.sobreNegro,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: Esp.md),
-                    Text(
-                      Fmt.pesosCompacto(e.value),
-                      style: TextStyle(
-                        fontFamily: TemaApp.mono,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: p.tinta,
-                      ),
+                    const SizedBox(height: Esp.sm - 2),
+                    BarraProgreso(
+                      valor: total > 0 ? e.value / total : 0,
+                      color: p.acento,
+                      fondo: p.negroElevado,
+                      alto: 6,
                     ),
                   ],
                 ),
@@ -193,17 +226,14 @@ class _Fila extends StatelessWidget {
     final g = gasto;
 
     return Tarjeta(
-      padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.md),
+      padding: const EdgeInsets.all(Esp.md + 2),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: p.superficieHundida,
-              borderRadius: BorderRadius.circular(Curva.sm),
-            ),
-            child: Icon(g.categoria.icono, size: 16, color: p.tinta2),
+          IconoEnCirculo(
+            icono: g.categoria.icono,
+            tamano: 44,
+            color: p.tinta,
+            fondo: p.superficieHundida,
           ),
           const SizedBox(width: Esp.md),
           Expanded(

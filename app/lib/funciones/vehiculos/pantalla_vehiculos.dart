@@ -24,14 +24,15 @@ class PantallaVehiculos extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final asincrono = ref.watch(inventarioProvider);
+    final margen = MediaQuery.sizeOf(context).width < Corte.tablet
+        ? Esp.lg + 4
+        : Esp.xxl;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _abrirFormulario(context, ref),
-        backgroundColor: p.acento,
-        foregroundColor: p.acentoTinta,
-        icon: const Icon(Icons.add, size: 20),
+        icon: const Icon(Icons.add_rounded, size: 22),
         label: const Text('Nueva unidad'),
       ),
       body: asincrono.when(
@@ -61,21 +62,40 @@ class PantallaVehiculos extends ConsumerWidget {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(Esp.xl, Esp.xl, Esp.xl, 96),
+            padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, 104),
             itemCount: activos.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: Esp.sm),
+            separatorBuilder: (_, _) => const SizedBox(height: Esp.sm + 2),
             itemBuilder: (context, i) {
               if (i == 0) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: Esp.sm),
-                  child: Text(
-                    '${activos.length} unidad${activos.length == 1 ? '' : 'es'} '
-                    'en el predio',
-                    style: TextStyle(fontSize: 12.5, color: p.tinta3),
+                  padding: const EdgeInsets.only(bottom: Esp.xs),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Esp.md + 2,
+                          vertical: 6,
+                        ),
+                        decoration: ShapeDecoration(
+                          color: p.negro,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: Text(
+                          '${activos.length} unidad'
+                          '${activos.length == 1 ? '' : 'es'} en el predio',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: p.sobreNegro,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
-              return _Fila(vehiculo: activos[i - 1]);
+              final fila = _Fila(vehiculo: activos[i - 1]);
+              return i > 20 ? fila : Aparecer(indice: i, child: fila);
             },
           );
         },
@@ -118,30 +138,24 @@ class _Fila extends ConsumerWidget {
     final v = vehiculo;
 
     return Tarjeta(
-      padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.md),
+      padding: const EdgeInsets.fromLTRB(Esp.md, Esp.md, Esp.sm, Esp.md),
       onTap: () => context.go('/inventario/${v.id}'),
       child: Row(
         children: [
           Container(
-            width: 3,
-            height: 36,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
+              color: v.alerta.lavado(p),
+              borderRadius: BorderRadius.circular(Curva.md),
+            ),
+            child: Icon(
+              Icons.directions_car_filled_rounded,
+              size: 23,
               color: v.alerta.color(p),
-              borderRadius: BorderRadius.circular(Curva.completo),
             ),
           ),
-          const SizedBox(width: Esp.md),
-          SizedBox(
-            width: 46,
-            child: Text(
-              v.codigo,
-              style: TextStyle(
-                fontFamily: TemaApp.mono,
-                fontSize: 12,
-                color: p.tinta3,
-              ),
-            ),
-          ),
+          const SizedBox(width: Esp.md + 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,13 +165,14 @@ class _Fila extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                     color: p.tinta,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  '${v.subtitulo}'
+                  '${v.codigo} · ${v.subtitulo}'
                   '${v.km != null ? ' · ${Fmt.km(v.km)}' : ''}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -172,23 +187,27 @@ class _Fila extends ConsumerWidget {
             children: [
               Text(
                 'Ingresó',
-                style: TextStyle(fontSize: 10.5, color: p.tinta3),
+                style: TextStyle(fontSize: 11, color: p.tinta3),
               ),
               Text(
                 Fmt.fecha(v.fechaIngreso),
                 style: TextStyle(
                   fontFamily: TemaApp.mono,
                   fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
                   color: p.tinta2,
                 ),
               ),
             ],
           ),
-          const SizedBox(width: Esp.md),
-          IconButton(
+          const SizedBox(width: Esp.sm),
+          BotonCircular(
             tooltip: 'Editar',
-            icon: Icon(Icons.edit_outlined, size: 18, color: p.tinta3),
-            onPressed: () => PantallaVehiculos._abrirFormulario(
+            icono: Icons.edit_rounded,
+            tamano: 38,
+            relleno: p.superficieHundida,
+            conBorde: false,
+            onTap: () => PantallaVehiculos._abrirFormulario(
               context,
               ref,
               inicial: AltaVehiculo(

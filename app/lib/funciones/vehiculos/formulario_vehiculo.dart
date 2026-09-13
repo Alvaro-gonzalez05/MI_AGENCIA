@@ -534,7 +534,6 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
   }
 
   Widget _estado() {
-    final p = context.paleta;
     // Vendido y dado de baja no se eligen a mano: los pone el sistema al
     // cargar la venta o al dar de baja la unidad.
     const opciones = [
@@ -550,38 +549,10 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
         runSpacing: Esp.sm,
         children: [
           for (final e in opciones)
-            Material(
-              color: _v.estado == e ? p.acentoLavado : p.superficieHundida,
-              borderRadius: BorderRadius.circular(Curva.md),
-              child: InkWell(
-                onTap: () => setState(() => _v = _v.copiar(estado: e)),
-                borderRadius: BorderRadius.circular(Curva.md),
-                // Sin Center ni alignment: cualquiera de los dos estira el
-                // Container hasta las constraints maximas y los tres botones
-                // ocupan todo el ancho en vez de quedar uno al lado del otro.
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Esp.lg,
-                    vertical: Esp.md - 1,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Curva.md),
-                    border: Border.all(
-                      color: _v.estado == e ? p.acento : p.borde,
-                    ),
-                  ),
-                  child: Text(
-                    e.etiqueta,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: _v.estado == e
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: _v.estado == e ? p.acento : p.tinta2,
-                    ),
-                  ),
-                ),
-              ),
+            ChipSeleccion(
+              etiqueta: e.etiqueta,
+              activo: _v.estado == e,
+              onTap: () => setState(() => _v = _v.copiar(estado: e)),
             ),
         ],
       ),
