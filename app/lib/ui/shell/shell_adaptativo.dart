@@ -97,7 +97,7 @@ Widget _transicionTitulo(Widget hijo, Animation<double> animacion) =>
 
 Widget _apilarIzquierda(Widget? actual, List<Widget> previos) => Stack(
   alignment: Alignment.centerLeft,
-  children: [...previos, if (actual != null) actual],
+  children: [...previos, ?actual],
 );
 
 // ---------------------------------------------------------------------------
@@ -182,8 +182,9 @@ class _BarraLateral extends ConsumerWidget {
 
 /// Logo: cuadrado amarillo redondeado con el auto en negro.
 class _Logo extends StatelessWidget {
-  const _Logo({this.tamano = 40});
-  final double tamano;
+  const _Logo();
+
+  static const tamano = 40.0;
 
   @override
   Widget build(BuildContext context) {
@@ -361,11 +362,9 @@ class _EnlaceNavState extends State<_EnlaceNav> {
 
 /// Alterna claro/oscuro con el icono girando al cambiar.
 class _BotonTema extends ConsumerWidget {
-  const _BotonTema({required this.colorIcono, this.relleno, this.borde});
+  const _BotonTema({required this.colorIcono});
 
   final Color colorIcono;
-  final Color? relleno;
-  final Color? borde;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -374,10 +373,8 @@ class _BotonTema extends ConsumerWidget {
     return Tooltip(
       message: oscuro ? 'Tema claro' : 'Tema oscuro',
       child: Material(
-        color: relleno ?? Colors.transparent,
-        shape: CircleBorder(
-          side: borde == null ? BorderSide.none : BorderSide(color: borde!),
-        ),
+        color: Colors.transparent,
+        shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: () => ref.read(temaProvider.notifier).alternar(),
