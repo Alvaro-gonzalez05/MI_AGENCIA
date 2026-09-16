@@ -28,7 +28,8 @@ const DIAS_VIGENCIA = 30;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 function responder(cuerpo: unknown, status = 200) {
@@ -55,7 +56,7 @@ interface EntidadBcra {
 /// persona no tiene deudas informadas. Para el negocio son lo mismo: no hay
 /// nada en su contra. Por eso 404 no es un error.
 async function traer(url: string): Promise<unknown | null> {
-  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`El BCRA respondió ${r.status}`);
   return await r.json();
@@ -77,6 +78,7 @@ function cuitValido(cuit: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return responder({ error: 'Usá POST.' }, 405);
 
   const autorizacion = req.headers.get('Authorization');
   if (!autorizacion) return responder({ error: 'Falta la sesión.' }, 401);
@@ -105,19 +107,26 @@ Deno.serve(async (req) => {
   const comoUsuario = createClient(SUPABASE_URL, SERVICE_ROLE, {
     global: { headers: { Authorization: autorizacion } },
   });
+  const { data: autenticacion, error: errorSesion } = await comoUsuario.auth.getUser();
+  if (errorSesion || !autenticacion.user) return responder({ error: 'Iniciá sesión para consultar.' }, 401);
+  if (!clienteId) return responder({ error: 'Seleccioná un cliente de la agencia.' }, 400);
 
   let agenciaId: string | null = null;
   if (clienteId) {
     const { data: cliente } = await comoUsuario
       .from('clientes')
-      .select('id, agencia_id')
+      .select('id, agencia_id, cuit')
       .eq('id', clienteId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (!cliente) {
       return responder({ error: 'Ese cliente no existe o no es de tu agencia.' }, 404);
     }
     agenciaId = cliente.agencia_id as string;
+    if (cliente.cuit !== cuit) return responder({ error: 'Guardá el CUIT del cliente antes de consultar.' }, 400);
+    const { data: puedeEditar } = await comoUsuario.rpc('puede_editar', { p_agencia: agenciaId });
+    if (!puedeEditar) return responder({ error: 'No tenés permiso para evaluar clientes.' }, 403);
 
     // Consulta vigente: se devuelve la guardada en vez de volver al BCRA.
     if (!forzar) {
@@ -125,6 +134,7 @@ Deno.serve(async (req) => {
         .from('bcra_consultas')
         .select('*')
         .eq('cliente_id', clienteId)
+        .eq('cuit', cuit)
         .is('error', null)
         .gt('expira_at', new Date().toISOString())
         .order('consultado_at', { ascending: false })
@@ -216,7 +226,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { error } = await admin.from('bcra_consultas').insert({
       ...fila,
-      consultado_por: null,
+      consultado_por: autenticacion.user.id,
     });
     if (error) {
       return responder(

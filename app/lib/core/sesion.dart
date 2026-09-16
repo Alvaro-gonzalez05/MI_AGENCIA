@@ -97,6 +97,7 @@ class ControlSesion extends Notifier<EstadoSesion> {
           .select('rol, agencia_id, agencias ( nombre )')
           .eq('usuario_id', base.id)
           .eq('activa', true)
+          .order('agencia_id')
           .limit(1)
           .maybeSingle();
 

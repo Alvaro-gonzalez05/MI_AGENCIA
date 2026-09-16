@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mi_agencia/core/tema/tema.dart';
 import 'package:mi_agencia/datos/repositorio.dart';
 import 'package:mi_agencia/dominio/bcra.dart';
+import 'package:mi_agencia/dominio/alta_interesado.dart';
 import 'package:mi_agencia/dominio/modelos.dart';
 import 'package:mi_agencia/funciones/interesados/ficha_interesado.dart';
 import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
@@ -67,7 +68,7 @@ void main() {
         expect(find.text('Semáforo crediticio'), findsOneWidget);
         // Los cuatro filtros mas "Todos".
         expect(find.textContaining('Todos ('), findsOneWidget);
-        expect(find.textContaining('Apto ('), findsOneWidget);
+        expect(find.textContaining('Situación normal ('), findsOneWidget);
         expect(find.textContaining('Riesgo alto ('), findsOneWidget);
       });
     }
@@ -124,7 +125,7 @@ void main() {
       );
 
       expect(find.text('Consultar BCRA'), findsOneWidget);
-      expect(find.text('Sin consultar'), findsWidgets);
+      expect(find.text('Sin evaluación'), findsWidgets);
       // Sin consulta no hay informe que descargar.
       expect(find.text('Descargar informe'), findsNothing);
     });
@@ -184,8 +185,8 @@ void main() {
       // esta caido.
       expect(repo.cuitsGuardados, ['30500003193']);
       // Y despues de consultar aparece el resultado y el boton del informe.
-      expect(find.text('Apto'), findsWidgets);
-      expect(find.text('Descargar informe'), findsOneWidget);
+      expect(find.text('Situación normal'), findsWidgets);
+      expect(find.text('Guardar y descargar PDF'), findsOneWidget);
     });
 
     testWidgets('si el BCRA falla lo dice y no rompe la pantalla', (
@@ -280,6 +281,8 @@ const _sinConsultar = Interesado(
 
 /// Solo implementa lo que estas pantallas usan; el resto no se llama nunca.
 class _RepoFalso implements Repositorio {
+  @override
+  Future<List<InformeGuardado>> informes(Interesado interesado) async => [];
   final consultas = <String>[];
   final cuitsGuardados = <String>[];
   String? falla;

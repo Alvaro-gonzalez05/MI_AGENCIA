@@ -1,3 +1,5 @@
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,9 +57,7 @@ class _DatosDeLaAgenciaState extends ConsumerState<DatosDeLaAgencia> {
         _guardando = false;
         _editado = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Datos de la agencia guardados')),
-      );
+      confirmarGuardado(context, 'Datos de la agencia guardados');
     } catch (e) {
       if (!mounted) return;
       setState(() {

@@ -1,5 +1,8 @@
 # ---- Secretos: NUNCA commitear ----
 .env
+.env.signing
+*.jks
+*.keystore
 .env.*
 !.env.example
 *.pem

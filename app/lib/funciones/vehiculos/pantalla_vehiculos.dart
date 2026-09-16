@@ -1,3 +1,5 @@
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,11 +32,13 @@ class PantallaVehiculos extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirFormulario(context, ref),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text('Nueva unidad'),
-      ),
+      floatingActionButton: asincrono.value?.any((v) => !v.vendido) == true
+          ? FloatingActionButton.extended(
+              onPressed: () => _abrirFormulario(context, ref),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text('Nueva unidad'),
+            )
+          : null,
       body: asincrono.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => EstadoVacio(
@@ -116,12 +120,9 @@ class PantallaVehiculos extends ConsumerWidget {
     );
 
     if (guardado == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            inicial == null ? 'Unidad dada de alta' : 'Cambios guardados',
-          ),
-        ),
+      confirmarGuardado(
+        context,
+        inicial == null ? 'Unidad dada de alta' : 'Cambios guardados',
       );
     }
   }

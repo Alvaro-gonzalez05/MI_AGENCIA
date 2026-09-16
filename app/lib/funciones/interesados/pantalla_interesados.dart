@@ -9,6 +9,7 @@ import '../../dominio/bcra.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import 'ficha_interesado.dart';
+import 'alta_interesado.dart';
 
 /// Filtro de la lista. `null` en [SemaforoCrediticio] significa "todos".
 final _filtroProvider = NotifierProvider<_Filtro, SemaforoCrediticio?>(
@@ -34,71 +35,92 @@ class PantallaInteresados extends ConsumerWidget {
         ? Esp.lg + 4
         : Esp.xxl;
 
-    return asincrono.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => EstadoVacio(
-        icono: Icons.cloud_off_outlined,
-        titulo: 'No se pudieron cargar los interesados',
-        descripcion: '$e',
+    void nuevo() => Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const FormularioInteresado(),
       ),
-      data: (todos) {
-        if (todos.isEmpty) {
-          return const EstadoVacio(
-            icono: Icons.people_outline,
-            titulo: 'Sin interesados cargados',
-            descripcion:
-                'Cuando cargues un interesado vas a poder consultarle la '
-                'situación en el BCRA y ver si conviene financiarle la compra.',
-          );
-        }
+    );
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: asincrono.value?.isNotEmpty == true
+          ? FloatingActionButton.extended(
+              onPressed: nuevo,
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              label: const Text('Nuevo interesado'),
+            )
+          : null,
+      body: asincrono.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => EstadoVacio(
+          icono: Icons.cloud_off_outlined,
+          titulo: 'No se pudieron cargar los interesados',
+          descripcion: '$e',
+        ),
+        data: (todos) {
+          if (todos.isEmpty) {
+            return EstadoVacio(
+              icono: Icons.people_outline,
+              titulo: 'Sin interesados cargados',
+              descripcion:
+                  'Cuando cargues un interesado vas a poder consultarle la '
+                  'situación en el BCRA y guardar su informe.',
+              accion: FilledButton.icon(
+                onPressed: nuevo,
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('Nuevo interesado'),
+              ),
+            );
+          }
 
-        final lista = filtro == null
-            ? todos
-            : todos.where((i) => i.semaforo == filtro).toList();
+          final lista = filtro == null
+              ? todos
+              : todos.where((i) => i.semaforo == filtro).toList();
 
-        return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(interesadosProvider),
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xxl),
-            children: [
-              const Aparecer(child: _ExplicacionSemaforo()),
-              const SizedBox(height: Esp.lg),
-              Aparecer(indice: 1, child: _Filtros(interesados: todos)),
-              const SizedBox(height: Esp.md),
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(interesadosProvider),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, 112),
+              children: [
+                const Aparecer(child: _ExplicacionSemaforo()),
+                const SizedBox(height: Esp.lg),
+                Aparecer(indice: 1, child: _Filtros(interesados: todos)),
+                const SizedBox(height: Esp.md),
 
-              if (lista.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Esp.xxl),
-                  child: Center(
-                    child: Text(
-                      'Ningún interesado está en "${filtro!.etiqueta}".',
-                      style: TextStyle(fontSize: 13, color: p.tinta3),
+                if (lista.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: Esp.xxl),
+                    child: Center(
+                      child: Text(
+                        'Ningún interesado está en "${filtro!.etiqueta}".',
+                        style: TextStyle(fontSize: 13, color: p.tinta3),
+                      ),
                     ),
                   ),
-                ),
 
-              for (var i = 0; i < lista.length; i++) ...[
-                Aparecer(
-                  indice: i + 2,
-                  child: _TarjetaInteresado(interesado: lista[i]),
-                ),
-                const SizedBox(height: Esp.sm + 2),
-              ],
-
-              if (lista.isNotEmpty) ...[
-                const SizedBox(height: Esp.md),
-                Center(
-                  child: Text(
-                    '${lista.length} interesado${lista.length == 1 ? '' : 's'}'
-                    '${filtro == null ? '' : ' de ${todos.length}'}',
-                    style: TextStyle(fontSize: 12, color: p.tinta3),
+                for (var i = 0; i < lista.length; i++) ...[
+                  Aparecer(
+                    indice: i + 2,
+                    child: _TarjetaInteresado(interesado: lista[i]),
                   ),
-                ),
+                  const SizedBox(height: Esp.sm + 2),
+                ],
+
+                if (lista.isNotEmpty) ...[
+                  const SizedBox(height: Esp.md),
+                  Center(
+                    child: Text(
+                      '${lista.length} interesado${lista.length == 1 ? '' : 's'}'
+                      '${filtro == null ? '' : ' de ${todos.length}'}',
+                      style: TextStyle(fontSize: 12, color: p.tinta3),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -191,11 +213,15 @@ class _ExplicacionSemaforo extends StatelessWidget {
                 runSpacing: Esp.sm,
                 children: [
                   for (final (color, titulo, detalle) in [
-                    (p.bien, 'Apto', 'Situación 1 o 2, sin cheques rechazados'),
+                    (
+                      p.bien,
+                      'Situación normal',
+                      'Situación 1, sin alertas informadas',
+                    ),
                     (
                       p.observar,
                       'Con reparos',
-                      'Situación 3, o más de 30 días de atraso',
+                      'Situación 2 o 3, cheques pagados o mora',
                     ),
                     (
                       p.critico,
@@ -364,13 +390,16 @@ class _TarjetaInteresado extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: Esp.sm),
-              Pastilla(
-                texto: i.semaforo.etiqueta,
-                color: i.semaforo.color(p),
-                lavado: i.semaforo.lavado(p),
-              ),
             ],
+          ),
+          const SizedBox(height: Esp.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Pastilla(
+              texto: i.semaforo.etiqueta,
+              color: i.semaforo.color(p),
+              lavado: i.semaforo.lavado(p),
+            ),
           ),
 
           if (i.vehiculoTitulo != null) ...[

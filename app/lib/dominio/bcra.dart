@@ -185,7 +185,7 @@ class ConsultaBcra {
   /// Nadie informó nada sobre esta persona.
   ///
   /// No es lo mismo que "situación 1": puede no tener historial crediticio.
-  /// Para financiar es buena señal, pero no es una garantía.
+  /// La ausencia de deudas no acredita solvencia ni confirma la identidad.
   bool get sinDeudasInformadas => entidades.isEmpty;
 
   /// El período legible: "202607" -> "julio 2026".
@@ -214,19 +214,21 @@ class ConsultaBcra {
   /// El semáforo. Replica exactamente `semaforo_de_situacion` del SQL: si se
   /// cambia uno hay que cambiar el otro, y por eso hay un test que los ata.
   SemaforoCrediticio get semaforo {
-    if (situacionMaxima == null) {
-      // Sin deudas informadas se trata como apto: no hay nada en contra.
-      return entidades.isEmpty
-          ? SemaforoCrediticio.verde
-          : SemaforoCrediticio.sinDatos;
-    }
-    if (situacionMaxima! >= 4 || chequesSinPagar > 0 || tieneProcesoJudicial) {
+    if (vencida) return SemaforoCrediticio.sinDatos;
+    if ((situacionMaxima ?? 0) >= 4 ||
+        chequesSinPagar > 0 ||
+        tieneProcesoJudicial) {
       return SemaforoCrediticio.rojo;
     }
-    if (situacionMaxima == 3 || chequesRechazados || diasAtrasoMax > 30) {
+    if (situacionMaxima == 2 ||
+        situacionMaxima == 3 ||
+        chequesRechazados ||
+        diasAtrasoMax > 30) {
       return SemaforoCrediticio.amarillo;
     }
-    return SemaforoCrediticio.verde;
+    return situacionMaxima == 1
+        ? SemaforoCrediticio.verde
+        : SemaforoCrediticio.sinDatos;
   }
 
   /// Por qué dio ese color. Es lo que el vendedor le explica al cliente.
@@ -234,7 +236,12 @@ class ConsultaBcra {
     final m = <String>[];
     if (sinDeudasInformadas) {
       m.add('Ninguna entidad informó deudas a su nombre.');
-      return m;
+    }
+    if (vencida) {
+      m.add('Consulta vencida: actualizá los datos antes de evaluar.');
+    }
+    if (situacionMaxima == 2) {
+      m.add('Situación 2: requiere revisar el detalle informado.');
     }
     if (situacionMaxima != null && situacionMaxima! >= 4) {
       m.add('Está en situación $situacionMaxima en al menos una entidad.');
@@ -261,20 +268,11 @@ class ConsultaBcra {
 
   /// La recomendación concreta: financiar o no.
   String get recomendacion => switch (semaforo) {
-    SemaforoCrediticio.verde =>
-      sinDeudasInformadas
-          ? 'Sin antecedentes negativos. No tiene historial crediticio '
-                'informado, así que conviene pedir recibo de sueldo o garantía.'
-          : 'Apto para financiar. Cumple en término con las entidades que lo '
-                'informan.',
-    SemaforoCrediticio.amarillo =>
-      'Se puede financiar con reparos: conviene pedir garantía, adelantar '
-          'más porcentaje o acortar el plazo.',
-    SemaforoCrediticio.rojo =>
-      'No conviene financiar. Si se cierra la operación, que sea al contado '
-          'o con la unidad como garantía.',
+    SemaforoCrediticio.verde => 'Situación normal informada. El semáforo es orientativo: la agencia debe evaluar ingresos y capacidad de pago antes de aprobar financiación.',
+    SemaforoCrediticio.amarillo => 'Hay observaciones que requieren revisión. Consultá el detalle por entidad y la documentación del cliente.',
+    SemaforoCrediticio.rojo => 'Hay antecedentes de riesgo alto. Requiere evaluación de la agencia; este resultado no aprueba ni rechaza una operación.',
     SemaforoCrediticio.sinDatos =>
-      'No se pudo determinar la situación. Volvé a consultar.',
+      vencida ? 'La consulta venció. Actualizala para evaluar la situación.' : 'No hay información suficiente para evaluar el historial crediticio. La ausencia de deudas no acredita solvencia ni confirma la identidad.',
   };
 
   /// Sirve para las dos fuentes: lo que devuelve la Edge Function y la fila

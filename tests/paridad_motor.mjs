@@ -204,8 +204,10 @@ for (const v of js) {
   const r = porCodigo[v.id];
   if (!r) continue;
 
-  const ingreso = new Date(v.fechaIngreso + 'T00:00:00');
-  const fin = v.venta ? new Date(v.venta.fechaVenta + 'T00:00:00') : new Date();
+  // PGlite usa UTC; no comparar su CURRENT_DATE con medianoche del host.
+  // En Argentina esa mezcla fallaba entre las 21:00 y las 00:00.
+  const ingreso = new Date(v.fechaIngreso + 'T00:00:00Z');
+  const fin = v.venta ? new Date(v.venta.fechaVenta + 'T00:00:00Z') : new Date();
   const diasCalendario = Math.floor((fin - ingreso) / DIA_MS);
 
   if (Number(r.dias_en_stock) !== diasCalendario) {

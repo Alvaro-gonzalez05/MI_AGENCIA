@@ -189,11 +189,8 @@ class _Logo extends StatelessWidget {
         color: p.acento,
         borderRadius: BorderRadius.circular(tamano * 0.32),
       ),
-      child: Icon(
-        Icons.directions_car_filled_rounded,
-        size: tamano * 0.52,
-        color: p.acentoTinta,
-      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset('assets/icono/icono.png', semanticLabel: 'Mi Agencia'),
     );
   }
 }
@@ -227,7 +224,7 @@ class _Marca extends StatelessWidget {
                         TextSpan(
                           children: [
                             TextSpan(
-                              text: 'Mi',
+                              text: 'Mi ',
                               style: TextStyle(color: p.sobreNegro),
                             ),
                             TextSpan(

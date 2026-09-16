@@ -14,7 +14,6 @@
     "  app/test/bcra_test.dart   -> lo corre contra el codigo de la app",
     "Si alguien cambia un criterio en un solo lado, uno de los dos falla."
   ],
-
   "casos": [
     {
       "caso": "nunca se consulto",
@@ -24,7 +23,7 @@
     {
       "caso": "consultado y ninguna entidad informo deuda",
       "entidades": 0,
-      "esperado": "verde"
+      "esperado": "sin_datos"
     },
     {
       "caso": "situacion 1 en una entidad",
@@ -33,10 +32,10 @@
       "esperado": "verde"
     },
     {
-      "caso": "situacion 2: atrasos de hasta 90 dias, todavia apto",
+      "caso": "situacion 2: atrasos de hasta 90 dias, requiere revision",
       "situacion": 2,
       "entidades": 3,
-      "esperado": "verde"
+      "esperado": "amarillo"
     },
     {
       "caso": "situacion 3: cumplimiento deficiente",
@@ -112,13 +111,31 @@
       "situacion": 2,
       "entidades": 1,
       "refinanciaciones": true,
-      "esperado": "verde"
+      "esperado": "amarillo"
     },
     {
       "caso": "situacion 4 en una sola entidad entre varias normales",
       "situacion": 4,
       "entidades": 5,
       "esperado": "rojo"
+    },
+    {
+      "caso": "sin entidades con cheques impagos",
+      "entidades": 0,
+      "chequesSinPagar": 2,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "sin entidades con juicio",
+      "entidades": 0,
+      "procesoJudicial": true,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "sin entidades con cheques pagados",
+      "entidades": 0,
+      "chequesRechazados": true,
+      "esperado": "amarillo"
     }
   ]
 }

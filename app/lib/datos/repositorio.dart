@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/alta_interesado.dart';
 import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
@@ -28,6 +29,10 @@ abstract interface class Repositorio {
     int cantidad = 500,
   });
   Future<List<Interesado>> interesados();
+  Future<Interesado> crearInteresado(AltaInteresado alta);
+  Future<void> guardarInforme(Interesado interesado, List<int> bytes);
+  Future<List<InformeGuardado>> informes(Interesado interesado);
+  Future<List<int>> descargarInforme(String ruta);
   Future<ConfigAgencia> config();
 
   /// Codigo sugerido para la proxima unidad (V001, V002...). Lo calcula la
@@ -519,6 +524,33 @@ class RepositorioDemo implements Repositorio {
 
   /// CUIT que se cargaron en esta sesion de demo.
   final Map<String, String> _cuits = {};
+  final Map<String, Interesado> _altasInteresados = {};
+  final Map<String, List<int>> _informes = {};
+
+  @override
+  Future<Interesado> crearInteresado(AltaInteresado alta) async {
+    alta.validar();
+    return _altasInteresados.putIfAbsent(
+      alta.solicitud,
+      () => alta.comoInteresado(alta.solicitud, alta.solicitud),
+    );
+  }
+
+  @override
+  Future<void> guardarInforme(Interesado interesado, List<int> bytes) async {
+    _informes['${interesado.id}/informe.pdf'] = List.of(bytes);
+  }
+
+  @override
+  Future<List<InformeGuardado>> informes(Interesado interesado) async => [
+    for (final ruta in _informes.keys.where(
+      (r) => r.startsWith('${interesado.id}/'),
+    ))
+      InformeGuardado(ruta: ruta, fecha: DateTime.now()),
+  ];
+
+  @override
+  Future<List<int>> descargarInforme(String ruta) async => _informes[ruta]!;
 
   @override
   Future<List<Interesado>> interesados() async {
@@ -527,22 +559,25 @@ class RepositorioDemo implements Repositorio {
 
     // Los interesados del sistema original no tienen CUIT ni consulta al
     // BCRA, asi que el semaforo arranca en "sin consultar", que es la verdad.
-    return DatosDemo.interesados.map((i) {
-      final v = inv.where((x) => x.codigo == i.codigo).firstOrNull;
-      final id = '${i.codigo}-${i.nombre}';
-      return Interesado(
-        id: id,
-        clienteId: id,
-        nombre: i.nombre,
-        telefono: i.telefono,
-        cuit: _cuits[id],
-        vehiculoCodigo: i.codigo,
-        vehiculoTitulo: v?.titulo,
-        vehiculoPrecio: v?.precioActual,
-        notas: i.notas,
-        fecha: i.fecha,
-      );
-    }).toList();
+    return [
+      ..._altasInteresados.values,
+      ...DatosDemo.interesados.map((i) {
+        final v = inv.where((x) => x.codigo == i.codigo).firstOrNull;
+        final id = '${i.codigo}-${i.nombre}';
+        return Interesado(
+          id: id,
+          clienteId: id,
+          nombre: i.nombre,
+          telefono: i.telefono,
+          cuit: _cuits[id],
+          vehiculoCodigo: i.codigo,
+          vehiculoTitulo: v?.titulo,
+          vehiculoPrecio: v?.precioActual,
+          notas: i.notas,
+          fecha: i.fecha,
+        );
+      }),
+    ];
   }
 
   @override

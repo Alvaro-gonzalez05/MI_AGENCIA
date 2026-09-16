@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formato.dart';
@@ -95,10 +98,9 @@ class PantallaVentas extends ConsumerWidget {
       ),
     );
     if (guardado == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Venta registrada — la unidad salió del stock'),
-        ),
+      confirmarGuardado(
+        context,
+        'Venta registrada — la unidad salió del stock',
       );
     }
   }

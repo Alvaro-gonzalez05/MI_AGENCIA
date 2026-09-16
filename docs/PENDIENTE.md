@@ -37,13 +37,13 @@ de ejemplo.
 ## Publicar una versión
 
 ```bash
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 Eso dispara el workflow, que compila y publica en Releases:
 
-- `MiAgencia-Setup-0.4.0.exe` — instalador de Windows
+- `MiAgencia-Setup-0.5.0.exe` — instalador de Windows
 - `MiAgencia-Windows-portable.zip` — para PCs sin permisos de instalación
 - `MiAgencia-Android-arm64.apk` y `-arm32.apk`
 
@@ -59,6 +59,12 @@ nueva muestran un aviso con el botón **Actualizar**:
 - **Windows**: baja el instalador, lo corre en silencio, la app se cierra y
   se vuelve a abrir actualizada.
 - **Android**: abre la descarga del APK; el usuario confirma la instalación.
+
+La 0.5.0 inaugura la firma Android estable. Cualquier APK anterior era una
+prueba firmada por un runner descartable: hay que desinstalarlo una única vez.
+Desde la 0.5.0 las actualizaciones se instalan encima sin perder esa identidad.
+La clave se guarda en secretos de GitHub y su respaldo local está fuera del repo,
+en `%USERPROFILE%\.mi-agencia`.
 
 Para que una versión sea **obligatoria** (la app no deja seguir hasta
 actualizar), publicala con un tag anotado que diga `[obligatoria]`. El resto
@@ -180,13 +186,14 @@ consumirse desde Edge Functions, nunca desde la app.
   pero falta la evolución mensual. `Motor.evolucion()` ya calcula los datos.
 - ~~**Sin ícono propio**~~ **Hecho.** La "M" de Mi Agencia en la tipografía de
   la app sobre negro, con el punto del semáforo. Lo dibuja
-  `scripts/generar_icono.py` y lo baja a todos los tamaños
+  `scripts/generar_icono.py` dibuja el auto dentro de la agencia y lo baja a todos los tamaños
   `dart run flutter_launcher_icons`, así que retocarlo es cambiar un número y
   correr dos comandos, no exportar catorce archivos a mano. Incluye el ícono
   adaptativo de Android (el que el launcher recorta en círculo o gota).
 - **Sin splash** propio: está el de la plantilla de Flutter.
-- **Sin firma de release** para Android: el APK sale firmado con la clave de
-  debug. Para subir a Play Store hay que generar un keystore.
+- ~~**Sin firma de release**~~ **Resuelto desde 0.5.0.** GitHub usa un keystore
+  estable; los cuatro valores necesarios viven como secretos del repositorio.
+  Para Play Store se puede reutilizar esta identidad o adoptar Play App Signing.
 - **El APK pesa 51,5 MB** porque incluye las tres arquitecturas en un solo
   archivo. Con `--split-per-abi` salen tres de ~20 MB, y Play Store elige la
   que corresponde. Para repartir el APK a mano conviene el universal.

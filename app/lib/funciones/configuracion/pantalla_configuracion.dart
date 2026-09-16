@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formato.dart';
@@ -61,11 +64,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
         _guardando = false;
         _editada = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Configuración guardada — todo se recalculó'),
-        ),
-      );
+      confirmarGuardado(context, 'Configuración guardada — todo se recalculó');
     } catch (e) {
       if (!mounted) return;
       setState(() {

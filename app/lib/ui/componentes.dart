@@ -180,6 +180,8 @@ class Aparecer extends StatelessWidget {
     final demora = (indice > 6 ? 6 : indice) * 38;
     final total = 320 + demora;
 
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: total),

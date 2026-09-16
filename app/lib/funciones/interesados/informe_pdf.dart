@@ -58,7 +58,7 @@ abstract final class InformeCrediticio {
             ],
             if (c.cheques.isNotEmpty) ...[pw.SizedBox(height: 14), _cheques(c)],
           ],
-          pw.SizedBox(height: 16),
+          pw.SizedBox(height: 10),
           _comoSeLee(c),
         ],
       ),
@@ -506,7 +506,7 @@ abstract final class InformeCrediticio {
 
   /// El criterio, escrito. Sin esto el informe es una opinión con colores.
   static pw.Widget _comoSeLee(ConsultaBcra? c) => pw.Container(
-    padding: const pw.EdgeInsets.all(12),
+    padding: const pw.EdgeInsets.all(8),
     decoration: pw.BoxDecoration(
       color: _hundido,
       borderRadius: pw.BorderRadius.circular(8),
@@ -517,66 +517,75 @@ abstract final class InformeCrediticio {
         pw.Text(
           'Cómo se lee este informe',
           style: pw.TextStyle(
-            fontSize: 9.5,
+            fontSize: 8.5,
             fontWeight: pw.FontWeight.bold,
             color: _tinta,
           ),
         ),
-        pw.SizedBox(height: 6),
-        ...[
-          'El BCRA clasifica a cada deudor del 1 al 6. 1 es cumplimiento '
-              'normal y 6 es incobrable por disposición técnica.',
-          'Apto (verde): situación 1 o 2 en todas las entidades, sin cheques '
-              'rechazados ni juicios.',
-          'Con reparos (amarillo): situación 3, cheques rechazados ya pagados '
-              'o más de 30 días de atraso.',
-          'Riesgo alto (rojo): situación 4 o peor, cheques sin pagar o un '
-              'proceso judicial informado.',
-          'Los montos los informa el BCRA en miles de pesos; acá ya están '
-              'convertidos a pesos.',
-          'La Central de Deudores se actualiza una vez por mes: este informe '
-              'refleja el último período publicado, no el día de hoy.',
-        ].map(
-          (t) => pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 3),
+        pw.SizedBox(height: 4),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: _notasLectura([
+                'Verde: situación 1 en todas las entidades, sin cheques impagos ni juicios.',
+                'Amarillo: situación 2 o 3, cheques ya pagados o más de 30 días de atraso.',
+              ]),
+            ),
+            pw.SizedBox(width: 10),
+            pw.Expanded(
+              child: _notasLectura([
+                'Rojo: situación 4 a 6, cheques sin pagar o proceso judicial informado.',
+                'Gris: faltan datos o la consulta venció; nunca equivale a una aprobación.',
+              ]),
+            ),
+          ],
+        ),
+        if (c != null) ...[
+          pw.SizedBox(height: 3),
+          pw.Text(
+            'Fuente: BCRA, Central de Deudores. Los montos publicados en miles de pesos se muestran convertidos a pesos. '
+            'La información se actualiza mensualmente y no reemplaza el análisis de la agencia.',
+            style: pw.TextStyle(
+              fontSize: 6.8,
+              color: _tinta3,
+              fontStyle: pw.FontStyle.italic,
+              lineSpacing: 1,
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  static pw.Widget _notasLectura(List<String> notas) => pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: notas
+        .map(
+          (texto) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
             child: pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  '·  ',
-                  style: const pw.TextStyle(fontSize: 8.5, color: _tinta3),
+                  '· ',
+                  style: const pw.TextStyle(fontSize: 7.2, color: _tinta3),
                 ),
                 pw.Expanded(
                   child: pw.Text(
-                    t,
+                    texto,
                     style: const pw.TextStyle(
-                      fontSize: 8.5,
+                      fontSize: 7.2,
                       color: _tinta3,
-                      lineSpacing: 1.6,
+                      lineSpacing: 1,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-        if (c != null) ...[
-          pw.SizedBox(height: 6),
-          pw.Text(
-            'Fuente: api.bcra.gob.ar/centraldedeudores/v1.0 — información '
-            'pública y gratuita. Este informe describe lo que las entidades '
-            'informaron al BCRA; no es un dictamen ni reemplaza el análisis '
-            'de la agencia.',
-            style: pw.TextStyle(
-              fontSize: 8,
-              color: _tinta3,
-              fontStyle: pw.FontStyle.italic,
-              lineSpacing: 1.5,
-            ),
-          ),
-        ],
-      ],
-    ),
+        )
+        .toList(),
   );
 
   static pw.Widget _pie(pw.Context ctx, DateTime cuando, String? quien) =>

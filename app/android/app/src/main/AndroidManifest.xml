@@ -4,7 +4,7 @@
          eso no se notaba. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="mi_agencia"
+        android:label="Mi Agencia"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

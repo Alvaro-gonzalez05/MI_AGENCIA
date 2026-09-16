@@ -51,11 +51,36 @@ jobs:
       # La app necesita saber que version es para compararla con la ultima
       # publicada. Sale del tag: v0.3.0 -> 0.3.0.
       - name: Version desde el tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+        run: |
+          VERSION=$(sed -n 's/^version: \([^+]*\).*/\1/p' app/pubspec.yaml)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; fi
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      # Si los secretos no estan cargados, la app se compila en MODO DEMO
-      # contra los datos de ejemplo. Preferible a que el build falle.
+      - name: Validar configuracion de Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: test -n "$SUPABASE_URL" && test -n "$SUPABASE_ANON_KEY"
+
+      - name: Preparar firma estable de Android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/app/android/mi-agencia-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/app/android/mi-agencia-release.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      # La validación anterior impide distribuir una demo accidentalmente.
       - name: Compilar APK
         working-directory: app
         run: >
@@ -93,10 +118,19 @@ jobs:
         run: flutter pub get
 
       - name: Version desde el tag
-        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          "APP_VERSION=$($env:GITHUB_REF_NAME.Substring(1))" |
+          $version = ((Get-Content app/pubspec.yaml | Select-String '^version:').Line -replace '^version:\s*','').Split('+')[0]
+          if ($env:GITHUB_REF.StartsWith('refs/tags/v')) { $version = $env:GITHUB_REF_NAME.Substring(1) }
+          "APP_VERSION=$version" |
             Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        shell: pwsh
+
+      - name: Validar configuracion de Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) { throw 'Falta la configuracion de Supabase para el instalador.' }
         shell: pwsh
 
       - name: Compilar Windows
@@ -109,8 +143,7 @@ jobs:
 
       - name: Armar el instalador con Inno Setup
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v',''
-          if (-not $version -or $version -eq "${{ github.ref_name }}") { $version = "0.0.0" }
+          $version = $env:APP_VERSION
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
             /DMiVersion=$version `
             installer\mi_agencia.iss
@@ -170,8 +203,13 @@ jobs:
             | **Android** (casi todos los celulares desde 2017) | `MiAgencia-Android-arm64.apk` |
             | **Android viejo** (32 bits) | `MiAgencia-Android-arm32.apk` |
 
-            Las apps ya instaladas (desde la 0.3.0) avisan solas que hay una
-            versión nueva y se actualizan con un botón.
+            La app avisa sola cuando hay una versión nueva y abre la descarga
+            con un botón. En Windows el instalador actualiza la versión existente.
+
+            > **Android:** las versiones anteriores a la 0.5.0 eran pruebas con
+            > una firma temporal. Hay que desinstalarlas una única vez antes de
+            > instalar la 0.5.0. Desde esta versión la firma es estable y las
+            > siguientes actualizaciones se instalan encima normalmente.
 
             > El APK no está firmado con una clave de Play Store, así que Android
             > va a pedir permiso para instalar desde fuera de la tienda. Es

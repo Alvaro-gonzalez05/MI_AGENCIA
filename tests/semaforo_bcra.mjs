@@ -86,8 +86,8 @@ for (const c of casos) {
   } = c;
 
   const { rows: [{ id: cliente }] } = await db.query(
-    `insert into public.clientes (agencia_id, nombre) values ($1, $2) returning id`,
-    [agencia, caso.slice(0, 60)],
+    `insert into public.clientes (agencia_id, nombre, cuit) values ($1, $2, $3) returning id`,
+    [agencia, caso.slice(0, 60), String(20000000000 + corridos)],
   );
 
   if (consultado) {
@@ -96,7 +96,7 @@ for (const c of casos) {
          (agencia_id, cliente_id, cuit, situacion_maxima, cantidad_entidades,
           cheques_sin_pagar, tiene_cheques_rechazados, tiene_proceso_judicial,
           dias_atraso_max)
-       values ($1, $2, '20111111112', $3, $4, $5, $6, $7, $8)`,
+       values ($1, $2, (select cuit from public.clientes where id=$2), $3, $4, $5, $6, $7, $8)`,
       [agencia, cliente, entidades === 0 ? null : situacion, entidades,
        chequesSinPagar, chequesRechazados, procesoJudicial, diasAtraso],
     );
@@ -133,7 +133,7 @@ for (const c of casos) {
 const sueltos = [
   [null, 0, false, false, 0, 'sin_datos'],
   [1, 0, false, false, 0, 'verde'],
-  [2, 0, false, false, 0, 'verde'],
+  [2, 0, false, false, 0, 'amarillo'],
   [3, 0, false, false, 0, 'amarillo'],
   [4, 0, false, false, 0, 'rojo'],
   [6, 0, false, false, 0, 'rojo'],

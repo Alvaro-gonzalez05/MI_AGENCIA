@@ -1,3 +1,5 @@
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -103,8 +105,7 @@ class PantallaPrecios extends ConsumerWidget {
       ),
     );
     if (guardado == true && context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Precio actualizado')));
+      confirmarGuardado(context, 'Precio actualizado');
     }
   }
 }

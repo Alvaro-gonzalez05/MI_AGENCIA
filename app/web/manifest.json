@@ -1,6 +1,6 @@
 {
-    "name": "mi_agencia",
-    "short_name": "mi_agencia",
+    "name": "Mi Agencia",
+    "short_name": "Mi Agencia",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -18,13 +18,13 @@ convierte en una app multi-agencia con backend propio, para Windows y Android.
 | Toolchain Flutter | instalado y funcionando |
 | App: tema, shell, navegación, login | funcionando |
 | App: las 10 secciones | **todas con pantalla real**, contra la base de verdad |
-| Semáforo crediticio del BCRA + informe en PDF | **funcionando**, probado contra CUIT reales |
-| APK Android | **compila** (release, tres APK de ~20 MB) |
+| Semáforo crediticio del BCRA + informe en PDF | **funcionando**; alta guiada, archivo privado y reintentos seguros |
+| APK Android | **compila y firma** (release, tres APK de ~20 MB; firma estable desde 0.5.0) |
 | Ejecutable de Windows | **compila en el runner de GitHub**; localmente falta Visual Studio con C++ (requiere administrador) |
-| Integración BCRA | **Edge Function desplegada y andando** |
+| Integración BCRA | **Edge Function desplegada**; conserva el alta si el proveedor está temporalmente caído |
 | Integración ArgAutos (valor de revista) | API verificada en vivo, falta la API key |
 | Email marketing | pantalla y Edge Function escritas, falta desplegarla y cargar la key de Resend |
-| Ícono de la app | **hecho**, Android (con ícono adaptativo) y Windows |
+| Ícono de la app | **hecho**, auto dentro de una agencia; Android adaptativo y Windows |
 | Base del cliente | **vacía y lista para cargar**: se borraron los datos de ejemplo |
 
 Todo lo que falta, con los pasos exactos, está en

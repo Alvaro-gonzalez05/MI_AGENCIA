@@ -215,7 +215,7 @@ void main() {
       });
 
       expect(c.sinDeudasInformadas, isTrue);
-      expect(c.semaforo, SemaforoCrediticio.verde);
+      expect(c.semaforo, SemaforoCrediticio.sinDatos);
       // Pero el informe tiene que aclarar que no tiene historial: verde por
       // ausencia de datos no es lo mismo que verde por buen cumplimiento.
       expect(c.recomendacion, contains('historial'));

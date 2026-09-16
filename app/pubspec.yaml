@@ -1,7 +1,7 @@
 name: mi_agencia
 description: "ERP para agencias de autos usados"
 publish_to: 'none'
-version: 0.3.1+4
+version: 0.5.0+5
 
 environment:
   sdk: ^3.13.3
@@ -80,6 +80,7 @@ flutter:
 
   assets:
     - assets/fuentes/
+    - assets/icono/icono.png
 
   # Empaquetadas en vez de descargadas en runtime (google_fonts): la app tiene
   # que verse igual en Windows, Android y web, y funcionar sin internet.

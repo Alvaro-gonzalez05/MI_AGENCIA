@@ -1,3 +1,5 @@
+import '../../ui/confirmacion.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -94,8 +96,7 @@ class PantallaGastos extends ConsumerWidget {
       ),
     );
     if (guardado == true && context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Gasto cargado')));
+      confirmarGuardado(context, 'Gasto cargado');
     }
   }
 }

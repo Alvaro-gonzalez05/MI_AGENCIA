@@ -300,16 +300,22 @@ class BotoneraFormulario extends StatelessWidget {
             height: 46,
             child: FilledButton(
               onPressed: guardando ? null : onGuardar,
-              child: guardando
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: p.acentoTinta,
-                      ),
-                    )
-                  : Text(etiquetaGuardar),
+              child: AnimatedSwitcher(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 180),
+                child: guardando
+                    ? SizedBox(
+                        key: const ValueKey('guardando'),
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: p.acentoTinta,
+                        ),
+                      )
+                    : Text(etiquetaGuardar, key: const ValueKey('guardar')),
+              ),
             ),
           ),
         ),

@@ -41,10 +41,10 @@ enum AlertaRotacion {
 /// Semaforo CREDITICIO: situacion del interesado en la Central de Deudores
 /// del BCRA. Es lo que responde "¿le puedo financiar la compra?".
 enum SemaforoCrediticio {
-  verde('Apto'),
+  verde('Situación normal'),
   amarillo('Con reparos'),
   rojo('Riesgo alto'),
-  sinDatos('Sin consultar');
+  sinDatos('Sin evaluación');
 
   const SemaforoCrediticio(this.etiqueta);
   final String etiqueta;
@@ -323,7 +323,8 @@ class Interesado {
     notas: notas,
     notasCliente: notasCliente,
     fecha: fecha,
-    consulta: consulta ?? this.consulta,
+    consulta:
+        consulta ?? (cuit != null && cuit != this.cuit ? null : this.consulta),
   );
 }
 

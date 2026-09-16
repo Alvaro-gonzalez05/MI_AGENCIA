@@ -9,9 +9,11 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/bcra.dart';
+import '../../dominio/alta_interesado.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import '../../ui/confirmacion.dart';
 import 'informe_pdf.dart';
 
 /// Ficha de un interesado: quién es, qué quiere y si le podemos financiar.
@@ -37,6 +39,9 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
 
   /// Se invalida la lista al salir solo si algo cambió de verdad.
   bool _huboCambios = false;
+  late Future<List<InformeGuardado>> _archivos = ref
+      .read(repositorioProvider)
+      .informes(_i);
 
   Future<void> _consultar({required String cuit, bool forzar = false}) async {
     setState(() {
@@ -51,6 +56,7 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
       // BCRA se caiga justo ahora y haya que reintentar mañana.
       if (cuit != _i.cuit) {
         await repo.guardarCuit(clienteId: _i.clienteId, cuit: cuit);
+        _huboCambios = true;
         if (mounted) setState(() => _i = _i.copiar(cuit: cuit));
       }
 
@@ -106,6 +112,11 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
         agencia: agencia,
         generadoPor: usuario?.nombre,
       );
+      await ref.read(repositorioProvider).guardarInforme(_i, bytes);
+      if (mounted) {
+        setState(() => _archivos = ref.read(repositorioProvider).informes(_i));
+        confirmarGuardado(context, 'Informe guardado en la agencia');
+      }
       await Printing.sharePdf(
         bytes: Uint8List.fromList(bytes),
         filename: InformeCrediticio.nombreArchivo(_i),
@@ -116,6 +127,28 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
       );
     } finally {
       if (mounted) setState(() => _generandoPdf = false);
+    }
+  }
+
+  Future<void> _abrirInforme(InformeGuardado informe) async {
+    try {
+      final bytes = await ref
+          .read(repositorioProvider)
+          .descargarInforme(informe.ruta);
+      await Printing.sharePdf(
+        bytes: Uint8List.fromList(bytes),
+        filename: InformeCrediticio.nombreArchivo(_i),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir el informe. Reintentá cuando tengas conexión.',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -134,27 +167,23 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
         appBar: AppBar(
           title: Text(_i.nombre),
           actions: [
-            if (c != null)
-              Padding(
-                padding: const EdgeInsets.only(right: Esp.md),
-                child: _generandoPdf
-                    ? const Padding(
-                        padding: EdgeInsets.all(Esp.md),
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : FilledButton.icon(
-                        onPressed: _informe,
-                        icon: const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          size: 17,
-                        ),
-                        label: Text(esMovil ? 'PDF' : 'Descargar informe'),
+            Padding(
+              padding: const EdgeInsets.only(right: Esp.md),
+              child: _generandoPdf
+                  ? const Padding(
+                      padding: EdgeInsets.all(Esp.md),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-              ),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _informe,
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 17),
+                      label: Text(esMovil ? 'PDF' : 'Guardar y descargar PDF'),
+                    ),
+            ),
           ],
         ),
         body: ListView(
@@ -199,6 +228,67 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
 
                     const SizedBox(height: Esp.md),
                     Aparecer(indice: 5, child: _Operacion(interesado: _i)),
+                    const SizedBox(height: Esp.md),
+                    Tarjeta(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Informes guardados',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FutureBuilder<List<InformeGuardado>>(
+                            future: _archivos,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState !=
+                                  ConnectionState.done) {
+                                return const LinearProgressIndicator();
+                              }
+                              if (snapshot.hasError) {
+                                return TextButton.icon(
+                                  onPressed: () => setState(
+                                    () => _archivos = ref
+                                        .read(repositorioProvider)
+                                        .informes(_i),
+                                  ),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text(
+                                    'Reintentar cargar informes',
+                                  ),
+                                );
+                              }
+                              final archivos = snapshot.data ?? [];
+                              if (archivos.isEmpty) {
+                                return const Text(
+                                  'Todavía no hay informes archivados. Generá un PDF para guardarlo acá.',
+                                );
+                              }
+                              return Column(
+                                children: [
+                                  for (final a in archivos)
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: const Icon(
+                                        Icons.picture_as_pdf_outlined,
+                                      ),
+                                      title: const Text('Informe crediticio'),
+                                      subtitle: Text(Fmt.fecha(a.fecha)),
+                                      trailing: const Icon(
+                                        Icons.download_rounded,
+                                      ),
+                                      onTap: () => _abrirInforme(a),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

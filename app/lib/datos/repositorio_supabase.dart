@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
+import '../dominio/alta_interesado.dart';
 import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
@@ -15,9 +18,8 @@ import 'repositorio.dart';
 /// Las pantallas no saben que esto existe: hablan con [Repositorio]. Por eso
 /// pasar de modo demo a base real no toca una sola linea de UI.
 ///
-/// No hace falta filtrar por agencia en ningun select: el RLS de la base ya
-/// devuelve solo las filas de las agencias del usuario. Filtrar de nuevo aca
-/// seria seguridad de mentira, porque viviria en el cliente.
+/// RLS controla el acceso. Los filtros de agencia delimitan la vista de
+/// trabajo, especialmente para usuarios con acceso a más de una agencia.
 class RepositorioSupabase implements Repositorio {
   const RepositorioSupabase();
 
@@ -31,6 +33,7 @@ class RepositorioSupabase implements Repositorio {
     final filas = await _db
         .from('v_inventario')
         .select()
+        .eq('agencia_id', await _miAgencia())
         .order('dias_en_stock', ascending: false)
         .range(desde, desde + cantidad - 1);
 
@@ -76,12 +79,12 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
-  Future<List<Interesado>> interesados() async {
+  Future<List<Interesado>> interesados({String? oportunidadId}) async {
     // Una sola ida y vuelta: PostgREST resuelve las relaciones anidadas.
     // Se trae TODO lo que la agencia sabe de la persona porque es lo que
     // despues se imprime en el informe crediticio, y volver a la base en el
     // medio de armar un PDF seria pedirlo dos veces por nada.
-    final filas = await _db
+    var consulta = _db
         .from('oportunidades')
         .select('''
           id, estado, interes, notas, created_at,
@@ -94,6 +97,10 @@ class RepositorioSupabase implements Repositorio {
           ),
           vehiculos ( id, codigo, marca, modelo, anio, precio_objetivo )
         ''')
+        .eq('agencia_id', await _miAgencia())
+        .isFilter('clientes.deleted_at', null);
+    if (oportunidadId != null) consulta = consulta.eq('id', oportunidadId);
+    final filas = await consulta
         .order('created_at', ascending: false)
         .limit(500);
 
@@ -169,6 +176,67 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
+  Future<Interesado> crearInteresado(AltaInteresado alta) async {
+    alta.validar();
+    final r = await _db.rpc(
+      'crear_interesado',
+      params: {
+        'p_agencia': await _miAgencia(),
+        'p_solicitud': alta.solicitud,
+        'p_datos': alta.json,
+      },
+    );
+    // Relee la persona real: un CUIT existente no se sobrescribe con el alta.
+    return (await interesados(oportunidadId: r['id'] as String)).single;
+  }
+
+  Future<String> _carpetaInforme(Interesado i) async =>
+      '${await _miAgencia()}/${i.clienteId}/${i.id}';
+
+  @override
+  Future<void> guardarInforme(Interesado interesado, List<int> bytes) async {
+    final fecha = interesado.consulta?.consultadoEl.microsecondsSinceEpoch;
+    final ruta =
+        '${await _carpetaInforme(interesado)}/${fecha ?? 'sin-consulta'}.pdf';
+    await _db.storage
+        .from('informes')
+        .uploadBinary(
+          ruta,
+          Uint8List.fromList(bytes),
+          fileOptions: const FileOptions(
+            contentType: 'application/pdf',
+            upsert: true,
+          ),
+        );
+  }
+
+  @override
+  Future<List<InformeGuardado>> informes(Interesado interesado) async {
+    final carpeta = await _carpetaInforme(interesado);
+    final archivos = await _db.storage
+        .from('informes')
+        .list(
+          path: carpeta,
+          searchOptions: const SearchOptions(
+            sortBy: SortBy(column: 'name', order: 'desc'),
+          ),
+        );
+    return [
+      for (final a in archivos.where((a) => a.name.endsWith('.pdf')))
+        InformeGuardado(
+          ruta: '$carpeta/${a.name}',
+          fecha:
+              DateTime.tryParse(a.updatedAt ?? a.createdAt ?? '') ??
+              DateTime.now(),
+        ),
+    ];
+  }
+
+  @override
+  Future<List<int>> descargarInforme(String ruta) =>
+      _db.storage.from('informes').download(ruta);
+
+  @override
   Future<void> guardarCuit({
     required String clienteId,
     required String cuit,
@@ -195,10 +263,20 @@ class RepositorioSupabase implements Repositorio {
       throw Exception('Ese CUIT/CUIL no es valido. Revisa los 11 digitos.');
     }
 
-    final r = await _db.functions.invoke(
-      'bcra-consulta',
-      body: {'cliente_id': clienteId, 'cuit': limpio, 'forzar': forzar},
-    );
+    late FunctionResponse r;
+    try {
+      r = await _db.functions.invoke(
+        'bcra-consulta',
+        body: {'cliente_id': clienteId, 'cuit': limpio, 'forzar': forzar},
+      );
+    } on FunctionException catch (e) {
+      final detalle = e.details;
+      throw Exception(
+        detalle is Map && detalle['error'] != null
+            ? detalle['error']
+            : 'No se pudo consultar el BCRA. Reintentá en unos minutos.',
+      );
+    }
 
     final datos = r.data;
     if (datos is! Map) {
@@ -228,7 +306,9 @@ class RepositorioSupabase implements Repositorio {
     final fila = await _db
         .from('membresias')
         .select('agencia_id')
+        .eq('usuario_id', _db.auth.currentUser?.id ?? '')
         .eq('activa', true)
+        .order('agencia_id')
         .limit(1)
         .maybeSingle();
     if (fila == null) {
@@ -436,13 +516,13 @@ class RepositorioSupabase implements Repositorio {
 
   @override
   Future<Agencia?> miAgencia() async {
-    // Sin filtro por agencia: el RLS ya devuelve solo la del usuario.
     final fila = await _db
         .from('agencias')
         .select(
           'id, nombre, slug, activa, plan, cuit, email_contacto, telefono, '
           'localidad, provincia, vigente_hasta, created_at',
         )
+        .eq('id', await _miAgencia())
         .limit(1)
         .maybeSingle();
     if (fila == null) return null;
