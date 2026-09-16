@@ -1,6 +1,6 @@
 # Alta de interesados y experiencia de uso
 
-Cambios preparados para 0.5.0 (14/09/2026).
+Cambios publicados en 0.5.0 (16/09/2026).
 
 - Alta desde la pantalla vacía y desde la lista: cliente, interés y evaluación.
 - Nombre y CUIT/CUIL obligatorios; contacto, ubicación, unidad, presupuesto,
@@ -34,10 +34,10 @@ entre agencias, consulta autenticada y descarga privada del PDF. Elimina solamen
 los registros creados en esa ejecución. Requiere `SUPABASE_TOKEN_MI_AGENCIA` en
 el entorno y el PDF de prueba generado. No imprime claves ni contraseñas.
 
-En la verificación remota el BCRA respondió 503 tanto desde Supabase como desde
-la PC. Se verificó la conservación del alta sin inventar una evaluación. El éxito
-contra el proveedor queda pendiente de disponibilidad; las pruebas de interfaz
-usan respuestas controladas claramente separadas del servicio real.
+La verificación final consultó el BCRA real con una sesión autenticada, persistió
+la respuesta, recuperó la evaluación desde la base y comprobó la caché. También
+guardó y volvió a descargar el PDF privado sin alteraciones. El script eliminó
+al terminar las agencias, usuarios y registros temporales de esa ejecución.
 
 Migraciones nuevas: `0014_alta_interesados_informes.sql` y
 `0015_bcra_evaluacion_responsable.sql`. Edge Function: `bcra-consulta`.
