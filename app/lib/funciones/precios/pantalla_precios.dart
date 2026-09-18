@@ -25,11 +25,13 @@ class PantallaPrecios extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => abrirFormulario(context),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text('Cambiar precio'),
-      ),
+      floatingActionButton: asincrono.value?.isNotEmpty == true
+          ? FloatingActionButton.extended(
+              onPressed: () => abrirFormulario(context),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text('Cambiar precio'),
+            )
+          : null,
       body: asincrono.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => EstadoVacio(

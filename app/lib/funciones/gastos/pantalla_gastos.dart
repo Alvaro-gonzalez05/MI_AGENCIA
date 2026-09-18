@@ -23,11 +23,13 @@ class PantallaGastos extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => abrirFormulario(context),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text('Nuevo gasto'),
-      ),
+      floatingActionButton: asincrono.value?.isNotEmpty == true
+          ? FloatingActionButton.extended(
+              onPressed: () => abrirFormulario(context),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text('Nuevo gasto'),
+            )
+          : null,
       body: asincrono.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => EstadoVacio(
@@ -216,15 +218,54 @@ class _Resumen extends StatelessWidget {
   }
 }
 
-class _Fila extends StatelessWidget {
+class _Fila extends ConsumerStatefulWidget {
   const _Fila({required this.gasto});
 
   final Gasto gasto;
 
   @override
+  ConsumerState<_Fila> createState() => _FilaState();
+}
+
+class _FilaState extends ConsumerState<_Fila> {
+  bool _eliminando = false;
+
+  Future<void> _eliminar() async {
+    final g = widget.gasto;
+    final detalle = g.descripcion?.isNotEmpty == true
+        ? g.descripcion!
+        : g.categoria.etiqueta;
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Eliminar este gasto',
+      descripcion:
+          '$detalle por ${Fmt.pesos(g.importe)} se quitará del costo de la '
+          'unidad. Esta acción no se puede deshacer.',
+      confirmar: 'Eliminar gasto',
+      icono: Icons.delete_outline_rounded,
+      peligrosa: true,
+    );
+    if (!ok || !mounted) return;
+
+    setState(() => _eliminando = true);
+    try {
+      await ref.read(repositorioProvider).eliminarGasto(g.id);
+      if (!mounted) return;
+      confirmarEliminado(context, 'Gasto eliminado');
+      ref.invalidate(gastosProvider);
+      ref.invalidate(gastosDeVehiculoProvider(g.vehiculoId));
+      ref.invalidate(inventarioProvider);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    } finally {
+      if (mounted) setState(() => _eliminando = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    final g = gasto;
+    final g = widget.gasto;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.md + 2),
@@ -289,6 +330,25 @@ class _Fila extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(width: Esp.sm),
+          if (_eliminando)
+            const SizedBox.square(
+              dimension: 38,
+              child: Padding(
+                padding: EdgeInsets.all(9),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            BotonCircular(
+              tooltip: 'Eliminar gasto',
+              icono: Icons.delete_outline_rounded,
+              tamano: 38,
+              relleno: p.criticoLavado,
+              colorIcono: p.critico,
+              conBorde: false,
+              onTap: _eliminar,
+            ),
         ],
       ),
     );

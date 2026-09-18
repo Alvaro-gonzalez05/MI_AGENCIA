@@ -434,7 +434,12 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
     clave,
     TextFormField(
       initialValue: valor,
-      onChanged: onChanged,
+      onChanged: (s) {
+        onChanged(s);
+        if (_errores.containsKey(clave)) {
+          setState(() => _errores.remove(clave));
+        }
+      },
       textCapitalization: capitalizar
           ? TextCapitalization.words
           : TextCapitalization.none,
@@ -461,7 +466,12 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
     clave,
     TextFormField(
       initialValue: valor,
-      onChanged: onChanged,
+      onChanged: (s) {
+        onChanged(s);
+        if (_errores.containsKey(clave)) {
+          setState(() => _errores.remove(clave));
+        }
+      },
       keyboardType: TextInputType.number,
       // En el celular el teclado numerico no trae signos: filtrar aca evita
       // que se cuele una coma o un punto que despues rompe el parseo.
@@ -500,7 +510,12 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
             lastDate: hoy,
             locale: const Locale('es', 'AR'),
           );
-          if (elegida != null) onChanged(elegida);
+          if (elegida != null) {
+            onChanged(elegida);
+            if (_errores.containsKey(clave)) {
+              setState(() => _errores.remove(clave));
+            }
+          }
         },
         borderRadius: BorderRadius.circular(Curva.md),
         child: Container(

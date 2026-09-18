@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
+import '../core/sesion.dart';
 import '../dominio/alta_vehiculo.dart';
 import '../dominio/alta_interesado.dart';
 import '../dominio/agencias.dart';
@@ -605,9 +606,17 @@ class RepositorioDemo implements Repositorio {
   }
 }
 
-final repositorioProvider = Provider<Repositorio>(
-  (ref) => Config.modoDemo ? RepositorioDemo() : const RepositorioSupabase(),
-);
+final repositorioProvider = Provider<Repositorio>((ref) {
+  // El repositorio es la raiz de todos los providers de negocio. Al ligarlo
+  // al usuario, cerrar sesion descarta de inmediato cualquier Future ya
+  // resuelto de la cuenta anterior. Sin esto Riverpod conservaba, por unos
+  // instantes, el inventario anterior al entrar con otra agencia.
+  ref.watch(usuarioProvider)?.id;
+  // No usar `const` para Supabase: Riverpod compara el resultado del provider.
+  // Una instancia idéntica haría que los providers dependientes conserven sus
+  // Futures aunque haya cambiado el usuario.
+  return Config.modoDemo ? RepositorioDemo() : RepositorioSupabase();
+});
 
 final inventarioProvider = FutureProvider<List<VehiculoInventario>>(
   (ref) => ref.watch(repositorioProvider).inventario(),

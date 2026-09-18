@@ -102,6 +102,20 @@ void main() {
     // y los informes salen con el nombre que puso quien creo la cuenta.
     expect(find.text('Nombre'), findsOneWidget);
   });
+
+  for (final (nombre, pantalla, accion) in [
+    ('Gastos', const PantallaGastos(), 'Cargar un gasto'),
+    ('Precios', const PantallaPrecios(), 'Cambiar un precio'),
+    ('Ventas', const PantallaVentas(), 'Registrar una venta'),
+    ('Campañas', const PantallaCampanas(), 'Armar una campaña'),
+  ]) {
+    testWidgets('$nombre vacío ofrece una sola acción de alta', (tester) async {
+      await pintar(tester, pantalla, escritorio);
+
+      expect(find.widgetWithText(FilledButton, accion), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
+    });
+  }
 }
 
 /// Todo vacío, como una cuenta recién creada.

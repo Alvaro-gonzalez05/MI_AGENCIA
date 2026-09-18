@@ -135,24 +135,14 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
           _presupuesto,
           _notas,
         ].any((c) => c.text.isNotEmpty)) {
-      final salir = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('¿Salir sin guardar?'),
-          content: const Text(
-            'Los datos que escribiste todavía no se guardaron.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Seguir cargando'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salir'),
-            ),
-          ],
-        ),
+      final salir = await confirmarAccion(
+        context,
+        titulo: '¿Salir sin guardar?',
+        descripcion: 'Los datos que escribiste todavía no se guardaron.',
+        confirmar: 'Salir',
+        cancelar: 'Seguir cargando',
+        icono: Icons.exit_to_app_rounded,
+        peligrosa: true,
       );
       if (salir != true) return;
     }
@@ -220,144 +210,164 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
                 if (_paso < 2)
                   Form(
                     key: _form,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _paso == 0
-                              ? 'Conocé a tu próximo cliente'
-                              : '¿Qué está buscando?',
-                          style: const TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    child: AnimatedSwitcher(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 280),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animacion) => FadeTransition(
+                        opacity: animacion,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: const Offset(0.035, 0),
+                            end: Offset.zero,
+                          ).animate(animacion),
+                          child: child,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _paso == 0
-                              ? 'Cargá sus datos. Usamos el CUIT/CUIL para consultar el BCRA.'
-                              : 'Podés vincular una unidad ahora o dejarla para más adelante.',
-                          style: TextStyle(color: p.tinta3),
-                        ),
-                        const SizedBox(height: 24),
-                        if (_paso == 0) ...[
-                          _campo(
-                            _nombre,
-                            'Nombre y apellido',
-                            obligatorio: true,
-                          ),
-                          _campo(
-                            _cuit,
-                            'CUIT / CUIL',
-                            tipo: TextInputType.number,
-                            validar: (v) =>
-                                cuitValido(
-                                  (v ?? '').replaceAll(RegExp(r'\D'), ''),
-                                )
-                                ? null
-                                : 'Revisá los 11 dígitos y el verificador.',
-                          ),
-                          _campo(
-                            _telefono,
-                            'Teléfono (opcional)',
-                            tipo: TextInputType.phone,
-                          ),
-                          _campo(
-                            _email,
-                            'Email (opcional)',
-                            tipo: TextInputType.emailAddress,
-                            validar: (v) =>
-                                v == null ||
-                                    v.trim().isEmpty ||
-                                    RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                        .hasMatch(v.trim())
-                                ? null
-                                : 'Revisá el email.',
-                          ),
-                          _campo(_localidad, 'Localidad (opcional)'),
-                        ] else ...[
-                          ref
-                              .watch(inventarioProvider)
-                              .when(
-                                loading: () => const LinearProgressIndicator(),
-                                error: (_, _) => TextButton.icon(
-                                  onPressed: () =>
-                                      ref.invalidate(inventarioProvider),
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text(
-                                    'Reintentar cargar unidades',
-                                  ),
-                                ),
-                                data: (unidades) =>
-                                    DropdownButtonFormField<String>(
-                                      initialValue: _vehiculo,
-                                      isExpanded: true,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Unidad de interés',
-                                      ),
-                                      items: [
-                                        const DropdownMenuItem(
-                                          value: '',
-                                          child: Text(
-                                            'Todavía sin unidad definida',
-                                          ),
-                                        ),
-                                        for (final v in unidades.where(
-                                          (v) => !v.vendido,
-                                        ))
-                                          DropdownMenuItem(
-                                            value: v.id,
-                                            child: Text(
-                                              '${v.codigo} · ${v.titulo}',
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                      ],
-                                      onChanged: _ocupado
-                                          ? null
-                                          : (v) => setState(
-                                              () => _vehiculo = v == ''
-                                                  ? null
-                                                  : v,
-                                            ),
-                                    ),
-                              ),
-                          const SizedBox(height: 20),
-                          _campo(
-                            _presupuesto,
-                            'Presupuesto en pesos (opcional)',
-                            tipo: const TextInputType.numberWithOptions(
-                              decimal: true,
+                      ),
+                      child: Column(
+                        key: ValueKey(_paso),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _paso == 0
+                                ? 'Conocé a tu próximo cliente'
+                                : '¿Qué está buscando?',
+                            style: const TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.w600,
                             ),
-                            validar: (v) {
-                              if (v == null || v.isEmpty) return null;
-                              final n = double.tryParse(
-                                v.replaceAll('.', '').replaceAll(',', '.'),
-                              );
-                              return n != null && n.isFinite && n > 0
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _paso == 0
+                                ? 'Cargá sus datos. Usamos el CUIT/CUIL para consultar el BCRA.'
+                                : 'Podés vincular una unidad ahora o dejarla para más adelante.',
+                            style: TextStyle(color: p.tinta3),
+                          ),
+                          const SizedBox(height: 24),
+                          if (_paso == 0) ...[
+                            _campo(
+                              _nombre,
+                              'Nombre y apellido',
+                              obligatorio: true,
+                            ),
+                            _campo(
+                              _cuit,
+                              'CUIT / CUIL',
+                              tipo: TextInputType.number,
+                              validar: (v) =>
+                                  cuitValido(
+                                    (v ?? '').replaceAll(RegExp(r'\D'), ''),
+                                  )
                                   ? null
-                                  : 'Ingresá un importe mayor a cero.';
-                            },
-                          ),
-                          SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Necesita financiación'),
-                            value: _financia,
-                            onChanged: _ocupado
-                                ? null
-                                : (v) => setState(() => _financia = v),
-                          ),
-                          _campo(
-                            _notas,
-                            'Qué busca / notas (opcional)',
-                            lineas: 3,
-                          ),
-                          const Text(
-                            'Al continuar se guardan el cliente y su interés, se consulta el BCRA y se archiva el PDF en la agencia.',
-                          ),
-                          const SizedBox(height: 20),
+                                  : 'Revisá los 11 dígitos y el verificador.',
+                            ),
+                            _campo(
+                              _telefono,
+                              'Teléfono (opcional)',
+                              tipo: TextInputType.phone,
+                            ),
+                            _campo(
+                              _email,
+                              'Email (opcional)',
+                              tipo: TextInputType.emailAddress,
+                              validar: (v) =>
+                                  v == null ||
+                                      v.trim().isEmpty ||
+                                      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                          .hasMatch(v.trim())
+                                  ? null
+                                  : 'Revisá el email.',
+                            ),
+                            _campo(_localidad, 'Localidad (opcional)'),
+                          ] else ...[
+                            ref
+                                .watch(inventarioProvider)
+                                .when(
+                                  loading: () =>
+                                      const LinearProgressIndicator(),
+                                  error: (_, _) => TextButton.icon(
+                                    onPressed: () =>
+                                        ref.invalidate(inventarioProvider),
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text(
+                                      'Reintentar cargar unidades',
+                                    ),
+                                  ),
+                                  data: (unidades) =>
+                                      DropdownButtonFormField<String>(
+                                        initialValue: _vehiculo,
+                                        isExpanded: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Unidad de interés',
+                                        ),
+                                        items: [
+                                          const DropdownMenuItem(
+                                            value: '',
+                                            child: Text(
+                                              'Todavía sin unidad definida',
+                                            ),
+                                          ),
+                                          for (final v in unidades.where(
+                                            (v) => !v.vendido,
+                                          ))
+                                            DropdownMenuItem(
+                                              value: v.id,
+                                              child: Text(
+                                                '${v.codigo} · ${v.titulo}',
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                        ],
+                                        onChanged: _ocupado
+                                            ? null
+                                            : (v) => setState(
+                                                () => _vehiculo = v == ''
+                                                    ? null
+                                                    : v,
+                                              ),
+                                      ),
+                                ),
+                            const SizedBox(height: 20),
+                            _campo(
+                              _presupuesto,
+                              'Presupuesto en pesos (opcional)',
+                              tipo: const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              validar: (v) {
+                                if (v == null || v.isEmpty) return null;
+                                final n = double.tryParse(
+                                  v.replaceAll('.', '').replaceAll(',', '.'),
+                                );
+                                return n != null && n.isFinite && n > 0
+                                    ? null
+                                    : 'Ingresá un importe mayor a cero.';
+                              },
+                            ),
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Necesita financiación'),
+                              value: _financia,
+                              onChanged: _ocupado
+                                  ? null
+                                  : (v) => setState(() => _financia = v),
+                            ),
+                            _campo(
+                              _notas,
+                              'Qué busca / notas (opcional)',
+                              lineas: 3,
+                            ),
+                            const Text(
+                              'Al continuar se guardan el cliente y su interés, se consulta el BCRA y se archiva el PDF en la agencia.',
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 if (_paso == 2) ...[

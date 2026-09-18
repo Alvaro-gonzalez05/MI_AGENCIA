@@ -128,15 +128,53 @@ class PantallaVehiculos extends ConsumerWidget {
   }
 }
 
-class _Fila extends ConsumerWidget {
+class _Fila extends ConsumerStatefulWidget {
   const _Fila({required this.vehiculo});
 
   final VehiculoInventario vehiculo;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Fila> createState() => _FilaState();
+}
+
+class _FilaState extends ConsumerState<_Fila> {
+  bool _eliminando = false;
+
+  Future<void> _eliminar() async {
+    final v = widget.vehiculo;
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Dar de baja ${v.codigo}',
+      descripcion:
+          '${v.titulo} dejará de aparecer en el inventario. Su historial de '
+          'gastos, precios y operaciones se conserva.',
+      confirmar: 'Dar de baja',
+      icono: Icons.remove_circle_outline_rounded,
+      peligrosa: true,
+    );
+    if (!ok || !mounted) return;
+
+    setState(() => _eliminando = true);
+    try {
+      await ref.read(repositorioProvider).eliminarVehiculo(v.id);
+      if (!mounted) return;
+      confirmarEliminado(context, '${v.codigo} fue dado de baja');
+      ref.invalidate(inventarioProvider);
+      ref.invalidate(gastosProvider);
+      ref.invalidate(gastosDeVehiculoProvider(v.id));
+      ref.invalidate(preciosProvider);
+      ref.invalidate(ventasProvider);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    } finally {
+      if (mounted) setState(() => _eliminando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final p = context.paleta;
-    final v = vehiculo;
+    final v = widget.vehiculo;
 
     return Tarjeta(
       padding: const EdgeInsets.fromLTRB(Esp.md, Esp.md, Esp.sm, Esp.md),
@@ -199,33 +237,70 @@ class _Fila extends ConsumerWidget {
             ],
           ),
           const SizedBox(width: Esp.sm),
-          BotonCircular(
-            tooltip: 'Editar',
-            icono: Icons.edit_rounded,
-            tamano: 38,
-            relleno: p.superficieHundida,
-            conBorde: false,
-            onTap: () => PantallaVehiculos._abrirFormulario(
-              context,
-              ref,
-              inicial: AltaVehiculo(
-                id: v.id,
-                codigo: v.codigo,
-                marca: v.marca,
-                modelo: v.modelo,
-                anio: v.anio,
-                version: v.version ?? '',
-                km: v.km,
-                patente: v.patente ?? '',
-                fechaIngreso: v.fechaIngreso,
-                fechaCompra: v.fechaCompra ?? v.fechaIngreso,
-                precioCompra: v.precioCompra,
-                precioObjetivo: v.precioObjetivo,
-                estado: v.estado,
-                observaciones: v.observaciones ?? '',
+          if (_eliminando)
+            const SizedBox.square(
+              dimension: 38,
+              child: Padding(
+                padding: EdgeInsets.all(9),
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
+            )
+          else
+            PopupMenuButton<String>(
+              key: Key('vehiculo-menu-${v.id}'),
+              tooltip: 'Acciones de ${v.codigo}',
+              icon: const Icon(Icons.more_horiz_rounded),
+              onSelected: (accion) {
+                if (accion == 'editar') {
+                  PantallaVehiculos._abrirFormulario(
+                    context,
+                    ref,
+                    inicial: AltaVehiculo(
+                      id: v.id,
+                      codigo: v.codigo,
+                      marca: v.marca,
+                      modelo: v.modelo,
+                      anio: v.anio,
+                      version: v.version ?? '',
+                      km: v.km,
+                      patente: v.patente ?? '',
+                      fechaIngreso: v.fechaIngreso,
+                      fechaCompra: v.fechaCompra ?? v.fechaIngreso,
+                      precioCompra: v.precioCompra,
+                      precioObjetivo: v.precioObjetivo,
+                      estado: v.estado,
+                      observaciones: v.observaciones ?? '',
+                    ),
+                  );
+                } else if (accion == 'eliminar') {
+                  _eliminar();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'editar',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Editar unidad'),
+                  ),
+                ),
+                PopupMenuItem(
+                  key: Key('vehiculo-eliminar-${v.id}'),
+                  value: 'eliminar',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline, color: p.critico),
+                    title: Text(
+                      'Dar de baja',
+                      style: TextStyle(color: p.critico),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
         ],
       ),
     );

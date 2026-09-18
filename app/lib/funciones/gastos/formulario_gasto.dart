@@ -250,8 +250,10 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
                       ),
                     ),
                 ],
-                onChanged: (id) =>
-                    setState(() => _g = _g.copiar(vehiculoId: id)),
+                onChanged: (id) => setState(() {
+                  _g = _g.copiar(vehiculoId: id);
+                  _errores.remove('vehiculo');
+                }),
               ),
             ),
           ),
@@ -314,8 +316,10 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
             'Importe',
             'importe',
             TextFormField(
-              onChanged: (s) =>
-                  setState(() => _g = _g.copiar(importe: double.tryParse(s))),
+              onChanged: (s) => setState(() {
+                _g = _g.copiar(importe: double.tryParse(s));
+                _errores.remove('importe');
+              }),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 16),
@@ -344,7 +348,10 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
                   locale: const Locale('es', 'AR'),
                 );
                 if (elegida != null) {
-                  setState(() => _g = _g.copiar(fecha: elegida));
+                  setState(() {
+                    _g = _g.copiar(fecha: elegida);
+                    _errores.remove('fecha');
+                  });
                 }
               },
               borderRadius: BorderRadius.circular(Curva.md),

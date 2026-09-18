@@ -7,6 +7,7 @@ import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/campanas.dart';
 import '../../ui/componentes.dart';
+import '../../ui/confirmacion.dart';
 import 'formulario_campana.dart';
 
 class PantallaCampanas extends ConsumerWidget {
@@ -19,11 +20,13 @@ class PantallaCampanas extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => abrirFormulario(context),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text('Nueva campaña'),
-      ),
+      floatingActionButton: asincrono.value?.isNotEmpty == true
+          ? FloatingActionButton.extended(
+              onPressed: () => abrirFormulario(context),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text('Nueva campaña'),
+            )
+          : null,
       body: asincrono.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => EstadoVacio(
@@ -79,9 +82,7 @@ class PantallaCampanas extends ConsumerWidget {
       ),
     );
     if (creada == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Campaña guardada como borrador')),
-      );
+      confirmarGuardado(context, 'Campaña guardada como borrador');
     }
   }
 }
@@ -275,48 +276,33 @@ class _Tarjeta extends ConsumerWidget {
   Future<void> _enviar(BuildContext context, WidgetRef ref, Campana c) async {
     final cantidad = ref.read(destinatariosProvider).value ?? 0;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.paleta.superficieElevada,
-        title: const Text('Enviar la campaña'),
-        content: Text(
-          cantidad == 0
-              ? 'No hay ningún destinatario con email cargado.'
-              : 'Se le va a mandar "${c.asunto}" a $cantidad '
-                    '${cantidad == 1 ? 'persona' : 'personas'}.\n\n'
-                    'Un mail enviado no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          if (cantidad > 0)
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Enviar ahora'),
-            ),
-        ],
-      ),
+    if (cantidad == 0) {
+      mostrarError(context, 'No hay ningún destinatario con email cargado.');
+      return;
+    }
+
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Enviar la campaña',
+      descripcion:
+          'Se le va a mandar "${c.asunto}" a $cantidad '
+          '${cantidad == 1 ? 'persona' : 'personas'}. Un mail enviado no se '
+          'puede deshacer.',
+      confirmar: 'Enviar ahora',
+      icono: Icons.send_rounded,
+      permitirCancelarTocandoAfuera: false,
     );
 
     if (ok != true || !context.mounted) return;
 
-    final mensajero = ScaffoldMessenger.of(context);
     try {
       final enviados = await ref.read(repositorioProvider).enviarCampana(c.id);
       ref.invalidate(campanasProvider);
-      mensajero.showSnackBar(
-        SnackBar(content: Text('Campaña enviada a $enviados destinatarios')),
-      );
+      if (context.mounted) {
+        confirmarGuardado(context, 'Campaña enviada a $enviados destinatarios');
+      }
     } catch (e) {
-      mensajero.showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      if (context.mounted) mostrarError(context, e);
     }
   }
 }

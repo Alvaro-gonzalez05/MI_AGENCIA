@@ -7,6 +7,7 @@ import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/agencias.dart';
 import '../../ui/componentes.dart';
+import '../../ui/confirmacion.dart';
 import 'formulario_agencia.dart';
 
 /// Panel de la cuenta de desarrollador: las agencias cliente.
@@ -24,11 +25,13 @@ class PantallaAgencias extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => abrirFormulario(context),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text('Nueva agencia'),
-      ),
+      floatingActionButton: asincrono.value?.isNotEmpty == true
+          ? FloatingActionButton.extended(
+              onPressed: () => abrirFormulario(context),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text('Nueva agencia'),
+            )
+          : null,
       body: asincrono.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => EstadoVacio(
@@ -275,30 +278,18 @@ class _Tarjeta extends ConsumerWidget {
     Agencia a,
   ) async {
     final suspender = a.activa;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.paleta.superficieElevada,
-        title: Text(
-          suspender ? 'Suspender ${a.nombre}' : 'Reactivar ${a.nombre}',
-        ),
-        content: Text(
-          suspender
-              ? 'Sus usuarios dejan de poder entrar. Los datos quedan '
-                    'intactos y se recupera todo al reactivarla.'
-              : 'Sus usuarios vuelven a tener acceso.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(suspender ? 'Suspender' : 'Reactivar'),
-          ),
-        ],
-      ),
+    final ok = await confirmarAccion(
+      context,
+      titulo: suspender ? 'Suspender ${a.nombre}' : 'Reactivar ${a.nombre}',
+      descripcion: suspender
+          ? 'Sus usuarios dejan de poder entrar. Los datos quedan intactos '
+                'y se recupera todo al reactivarla.'
+          : 'Sus usuarios vuelven a tener acceso a la agencia.',
+      confirmar: suspender ? 'Suspender' : 'Reactivar',
+      icono: suspender
+          ? Icons.pause_circle_outline_rounded
+          : Icons.play_circle_outline_rounded,
+      peligrosa: suspender,
     );
 
     if (ok != true) return;
@@ -306,6 +297,12 @@ class _Tarjeta extends ConsumerWidget {
         .read(repositorioProvider)
         .cambiarEstadoAgencia(a.id, activa: !a.activa);
     ref.invalidate(agenciasProvider);
+    if (context.mounted) {
+      confirmarGuardado(
+        context,
+        suspender ? '${a.nombre} fue suspendida' : '${a.nombre} fue reactivada',
+      );
+    }
   }
 }
 
