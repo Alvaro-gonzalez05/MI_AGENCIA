@@ -190,6 +190,23 @@ class RepositorioSupabase implements Repositorio {
     return (await interesados(oportunidadId: r['id'] as String)).single;
   }
 
+  @override
+  Future<void> eliminarInteresado(Interesado interesado) async {
+    // Los objetos se quitan primero: la política de Storage valida que la
+    // oportunidad todavía exista. Después, la función borra las filas en una
+    // sola transacción y conserva al cliente si tiene otra oportunidad.
+    final carpeta = await _carpetaInforme(interesado);
+    final archivos = await _db.storage.from('informes').list(path: carpeta);
+    final rutas = [for (final archivo in archivos) '$carpeta/${archivo.name}'];
+    if (rutas.isNotEmpty) {
+      await _db.storage.from('informes').remove(rutas);
+    }
+    await _db.rpc(
+      'eliminar_interesado',
+      params: {'p_oportunidad': interesado.id},
+    );
+  }
+
   Future<String> _carpetaInforme(Interesado i) async =>
       '${await _miAgencia()}/${i.clienteId}/${i.id}';
 

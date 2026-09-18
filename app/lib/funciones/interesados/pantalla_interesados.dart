@@ -10,6 +10,7 @@ import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import 'ficha_interesado.dart';
 import 'alta_interesado.dart';
+import 'eliminar_interesado.dart';
 
 /// Filtro de la lista. `null` en [SemaforoCrediticio] significa "todos".
 final _filtroProvider = NotifierProvider<_Filtro, SemaforoCrediticio?>(
@@ -310,13 +311,13 @@ class _Criterio extends StatelessWidget {
   }
 }
 
-class _TarjetaInteresado extends StatelessWidget {
+class _TarjetaInteresado extends ConsumerWidget {
   const _TarjetaInteresado({required this.interesado});
 
   final Interesado interesado;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final i = interesado;
     final c = i.consulta;
@@ -389,6 +390,39 @@ class _TarjetaInteresado extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Acciones de ${i.nombre}',
+                icon: const Icon(Icons.more_vert_rounded),
+                onSelected: (accion) async {
+                  if (accion == 'ver') {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FichaInteresado(interesado: i),
+                      ),
+                    );
+                  } else if (accion == 'eliminar') {
+                    await eliminarInteresadoConConfirmacion(context, ref, i);
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'ver',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.badge_outlined),
+                      title: Text('Ver ficha'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'eliminar',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.delete_outline_rounded),
+                      title: Text('Eliminar interesado'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

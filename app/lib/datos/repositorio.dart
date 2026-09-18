@@ -31,6 +31,10 @@ abstract interface class Repositorio {
   });
   Future<List<Interesado>> interesados();
   Future<Interesado> crearInteresado(AltaInteresado alta);
+
+  /// Elimina la oportunidad y sus informes. Si la persona no tiene otra
+  /// oportunidad en la agencia, la base elimina también su ficha y consultas.
+  Future<void> eliminarInteresado(Interesado interesado);
   Future<void> guardarInforme(Interesado interesado, List<int> bytes);
   Future<List<InformeGuardado>> informes(Interesado interesado);
   Future<List<int>> descargarInforme(String ruta);
@@ -527,6 +531,7 @@ class RepositorioDemo implements Repositorio {
   final Map<String, String> _cuits = {};
   final Map<String, Interesado> _altasInteresados = {};
   final Map<String, List<int>> _informes = {};
+  final Set<String> _interesadosEliminados = {};
 
   @override
   Future<Interesado> crearInteresado(AltaInteresado alta) async {
@@ -535,6 +540,14 @@ class RepositorioDemo implements Repositorio {
       alta.solicitud,
       () => alta.comoInteresado(alta.solicitud, alta.solicitud),
     );
+  }
+
+  @override
+  Future<void> eliminarInteresado(Interesado interesado) async {
+    _interesadosEliminados.add(interesado.id);
+    _altasInteresados.removeWhere((_, i) => i.id == interesado.id);
+    _informes.removeWhere((ruta, _) => ruta.startsWith('${interesado.id}/'));
+    _cuits.remove(interesado.clienteId);
   }
 
   @override
@@ -562,22 +575,24 @@ class RepositorioDemo implements Repositorio {
     // BCRA, asi que el semaforo arranca en "sin consultar", que es la verdad.
     return [
       ..._altasInteresados.values,
-      ...DatosDemo.interesados.map((i) {
-        final v = inv.where((x) => x.codigo == i.codigo).firstOrNull;
-        final id = '${i.codigo}-${i.nombre}';
-        return Interesado(
-          id: id,
-          clienteId: id,
-          nombre: i.nombre,
-          telefono: i.telefono,
-          cuit: _cuits[id],
-          vehiculoCodigo: i.codigo,
-          vehiculoTitulo: v?.titulo,
-          vehiculoPrecio: v?.precioActual,
-          notas: i.notas,
-          fecha: i.fecha,
-        );
-      }),
+      ...DatosDemo.interesados
+          .map((i) {
+            final v = inv.where((x) => x.codigo == i.codigo).firstOrNull;
+            final id = '${i.codigo}-${i.nombre}';
+            return Interesado(
+              id: id,
+              clienteId: id,
+              nombre: i.nombre,
+              telefono: i.telefono,
+              cuit: _cuits[id],
+              vehiculoCodigo: i.codigo,
+              vehiculoTitulo: v?.titulo,
+              vehiculoPrecio: v?.precioActual,
+              notas: i.notas,
+              fecha: i.fecha,
+            );
+          })
+          .where((i) => !_interesadosEliminados.contains(i.id)),
     ];
   }
 

@@ -23,7 +23,7 @@ Fecha: 18/09/2026
 | Login | mostrar contraseña, ingresar, errores, salir | Conectado a Supabase; el cambio de cuenta vacía el caché anterior |
 | Panel | métricas, accesos a inventario | Sin datos devuelve ceros válidos; tarjetas con respuesta al hover/toque |
 | Inventario | filtros, búsqueda, ficha, simuladores | Navegación sin superposición y estados vacíos claros |
-| Interesados | alta por pasos, volver, BCRA, PDF, ficha | Alta real, semáforo verde, consulta BCRA y PDF privado verificados |
+| Interesados | alta por pasos, volver, BCRA, PDF, ficha, eliminación | Alta real, semáforo verde, consulta BCRA y PDF privado verificados; borrado disponible en lista y ficha con confirmación |
 | Vehículos | alta, edición, ficha, baja | Un solo alta visible; baja lógica con confirmación y conservación de historial |
 | Gastos | alta, impacto en margen, eliminación | Un solo alta visible; borrado definitivo con importe y unidad en el aviso |
 | Precios | cambio y validación | Un solo alta visible en cuenta vacía; historial actualiza inventario |
@@ -41,4 +41,6 @@ Fecha: 18/09/2026
 - Diálogos destructivos sin desbordes en ancho angosto.
 - Cambio de usuario reconstruye el repositorio y descarta datos en memoria.
 - Alta de interesado, CUIT, BCRA, semáforo e informe PDF.
+- Borrado de interesado: cancelar conserva los datos; confirmar elimina una vez
+  y refresca el listado. La persona se conserva si tiene otra oportunidad.
 - Transiciones entre secciones sin pintar dos pantallas superpuestas.

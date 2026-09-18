@@ -15,6 +15,7 @@ import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
 import '../../ui/confirmacion.dart';
 import 'informe_pdf.dart';
+import 'eliminar_interesado.dart';
 
 /// Ficha de un interesado: quién es, qué quiere y si le podemos financiar.
 ///
@@ -183,6 +184,28 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
                       icon: const Icon(Icons.picture_as_pdf_rounded, size: 17),
                       label: Text(esMovil ? 'PDF' : 'Guardar y descargar PDF'),
                     ),
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Acciones del interesado',
+              onSelected: (accion) async {
+                if (accion != 'eliminar') return;
+                final eliminado = await eliminarInteresadoConConfirmacion(
+                  context,
+                  ref,
+                  _i,
+                );
+                if (eliminado && context.mounted) Navigator.of(context).pop();
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'eliminar',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline_rounded),
+                    title: Text('Eliminar interesado'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -93,6 +93,39 @@ void main() {
       await pintar(tester, const PantallaInteresados(), tamano: escritorio);
       expect(find.textContaining('Falta el CUIT'), findsOneWidget);
     });
+
+    testWidgets('pide confirmacion y elimina desde el listado', (tester) async {
+      await pintar(tester, const PantallaInteresados(), tamano: escritorio);
+
+      await tester.tap(find.byTooltip('Acciones de Ana Verde'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Eliminar interesado'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Eliminar a Ana Verde?'), findsOneWidget);
+      expect(repo.eliminados, isEmpty);
+
+      await tester.tap(find.byKey(const Key('confirmar-accion')));
+      await tester.pumpAndSettle();
+
+      expect(repo.eliminados, ['op-2']);
+      expect(find.text('Ana Verde'), findsNothing);
+      expect(find.text('Ana Verde fue eliminado'), findsOneWidget);
+    });
+
+    testWidgets('cancelar conserva al interesado', (tester) async {
+      await pintar(tester, const PantallaInteresados(), tamano: escritorio);
+
+      await tester.tap(find.byTooltip('Acciones de Beto Rojo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Eliminar interesado'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(repo.eliminados, isEmpty);
+      expect(find.text('Beto Rojo'), findsOneWidget);
+    });
   });
 
   group('Ficha del interesado', () {
@@ -285,14 +318,18 @@ class _RepoFalso implements Repositorio {
   Future<List<InformeGuardado>> informes(Interesado interesado) async => [];
   final consultas = <String>[];
   final cuitsGuardados = <String>[];
+  final eliminados = <String>[];
+  final datos = <Interesado>[_limpio, _conDeuda, _sinConsultar];
   String? falla;
 
   @override
-  Future<List<Interesado>> interesados() async => [
-    _limpio,
-    _conDeuda,
-    _sinConsultar,
-  ];
+  Future<List<Interesado>> interesados() async => List.of(datos);
+
+  @override
+  Future<void> eliminarInteresado(Interesado interesado) async {
+    eliminados.add(interesado.id);
+    datos.removeWhere((i) => i.id == interesado.id);
+  }
 
   @override
   Future<void> guardarCuit({
