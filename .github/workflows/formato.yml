@@ -61,5 +61,8 @@ jobs:
           git add app/lib app/test
           git commit -m "Formatear codigo (dart format)"
           # Si mientras tanto alguien pusheo otra cosa, se rebasa encima.
-          git pull --rebase origin main
+          # --autostash porque `flutter pub get` regenera los registrantes de
+          # plugins de Windows al agregar una dependencia, y esos cambios
+          # sueltos hacen fallar el rebase.
+          git pull --rebase --autostash origin main
           git push origin HEAD:main
