@@ -201,10 +201,7 @@ class FilaImportada {
     return n == null || n <= 0 ? null : n;
   }
 
-  static int? _entero(Object? v) {
-    final n = _numero(v);
-    return n == null ? null : n.round();
-  }
+  static int? _entero(Object? v) => _numero(v)?.round();
 
   static DateTime? _fecha(Object? v) {
     final t = _texto(v);

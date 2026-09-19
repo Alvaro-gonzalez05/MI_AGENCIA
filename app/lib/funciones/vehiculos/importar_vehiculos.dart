@@ -54,21 +54,19 @@ class _ImportarVehiculosState extends ConsumerState<ImportarVehiculos> {
   // -------------------------------------------------------------------
 
   Future<void> _elegirArchivos() async {
-    final elegidos = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      withData: true,
+    final elegidos = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: extensionesSoportadas,
     );
-    if (elegidos == null) return;
+    // Lista vacia = el usuario cerro el selector sin elegir nada.
+    if (elegidos.isEmpty) return;
 
-    for (final f in elegidos.files) {
-      final bytes = f.bytes;
-      if (bytes == null) {
-        _rechazados.add('${f.name}: no se pudo leer.');
-        continue;
+    for (final f in elegidos) {
+      try {
+        _agregar(f.name, await f.readAsBytes());
+      } catch (_) {
+        _rechazados.add('${f.name}: no se pudo abrir.');
       }
-      _agregar(f.name, bytes);
     }
     if (mounted) setState(() {});
   }
