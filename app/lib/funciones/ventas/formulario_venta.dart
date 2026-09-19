@@ -18,19 +18,21 @@ import '../../ui/formulario.dart';
 /// dolares. Si la operacion perdio contra la inflacion, se ve en el momento,
 /// no tres meses despues en un informe.
 class FormularioVenta extends ConsumerStatefulWidget {
-  const FormularioVenta({super.key, this.vehiculoFijo});
+  const FormularioVenta({super.key, this.vehiculoFijo, this.venta});
 
   final VehiculoInventario? vehiculoFijo;
+
+  /// Si viene, se está corrigiendo esa venta en vez de cargar una nueva.
+  final Venta? venta;
 
   @override
   ConsumerState<FormularioVenta> createState() => _FormularioVentaState();
 }
 
 class _FormularioVentaState extends ConsumerState<FormularioVenta> {
-  late AltaVenta _v = AltaVenta(
-    vehiculoId: widget.vehiculoFijo?.id,
-    fechaVenta: _hoy(),
-  );
+  late AltaVenta _v = widget.venta != null
+      ? AltaVenta.desde(widget.venta!)
+      : AltaVenta(vehiculoId: widget.vehiculoFijo?.id, fechaVenta: _hoy());
 
   Map<String, String> _errores = {};
   bool _guardando = false;
@@ -57,7 +59,12 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
 
     setState(() => _guardando = true);
     try {
-      await ref.read(repositorioProvider).crearVenta(_v);
+      final repo = ref.read(repositorioProvider);
+      if (_v.esEdicion) {
+        await repo.actualizarVenta(_v);
+      } else {
+        await repo.crearVenta(_v);
+      }
       // La venta saca la unidad del stock y cambia todos los totales.
       ref.invalidate(ventasProvider);
       ref.invalidate(inventarioProvider);
@@ -95,7 +102,9 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
 
     return Scaffold(
       backgroundColor: p.fondo,
-      appBar: AppBar(title: const Text('Registrar venta')),
+      appBar: AppBar(
+        title: Text(_v.esEdicion ? 'Corregir venta' : 'Registrar venta'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Esp.xl),
@@ -106,7 +115,34 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (widget.vehiculoFijo == null) ...[
+                    // Al corregir, la unidad queda fija: cambiarle el auto a
+                    // una venta es anularla y cargar otra.
+                    if (_v.esEdicion) ...[
+                      Tarjeta(
+                        child: Row(
+                          children: [
+                            IconoEnCirculo(
+                              icono: Icons.directions_car_filled_rounded,
+                              color: p.tinta2,
+                            ),
+                            const SizedBox(width: Esp.md),
+                            Expanded(
+                              child: Text(
+                                vehiculo == null
+                                    ? '${widget.venta!.vehiculoCodigo ?? ''} ${widget.venta!.vehiculoTitulo ?? ''}'
+                                    : '${vehiculo.codigo} · ${vehiculo.titulo}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: p.tinta,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: Esp.md),
+                    ] else if (widget.vehiculoFijo == null) ...[
                       SelectorVehiculo(
                         titulo: 'Qué se vendió',
                         ayuda: 'Al guardar, la unidad sale del stock automáticamente.',
@@ -128,7 +164,9 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                     const SizedBox(height: Esp.xl),
                     BotoneraFormulario(
                       guardando: _guardando,
-                      etiquetaGuardar: 'Cerrar la venta',
+                      etiquetaGuardar: _v.esEdicion
+                          ? 'Guardar corrección'
+                          : 'Cerrar la venta',
                       onCancelar: () => Navigator.of(context).pop(false),
                       onGuardar: () => _guardar(inv),
                     ),
@@ -158,6 +196,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
             etiqueta: 'Precio final de venta',
             error: _errores['precioFinal'],
             hijo: TextFormField(
+              initialValue: _v.precioFinal?.round().toString(),
               onChanged: (s) => setState(
                 () => _v = _v.copiar(precioFinal: double.tryParse(s)),
               ),
@@ -182,6 +221,9 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                 'Comisión, gestoría, transferencia — lo que aparece al firmar',
             error: _errores['gastosFinales'],
             hijo: TextFormField(
+              initialValue: _v.gastosFinales == 0
+                  ? null
+                  : _v.gastosFinales.round().toString(),
               onChanged: (s) => setState(
                 () => _v = _v.copiar(gastosFinales: double.tryParse(s) ?? 0),
               ),
@@ -239,6 +281,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
               etiqueta: 'Cantidad de cuotas',
               error: _errores['cuotas'],
               hijo: TextFormField(
+                initialValue: _v.cuotas?.toString(),
                 onChanged: (s) =>
                     setState(() => _v = _v.copiar(cuotas: int.tryParse(s))),
                 keyboardType: TextInputType.number,
@@ -252,6 +295,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
           CampoFormulario(
             etiqueta: 'Observaciones',
             hijo: TextFormField(
+              initialValue: _v.observaciones,
               maxLines: 2,
               onChanged: (s) =>
                   setState(() => _v = _v.copiar(observaciones: s)),

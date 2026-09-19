@@ -532,6 +532,42 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
+  Future<void> actualizarVenta(AltaVenta v) async {
+    // vehiculo_id no se manda: cambiarle el auto a una venta es anularla y
+    // hacer otra, y así el trigger que maneja el stock no se entera a medias.
+    final filas = await _db
+        .from('ventas')
+        .update({
+          'fecha_venta': _soloFecha(v.fechaVenta!),
+          'precio_final': v.precioFinal,
+          'gastos_finales': v.gastosFinales,
+          'forma_pago': v.formaPago.etiqueta,
+          'cuotas': v.pideCuotas ? v.cuotas : null,
+          'observaciones': _oNulo(v.observaciones),
+        })
+        .eq('id', v.id!)
+        .select('id');
+    // Sin permiso, el RLS no da error: filtra, y el update no toca nada. Hay
+    // que mirarlo para no decir "guardado" cuando no se guardó.
+    if (filas.isEmpty) {
+      throw Exception(
+        'No se pudo corregir la venta: no existe o no tenés permiso.',
+      );
+    }
+  }
+
+  @override
+  Future<void> anularVenta(String id) async {
+    // El trigger trg_venta_estado devuelve la unidad a "en stock".
+    final filas = await _db.from('ventas').delete().eq('id', id).select('id');
+    if (filas.isEmpty) {
+      throw Exception(
+        'Solo el dueño o un administrador de la agencia pueden anular una venta.',
+      );
+    }
+  }
+
+  @override
   Future<Agencia?> miAgencia() async {
     final fila = await _db
         .from('agencias')

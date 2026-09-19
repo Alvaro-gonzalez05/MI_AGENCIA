@@ -73,9 +73,10 @@ enum FormaPago {
   );
 }
 
-/// Lo que se carga al cerrar una venta.
+/// Lo que se carga al cerrar una venta, o al corregirla.
 class AltaVenta {
   const AltaVenta({
+    this.id,
     this.vehiculoId,
     this.fechaVenta,
     this.precioFinal,
@@ -85,6 +86,9 @@ class AltaVenta {
     this.observaciones = '',
   });
 
+  /// Null en una venta nueva; el id de la venta cuando se está corrigiendo.
+  final String? id;
+
   final String? vehiculoId;
   final DateTime? fechaVenta;
   final double? precioFinal;
@@ -92,6 +96,23 @@ class AltaVenta {
   final FormaPago formaPago;
   final int? cuotas;
   final String observaciones;
+
+  /// Corregir una venta ya cargada (checklist del cliente, punto 1.2). Antes
+  /// una venta con un dato mal puesto quedaba así para siempre, y arrastraba
+  /// el error a la ganancia real y a los históricos.
+  bool get esEdicion => id != null;
+
+  /// Precargada con una venta existente, para corregirla.
+  factory AltaVenta.desde(Venta v) => AltaVenta(
+    id: v.id,
+    vehiculoId: v.vehiculoId,
+    fechaVenta: v.fechaVenta,
+    precioFinal: v.precioFinal,
+    gastosFinales: v.gastosFinales,
+    formaPago: FormaPago.desde(v.formaPago),
+    cuotas: v.cuotas,
+    observaciones: v.observaciones ?? '',
+  );
 
   bool get pideCuotas =>
       formaPago == FormaPago.financiacionPropia ||
@@ -106,6 +127,7 @@ class AltaVenta {
     int? cuotas,
     String? observaciones,
   }) => AltaVenta(
+    id: id,
     vehiculoId: vehiculoId ?? this.vehiculoId,
     fechaVenta: fechaVenta ?? this.fechaVenta,
     precioFinal: precioFinal ?? this.precioFinal,

@@ -70,6 +70,15 @@ abstract interface class Repositorio {
   /// Al guardarla, un trigger de la base saca la unidad del stock.
   Future<void> crearVenta(AltaVenta v);
 
+  /// Corrige una venta ya cargada: precio, fecha, gastos de cierre, forma de
+  /// pago, cuotas, observaciones. La unidad no se cambia: vender otro auto es
+  /// anular esta venta y cargar otra.
+  Future<void> actualizarVenta(AltaVenta v);
+
+  /// Anula una venta que se cayó. Un trigger de la base devuelve la unidad al
+  /// stock. Solo el dueño o un administrador pueden: lo decide el RLS.
+  Future<void> anularVenta(String id);
+
   /// Guarda los umbrales de la agencia. Al volver, todo el sistema se
   /// recalcula solo: el motor lee esta config en cada consulta.
   Future<void> guardarConfig(ConfigAgencia c);
@@ -375,6 +384,43 @@ class RepositorioDemo implements Repositorio {
         obs: v.observaciones.trim().isEmpty ? null : v.observaciones.trim(),
       ),
     );
+  }
+
+  // En demo el id de una venta es "codigo-fecha" (ver ventas()).
+  int _indiceVenta(String id) => _ventasAgregadas.indexWhere(
+    (x) => '${x.codigo}-${x.fecha.toIso8601String()}' == id,
+  );
+
+  @override
+  Future<void> actualizarVenta(AltaVenta v) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final i = _indiceVenta(v.id!);
+    if (i < 0) {
+      throw Exception(
+        'En modo demo solo se pueden corregir las ventas que cargaste vos '
+        'en esta sesión.',
+      );
+    }
+    _ventasAgregadas[i] = VentaSemilla(
+      codigo: v.vehiculoId!,
+      fecha: v.fechaVenta!,
+      precioFinal: v.precioFinal!,
+      gastosFinales: v.gastosFinales,
+      obs: v.observaciones.trim().isEmpty ? null : v.observaciones.trim(),
+    );
+  }
+
+  @override
+  Future<void> anularVenta(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final i = _indiceVenta(id);
+    if (i < 0) {
+      throw Exception(
+        'En modo demo solo se pueden anular las ventas que cargaste vos en '
+        'esta sesión.',
+      );
+    }
+    _ventasAgregadas.removeAt(i);
   }
 
   ConfigAgencia _config = const ConfigAgencia();

@@ -215,13 +215,60 @@ class _Resumen extends StatelessWidget {
   }
 }
 
-class _Fila extends StatelessWidget {
+/// Una venta cerrada, con sus dos acciones: corregirla y anularla.
+///
+/// Las dos salen del checklist del cliente (punto 1.2): una venta con un dato
+/// mal puesto quedaba así para siempre, y una venta que se caía no tenía cómo
+/// deshacerse. El error se arrastraba a la ganancia real y a los históricos.
+class _Fila extends ConsumerWidget {
   const _Fila({required this.venta});
 
   final Venta venta;
 
+  Future<void> _corregir(BuildContext context) async {
+    final guardado = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => FormularioVenta(venta: venta),
+      ),
+    );
+    if (guardado == true && context.mounted) {
+      confirmarGuardado(context, 'Venta corregida — todo se recalculó');
+    }
+  }
+
+  Future<void> _anular(BuildContext context, WidgetRef ref) async {
+    final v = venta;
+    final unidad = v.vehiculoCodigo ?? 'La unidad';
+    final ok = await confirmarAccion(
+      context,
+      titulo: 'Anular la venta',
+      descripcion:
+          '$unidad vuelve al inventario como "En stock", y la venta deja de '
+          'contar en la ganancia y en los históricos.\n\n'
+          'Es para una venta que se cayó. Si solo hay un dato mal puesto, '
+          'mejor corregila.',
+      confirmar: 'Anular venta',
+      icono: Icons.undo_rounded,
+      peligrosa: true,
+    );
+    if (!ok || !context.mounted) return;
+
+    try {
+      await ref.read(repositorioProvider).anularVenta(v.id);
+      // La unidad vuelve al stock: cambian inventario, panel y ventas.
+      ref.invalidate(ventasProvider);
+      ref.invalidate(inventarioProvider);
+      if (context.mounted) {
+        confirmarEliminado(context, 'Venta anulada — $unidad volvió al stock');
+      }
+    } catch (e) {
+      if (context.mounted) mostrarError(context, e);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final v = venta;
     final real = v.gananciaReal;
@@ -277,6 +324,43 @@ class _Fila extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: p.tinta,
                 ),
+              ),
+              // Compacto a propósito: con el tamaño por defecto (48 px) la
+              // fila se pasaba de ancho en un celular de 360.
+              PopupMenuButton<String>(
+                tooltip: 'Acciones de la venta',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 200),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(32, 32),
+                  fixedSize: const Size(32, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: Icon(Icons.more_vert_rounded, color: p.tinta3, size: 20),
+                onSelected: (accion) => accion == 'corregir'
+                    ? _corregir(context)
+                    : _anular(context, ref),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'corregir',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Corregir datos'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'anular',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.undo_rounded, color: p.critico),
+                      title: Text(
+                        'Anular venta',
+                        style: TextStyle(color: p.critico),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
