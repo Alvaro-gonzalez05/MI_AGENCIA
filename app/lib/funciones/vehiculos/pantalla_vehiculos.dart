@@ -12,6 +12,7 @@ import '../../dominio/alta_vehiculo.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import 'formulario_vehiculo.dart';
+import 'importar_vehiculos.dart';
 
 /// Carga de unidades.
 ///
@@ -57,10 +58,22 @@ class PantallaVehiculos extends ConsumerWidget {
               descripcion:
                   'Cargá la primera y el sistema empieza a calcular costos, '
                   'márgenes y días en stock solo.',
-              accion: FilledButton.icon(
-                onPressed: () => _abrirFormulario(context, ref),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Cargar un vehículo'),
+              accion: Wrap(
+                spacing: Esp.md,
+                runSpacing: Esp.md,
+                alignment: WrapAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => _abrirFormulario(context, ref),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Cargar un vehículo'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _abrirImportacion(context, ref),
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                    label: const Text('Importar de un archivo'),
+                  ),
+                ],
               ),
             );
           }
@@ -94,6 +107,15 @@ class PantallaVehiculos extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      const Spacer(),
+                      // La importacion vive aca y no en el FAB porque es algo
+                      // que se hace una vez, al empezar, y despues nunca mas:
+                      // el boton de todos los dias es "Nueva unidad".
+                      TextButton.icon(
+                        onPressed: () => _abrirImportacion(context, ref),
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 17),
+                        label: const Text('Importar'),
+                      ),
                     ],
                   ),
                 );
@@ -105,6 +127,22 @@ class PantallaVehiculos extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Carga masiva leyendo la planilla, el PDF o la foto que trajo la agencia.
+  static Future<void> _abrirImportacion(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final cargo = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const ImportarVehiculos(),
+      ),
+    );
+    if (cargo == true && context.mounted) {
+      ref.invalidate(inventarioProvider);
+    }
   }
 
   static Future<void> _abrirFormulario(

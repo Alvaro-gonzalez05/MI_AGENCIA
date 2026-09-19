@@ -57,6 +57,33 @@ vivo: consulta nuestro Postgres, que responde en milisegundos y funciona sin int
 
 ---
 
+## 2 bis. API key de Gemini (importación de stock)
+
+La pantalla **Vehículos → Importar** lee la planilla, el PDF, el Word o la foto
+que trae la agencia y devuelve las unidades para revisar antes de cargarlas.
+Eso lo hace la Edge Function `importar-vehiculos` llamando a Gemini.
+
+Sacá la key gratuita en <https://aistudio.google.com/apikey> y guardala como
+secreto del proyecto:
+
+```bash
+supabase secrets set GEMINI_API_KEY=xxxxx --project-ref <ref-del-proyecto>
+supabase functions deploy importar-vehiculos --project-ref <ref-del-proyecto>
+```
+
+**La key nunca va dentro de la app.** Un `.exe` o un `.apk` se abren con
+cualquier editor: una clave metida ahí es una clave publicada, y la paga el
+que la puso. Por eso la lectura pasa por la Edge Function, que corre en el
+servidor y es la única que ve la clave.
+
+El modelo por defecto es `gemini-2.5-flash`. Para cambiarlo sin tocar código:
+
+```bash
+supabase secrets set GEMINI_MODELO=otro-modelo --project-ref <ref-del-proyecto>
+```
+
+---
+
 ## 3. Herramientas locales (Flutter)
 
 Estado de tu máquina, ya verificado:

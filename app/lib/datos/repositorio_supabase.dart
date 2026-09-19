@@ -8,6 +8,7 @@ import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
+import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
@@ -949,5 +950,79 @@ class RepositorioSupabase implements Repositorio {
       observaciones: f['observaciones'] as String?,
       revistaArs: _decimal(f['revista_ars']),
     );
+  }
+
+  // -------------------------------------------------------------------
+  // Importacion con IA
+  // -------------------------------------------------------------------
+
+  /// Tope por tanda. El servidor acepta hasta 18 MB; se manda menos para
+  /// dejar aire al resto del pedido y para que una foto pesada no arrastre a
+  /// las demas si la llamada falla.
+  static const _maximoPorTanda = 6 * 1024 * 1024;
+
+  @override
+  Future<List<FilaImportada>> leerVehiculosDeArchivos(
+    List<ArchivoImportado> archivos, {
+    void Function(int hechas, int totales)? alAvanzar,
+  }) async {
+    if (archivos.isEmpty) return const [];
+
+    // Los archivos se agrupan en tandas por peso. Cada tanda es una llamada
+    // al modelo: agrupar de a varias sale mas barato en tokens y, sobre todo,
+    // deja que el modelo vea las fotos de una misma hoja juntas.
+    final tandas = <List<ArchivoImportado>>[];
+    var actual = <ArchivoImportado>[];
+    var peso = 0;
+    for (final a in archivos) {
+      if (actual.isNotEmpty && peso + a.peso > _maximoPorTanda) {
+        tandas.add(actual);
+        actual = [];
+        peso = 0;
+      }
+      actual.add(a);
+      peso += a.peso;
+    }
+    if (actual.isNotEmpty) tandas.add(actual);
+
+    final filas = <FilaImportada>[];
+    for (var i = 0; i < tandas.length; i++) {
+      alAvanzar?.call(i, tandas.length);
+      filas.addAll(await _leerTanda(tandas[i]));
+    }
+    alAvanzar?.call(tandas.length, tandas.length);
+    return filas;
+  }
+
+  Future<List<FilaImportada>> _leerTanda(List<ArchivoImportado> tanda) async {
+    late FunctionResponse r;
+    try {
+      r = await _db.functions.invoke(
+        'importar-vehiculos',
+        body: {'archivos': [for (final a in tanda) a.aJson()]},
+      );
+    } on FunctionException catch (e) {
+      final detalle = e.details;
+      throw Exception(
+        detalle is Map && detalle['error'] != null
+            ? detalle['error']
+            : 'No se pudo leer el archivo. Reintentá en un momento.',
+      );
+    }
+
+    final datos = r.data;
+    if (datos is! Map) {
+      throw Exception('El servidor no devolvió una respuesta entendible.');
+    }
+    if (datos['error'] != null) throw Exception(datos['error'].toString());
+
+    final lista = datos['vehiculos'];
+    if (lista is! List) return const [];
+
+    return [
+      for (final fila in lista)
+        if (fila is Map)
+          ?FilaImportada.desdeJson(fila.cast<String, dynamic>()),
+    ];
   }
 }

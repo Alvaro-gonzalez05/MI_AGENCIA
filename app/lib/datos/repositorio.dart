@@ -8,6 +8,7 @@ import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
 import '../dominio/gastos.dart';
+import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
@@ -156,6 +157,19 @@ abstract interface class Repositorio {
 
   /// Dispara el envio en el servidor. Devuelve cuantos salieron.
   Future<int> enviarCampana(String campanaId);
+
+  /// Lee una lista de vehiculos de los archivos que trajo la agencia
+  /// (planillas, PDF, documentos o fotos de una hoja escrita a mano).
+  ///
+  /// No da de alta nada: devuelve filas para revisar. El alta la hace despues
+  /// [crearVehiculo], una por una y bajo el RLS de la agencia.
+  ///
+  /// [alAvanzar] se llama con (tandas hechas, tandas totales): los archivos se
+  /// mandan de a poco para no pasarse del limite del servidor.
+  Future<List<FilaImportada>> leerVehiculosDeArchivos(
+    List<ArchivoImportado> archivos, {
+    void Function(int hechas, int totales)? alAvanzar,
+  });
 }
 
 /// Implementacion en memoria con los datos de ejemplo del cliente.
@@ -583,6 +597,52 @@ class RepositorioDemo implements Repositorio {
     // es cero, y la pantalla lo explica en vez de inventar un total.
     await Future<void>.delayed(const Duration(milliseconds: 150));
     return 0;
+  }
+
+  @override
+  Future<List<FilaImportada>> leerVehiculosDeArchivos(
+    List<ArchivoImportado> archivos, {
+    void Function(int hechas, int totales)? alAvanzar,
+  }) async {
+    // En demo no hay modelo al que preguntarle: se devuelven dos filas de
+    // muestra para poder recorrer la pantalla de revision entera, una de
+    // ellas incompleta a proposito, que es lo que de verdad pasa con una
+    // planilla real.
+    alAvanzar?.call(0, 1);
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    alAvanzar?.call(1, 1);
+
+    final hoy = DateTime.now();
+    final nombre = archivos.isEmpty ? 'ejemplo' : archivos.first.nombre;
+    return [
+      FilaImportada.desdeJson({
+        'marca': 'Volkswagen',
+        'modelo': 'Amarok',
+        'version': 'V6 Highline',
+        'anio': 2019,
+        'km': 96000,
+        'patente': 'AD123XZ',
+        'precio_compra': 31500000,
+        'precio_objetivo': 36900000,
+        'fecha_compra': DateTime(
+          hoy.year,
+          hoy.month - 2,
+          12,
+        ).toIso8601String().substring(0, 10),
+        'confianza': 0.94,
+        'origen': '$nombre, fila 2',
+      }, hoy: hoy)!,
+      FilaImportada.desdeJson({
+        'marca': 'Fiat',
+        'modelo': 'Cronos',
+        'anio': 2021,
+        'km': 54000,
+        'precio_objetivo': 21500000,
+        'confianza': 0.61,
+        'origen': '$nombre, fila 3',
+        'observaciones': 'Escrito a mano, el precio de compra no se lee',
+      }, hoy: hoy)!,
+    ];
   }
 
   @override

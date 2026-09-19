@@ -35,6 +35,19 @@ dependencies:
   # como dependencia; se declara porque la app lo usa directamente.
   url_launcher: ^6.3.1
 
+  # Importacion masiva: elegir la planilla o el PDF que trae la agencia, y
+  # sacarle una foto a la hoja del stock desde el celular.
+  file_picker: ^13.1.0
+  image_picker: ^1.2.3
+
+  # Leer esa planilla sin subirla entera: el .xlsx se convierte a texto en la
+  # app y viaja diez veces mas liviano. `archive` ademas abre el .docx, que
+  # es un zip con XML adentro.
+  excel: ^4.0.6
+  # 3.x y no 4.x: es la que pide `excel`, y tener dos versiones de la misma
+  # libreria no se puede.
+  archive: ^3.6.1
+
   # Formato de numeros y fechas en es-AR ($ y separador de miles con punto).
   intl: ^0.20.2
 

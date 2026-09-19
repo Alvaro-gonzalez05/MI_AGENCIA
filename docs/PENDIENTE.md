@@ -172,6 +172,7 @@ campañas, configuración y agencias.
 | `sync-catalogo` | Espeja el catálogo de ArgAutos, mensual | Verificada. **Falta la API key** (pedila gratis en argautos.com) |
 | `sync-indices` | Actualiza IPC del INDEC y cotización del dólar | Por integrar |
 | `enviar-campana` | Envío de emails por Resend | **Escrita.** Falta desplegarla y cargar `RESEND_API_KEY` |
+| `importar-vehiculos` | Lee el stock de una planilla, un PDF, un Word o una foto con Gemini | **Escrita.** Falta desplegarla y cargar `GEMINI_API_KEY` |
 
 El BCRA no manda cabeceras CORS y ArgAutos limita por IP: las dos **tienen** que
 consumirse desde Edge Functions, nunca desde la app.

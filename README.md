@@ -112,7 +112,8 @@ mi-agencia/
 ├── supabase/
 │   ├── migrations/               # 0001..0013, se aplican en orden
 │   ├── migraciones_completas.sql # las 13 en un archivo, para el SQL Editor
-│   └── functions/                # Edge Functions (bcra-consulta, enviar-campana)
+│   └── functions/                # Edge Functions (bcra-consulta, enviar-campana,
+│                                 #                 importar-vehiculos)
 ├── tests/                        # verificación del SQL contra el JS original
 ├── docs/
 ├── scripts/
