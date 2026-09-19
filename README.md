@@ -24,6 +24,7 @@ convierte en una app multi-agencia con backend propio, para Windows y Android.
 | Integración BCRA | **Edge Function desplegada**; conserva el alta si el proveedor está temporalmente caído |
 | Integración ArgAutos (valor de revista) | API verificada en vivo, falta la API key |
 | Email marketing | pantalla y Edge Function escritas, falta desplegarla y cargar la key de Resend |
+| Importar stock (Excel, PDF, Word o foto) | pantalla y Edge Function escritas, falta desplegarla y cargar la key de Gemini |
 | Ícono de la app | **hecho**, auto dentro de una agencia; Android adaptativo y Windows |
 | Base del cliente | **vacía y lista para cargar**: se borraron los datos de ejemplo |
 
