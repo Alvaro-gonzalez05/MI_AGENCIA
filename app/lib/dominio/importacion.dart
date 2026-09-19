@@ -248,11 +248,12 @@ List<FilaImportada> marcarDuplicados(
   for (final v in inventario) {
     if (v.vendido) continue;
     existentes[clave(
-      (v.patente ?? '').toUpperCase(),
-      v.marca,
-      v.modelo,
-      v.anio,
-    )] = v.codigo;
+          (v.patente ?? '').toUpperCase(),
+          v.marca,
+          v.modelo,
+          v.anio,
+        )] =
+        v.codigo;
   }
 
   final vistas = <String>{};

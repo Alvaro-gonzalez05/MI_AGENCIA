@@ -999,7 +999,9 @@ class RepositorioSupabase implements Repositorio {
     try {
       r = await _db.functions.invoke(
         'importar-vehiculos',
-        body: {'archivos': [for (final a in tanda) a.aJson()]},
+        body: {
+          'archivos': [for (final a in tanda) a.aJson()],
+        },
       );
     } on FunctionException catch (e) {
       final detalle = e.details;
@@ -1021,8 +1023,7 @@ class RepositorioSupabase implements Repositorio {
 
     return [
       for (final fila in lista)
-        if (fila is Map)
-          ?FilaImportada.desdeJson(fila.cast<String, dynamic>()),
+        if (fila is Map) ?FilaImportada.desdeJson(fila.cast<String, dynamic>()),
     ];
   }
 }

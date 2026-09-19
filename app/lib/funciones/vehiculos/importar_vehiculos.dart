@@ -149,10 +149,7 @@ class _ImportarVehiculosState extends ConsumerState<ImportarVehiculos> {
         await repo.crearVehiculo(f.alta);
         if (mounted) setState(() => _cargadas++);
       } catch (e) {
-        fallidas.add((
-          f.titulo,
-          e.toString().replaceFirst('Exception: ', ''),
-        ));
+        fallidas.add((f.titulo, e.toString().replaceFirst('Exception: ', '')));
       }
     }
 
@@ -518,10 +515,7 @@ class _Leyendo extends StatelessWidget {
       padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         children: [
-          BarraProgreso(
-            valor: varias ? t.$1 / t.$2 : 0.35,
-            color: p.acento,
-          ),
+          BarraProgreso(valor: varias ? t.$1 / t.$2 : 0.35, color: p.acento),
           const SizedBox(height: Esp.lg),
           Text(
             varias
@@ -876,7 +870,6 @@ class _Resumen extends StatelessWidget {
 
   /// Las que se cargaron una por una desde el formulario, antes del lote.
   final int extra;
-
 
   final VoidCallback onCerrar;
 
