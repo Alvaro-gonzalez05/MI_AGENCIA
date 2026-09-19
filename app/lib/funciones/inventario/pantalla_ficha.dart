@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../datos/repositorio.dart';
 import '../../dominio/modelos.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
+import '../../ui/formulario.dart';
 
 /// Ficha de una unidad: todo lo que se sabe de ella, mas los dos simuladores.
 class PantallaFicha extends ConsumerWidget {
@@ -700,11 +702,40 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
   int _cuotas = 12;
   late double _tasa = widget.cfg.tasaFinanciacionMensual;
 
+  /// Cuánto se financia. Arranca en el precio entero, pero casi nadie
+  /// financia el 100%: lo habitual es que el comprador entregue algo
+  /// (checklist del cliente, punto 2.2).
+  late double _monto = widget.vehiculo.precioActual;
+
+  late final TextEditingController _montoCtrl = TextEditingController(
+    text: _monto.round().toString(),
+  );
+
+  @override
+  void dispose() {
+    _montoCtrl.dispose();
+    super.dispose();
+  }
+
+  double get _precio => widget.vehiculo.precioActual;
+  double get _anticipo => (_precio - _monto).clamp(0, _precio);
+
+  void _ponerMonto(double monto) {
+    final acotado = monto.clamp(0, _precio).toDouble();
+    setState(() => _monto = acotado);
+    _montoCtrl.value = TextEditingValue(
+      text: acotado.round().toString(),
+      selection: TextSelection.collapsed(
+        offset: acotado.round().toString().length,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
     final r = Motor.financiacion(
-      monto: widget.vehiculo.precioActual,
+      monto: _monto,
       cuotas: _cuotas,
       tasaMensual: _tasa,
     );
@@ -736,6 +767,56 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             'Es como se vende en el rubro: “$_cuotas cuotas fijas de…”.',
             style: TextStyle(fontSize: 12, color: p.tinta3, height: 1.4),
           ),
+          const SizedBox(height: Esp.lg),
+
+          // Cuánto se financia, y de ahí sale el anticipo.
+          CampoFormulario(
+            etiqueta: 'Monto a financiar',
+            ayuda: 'El resto lo pone el comprador de anticipo',
+            error: _monto <= 0 ? 'Tiene que ser mayor a cero.' : null,
+            hijo: TextFormField(
+              controller: _montoCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 16),
+              onChanged: (t) {
+                final n = double.tryParse(t) ?? 0;
+                // Se acota al precio, pero sin reescribir el campo mientras
+                // escribe: pisar el texto en cada tecla es insoportable.
+                setState(() => _monto = n > _precio ? _precio : n);
+              },
+              decoration: InputDecoration(
+                prefixText: r'$',
+                prefixStyle: TextStyle(
+                  fontFamily: TemaApp.mono,
+                  fontSize: 16,
+                  color: p.tinta3,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: Esp.sm),
+          Wrap(
+            spacing: Esp.sm,
+            runSpacing: Esp.sm,
+            children: [
+              for (final pct in const [0.0, 0.2, 0.3, 0.5])
+                ChipSeleccion(
+                  etiqueta: pct == 0
+                      ? 'Sin anticipo'
+                      : '${(pct * 100).round()}% de anticipo',
+                  activo: (_anticipo - _precio * pct).abs() < 1,
+                  onTap: () => _ponerMonto(_precio * (1 - pct)),
+                ),
+            ],
+          ),
+          const SizedBox(height: Esp.sm),
+          FilaDato(
+            etiqueta: 'Anticipo del comprador',
+            valor: Fmt.pesos(_anticipo),
+            valorColor: p.tinta2,
+          ),
+
           const SizedBox(height: Esp.lg),
           Text('Cuotas', style: TextStyle(fontSize: 13, color: p.tinta2)),
           const SizedBox(height: Esp.sm),
@@ -809,12 +890,20 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             ),
           ),
           const SizedBox(height: Esp.sm),
-          FilaDato(etiqueta: 'Total a pagar', valor: Fmt.pesos(r.total)),
+          FilaDato(etiqueta: 'Total financiado', valor: Fmt.pesos(r.total)),
           FilaDato(
             etiqueta: 'Intereses',
             valor: Fmt.pesos(r.interes),
             valorColor: p.observar,
           ),
+          // Lo que termina pagando el comprador por el auto, con anticipo
+          // incluido. Es el número que pregunta.
+          if (_anticipo > 0)
+            FilaDato(
+              etiqueta: 'Total con anticipo',
+              valor: Fmt.pesos(r.total + _anticipo),
+              destacado: true,
+            ),
         ],
       ),
     );
