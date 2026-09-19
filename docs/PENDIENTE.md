@@ -1,6 +1,13 @@
 # Qué falta
 
-Estado al 13/09/2026. Ordenado por lo que desbloquea más cosas.
+Estado al 19/09/2026. Ordenado por lo que desbloquea más cosas.
+
+**Las correcciones del checklist del cliente (tanda 1) están respondidas una
+por una en [CHECKLIST_TANDA1.md](CHECKLIST_TANDA1.md).** Quedaron resueltos
+los dos críticos (BCRA y IPC), los dos importantes (ventas y campañas) y la
+mejora del simulador. Sigue pendiente el valor de revista, y hay dos
+decisiones para tomar con el cliente: de qué fuente sacarlo, y si el ajuste
+por inflación se cuenta desde la fecha de ingreso o la de compra.
 
 **La base quedó vacía y lista para cargar.** Se borraron los datos de
 ejemplo (13 unidades, gastos, precios, ventas e interesados) y quedó la
@@ -172,6 +179,18 @@ consumirse desde Edge Functions, nunca desde la app.
 ### Detalles chicos
 
 - **El tema no se recuerda** al cerrar la app. Falta `shared_preferences`.
+- **Valor de revista**: falta la fuente de datos. El cálculo y la comparación
+  porcentual ya están en la base (`v_inventario.revista_ars`,
+  `var_vs_revista`). La opción gratuita verificada es la tabla de valuación
+  del DNRPA: la publica el Estado todos los meses en PDF con dirección
+  predecible (`dnrpa.gov.ar/valuacion/informacion/01-08-2026.pdf`), son 217
+  páginas y el texto sale ordenado por marca, modelo, versión y año, así que
+  se puede importar sola como el IPC. Ojo: es valuación **fiscal**, no de
+  mercado. La guía de ACARA (la "revista" de verdad) **no se puede copiar**:
+  la propia página lo prohíbe expresamente. Detalle y opciones en
+  [CHECKLIST_TANDA1.md](CHECKLIST_TANDA1.md#21--falta-el-valor-de-revista-y-su-comparación--pendiente).
+- **Otros sistemas de amortización** (francés, alemán) en el simulador: lo
+  pidió el cliente para más adelante, no para ahora.
 - **`v_dashboard` devuelve nulos con la agencia vacía** (los `sum()` sobre cero
   filas). Hoy no molesta porque la app calcula los totales en Dart desde el
   inventario y no lee esa vista; si alguna vez se lee, hay que ponerle
@@ -217,7 +236,7 @@ consumirse desde Edge Functions, nunca desde la app.
 
 ```powershell
 .\scripts\dev.ps1 analyze     # 0 problemas
-.\scripts\dev.ps1 test        # 142 tests
+.\scripts\dev.ps1 test        # 199 tests
 cd tests; npm test            # esquema + semáforo + paridad del motor
 ```
 
