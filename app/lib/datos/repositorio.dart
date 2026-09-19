@@ -129,6 +129,22 @@ abstract interface class Repositorio {
   /// baja: eso no es configurable.
   Future<int> destinatariosPosibles();
 
+  /// Cuantos tienen email cargado, hayan aceptado mails o no.
+  ///
+  /// Sirve para que Campanas explique un cero: no es lo mismo "nadie dejo el
+  /// email" que "dejaron el email pero ninguno acepto recibir novedades".
+  /// Sin esa diferencia la pantalla decia "0 personas" y parecia un error.
+  Future<int> interesadosConEmail();
+
+  /// Marca si la persona acepta recibir novedades por email.
+  ///
+  /// Al sacarlo se guarda la fecha de la baja: a quien la pidio no se le
+  /// vuelve a escribir, y queda constancia de cuando.
+  Future<void> cambiarAceptaMarketing({
+    required String clienteId,
+    required bool acepta,
+  });
+
   /// Dispara el envio en el servidor. Devuelve cuantos salieron.
   Future<int> enviarCampana(String campanaId);
 }
@@ -505,6 +521,17 @@ class RepositorioDemo implements Repositorio {
   }
 
   @override
+  Future<int> interesadosConEmail() async => 0;
+
+  @override
+  Future<void> cambiarAceptaMarketing({
+    required String clienteId,
+    required bool acepta,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+  }
+
+  @override
   Future<int> destinatariosPosibles() async {
     // En demo los interesados no tienen email cargado: el numero honesto
     // es cero, y la pantalla lo explica en vez de inventar un total.
@@ -661,6 +688,11 @@ final campanasProvider = FutureProvider<List<Campana>>(
 
 final destinatariosProvider = FutureProvider<int>(
   (ref) => ref.watch(repositorioProvider).destinatariosPosibles(),
+);
+
+/// Interesados con email, aunque no hayan aceptado mails.
+final conEmailProvider = FutureProvider<int>(
+  (ref) => ref.watch(repositorioProvider).interesadosConEmail(),
 );
 
 final agenciasProvider = FutureProvider<List<Agencia>>(

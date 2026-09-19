@@ -37,6 +37,9 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
       '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(0x7fffffff)}';
   int _paso = 0;
   bool _ocupado = false, _financia = false, _pdfGuardado = false;
+
+  /// Consentimiento para mails. Arranca en no: se pregunta, no se asume.
+  bool _aceptaMails = false;
   String? _vehiculo, _error;
   String _progreso = '';
   Interesado? _guardado;
@@ -85,6 +88,7 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
           ),
           financiacion: _financia,
           notas: _opcional(_notas),
+          aceptaMarketing: _aceptaMails,
         ),
       );
       ref.invalidate(interesadosProvider);
@@ -281,6 +285,30 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
                                           .hasMatch(v.trim())
                                   ? null
                                   : 'Revisá el email.',
+                            ),
+                            // Se pregunta, no se asume (checklist 4.1). Solo se
+                            // habilita con un email cargado: sin email no hay a
+                            // donde mandar nada.
+                            ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: _email,
+                              builder: (context, valor, _) {
+                                final hayEmail = valor.text.trim().isNotEmpty;
+                                return SwitchListTile.adaptive(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text(
+                                    'Acepta recibir novedades por email',
+                                  ),
+                                  subtitle: Text(
+                                    hayEmail
+                                        ? 'Preguntáselo. Solo a quien acepta le llegan las campañas.'
+                                        : 'Cargá un email para poder marcarlo.',
+                                  ),
+                                  value: hayEmail && _aceptaMails,
+                                  onChanged: _ocupado || !hayEmail
+                                      ? null
+                                      : (v) => setState(() => _aceptaMails = v),
+                                );
+                              },
                             ),
                             _campo(_localidad, 'Localidad (opcional)'),
                           ] else ...[

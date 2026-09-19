@@ -750,6 +750,32 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
+  Future<int> interesadosConEmail() async {
+    final filas = await _db
+        .from('clientes')
+        .select('id')
+        .not('email', 'is', null)
+        .isFilter('deleted_at', null);
+    return filas.length;
+  }
+
+  @override
+  Future<void> cambiarAceptaMarketing({
+    required String clienteId,
+    required bool acepta,
+  }) async {
+    await _db
+        .from('clientes')
+        .update({
+          'acepta_marketing': acepta,
+          'baja_marketing_at': acepta
+              ? null
+              : DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', clienteId);
+  }
+
+  @override
   Future<int> destinatariosPosibles() async {
     // Los que pidieron la baja no entran, y eso no es negociable: el filtro
     // vive tanto aca como en la Edge Function.

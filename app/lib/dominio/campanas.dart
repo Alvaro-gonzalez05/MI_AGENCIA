@@ -157,3 +157,30 @@ class AltaCampana {
 </body></html>''';
   }
 }
+
+/// Qué se le dice al usuario según cuántos pueden recibir la campaña.
+///
+/// Un cero puede significar dos cosas muy distintas, y el checklist del
+/// cliente (punto 4.1) lo encontró: decía "ningún interesado tiene email"
+/// cuando había uno con email que no había aceptado recibir mails. Parecía un
+/// error de la app, y era un dato que faltaba cargar.
+String textoAudiencia(int destinatarios, int conEmail) {
+  if (destinatarios == 0 && conEmail == 0) {
+    return 'Ningún interesado tiene email cargado todavía. Sin email no hay a '
+        'quién escribirle.';
+  }
+  if (destinatarios == 0) {
+    final quienes = conEmail == 1
+        ? 'Hay 1 interesado con email, pero no aceptó'
+        : 'Hay $conEmail interesados con email, pero ninguno aceptó';
+    return '$quienes recibir novedades. Se marca en la ficha de cada uno, '
+        'después de preguntárselo.';
+  }
+  final sinAceptar = conEmail - destinatarios;
+  final base = destinatarios == 1
+      ? 'persona recibiría esta campaña'
+      : 'personas recibirían esta campaña';
+  return sinAceptar > 0
+      ? '$base. Otros $sinAceptar tienen email pero no aceptaron recibir mails.'
+      : base;
+}

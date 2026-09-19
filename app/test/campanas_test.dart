@@ -109,4 +109,22 @@ void main() {
       expect(c.tasaClick, closeTo(0.05, 0.0001));
     });
   });
+
+  group('Audiencia (checklist 4.1)', () {
+    test('el caso del cliente: 1 con email que no aceptó, no es "nadie tiene email"', () {
+      final t = textoAudiencia(0, 1);
+      expect(t, isNot(contains('Ningún interesado tiene email')));
+      expect(t, contains('no aceptó'));
+      expect(t, contains('ficha'));
+    });
+
+    test('sin ningún email lo dice tal cual', () {
+      expect(textoAudiencia(0, 0), contains('Ningún interesado tiene email'));
+    });
+
+    test('con destinatarios cuenta también a los que no aceptaron', () {
+      expect(textoAudiencia(3, 5), contains('Otros 2'));
+      expect(textoAudiencia(1, 1), 'persona recibiría esta campaña');
+    });
+  });
 }

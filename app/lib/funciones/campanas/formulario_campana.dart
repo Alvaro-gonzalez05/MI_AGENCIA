@@ -74,6 +74,7 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final cantidad = ref.watch(destinatariosProvider).value;
+    final conEmail = ref.watch(conEmailProvider).value ?? 0;
 
     return Scaffold(
       backgroundColor: p.fondo,
@@ -97,6 +98,10 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
                             titulo: 'El mensaje',
                             descripcion: cantidad == null
                                 ? null
+                                : cantidad == 0
+                                // Con cero se explica por qué, en vez de un
+                                // "0 personas" que parece un error.
+                                ? textoAudiencia(0, conEmail)
                                 : 'Lo van a recibir $cantidad '
                                       '${cantidad == 1 ? 'persona' : 'personas'}',
                           ),

@@ -95,6 +95,7 @@ class _Audiencia extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final cantidad = ref.watch(destinatariosProvider);
+    final conEmail = ref.watch(conEmailProvider).value ?? 0;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
@@ -103,7 +104,8 @@ class _Audiencia extends ConsumerWidget {
         children: [
           const CabeceraBloque(
             titulo: 'Tu audiencia',
-            descripcion: 'Interesados con email, que no pidieron la baja',
+            descripcion:
+                'Interesados con email que aceptaron recibir novedades',
           ),
           const SizedBox(height: Esp.lg),
           cantidad.when(
@@ -128,12 +130,7 @@ class _Audiencia extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  n == 0
-                      ? 'Ningún interesado tiene email cargado todavía. Sin '
-                            'email no hay a quién escribirle.'
-                      : n == 1
-                      ? 'persona recibiría esta campaña'
-                      : 'personas recibirían esta campaña',
+                  textoAudiencia(n, conEmail),
                   style: TextStyle(
                     fontSize: 12.5,
                     color: p.tinta3,

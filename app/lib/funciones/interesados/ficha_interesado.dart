@@ -154,6 +154,31 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
     }
   }
 
+  bool _guardandoMails = false;
+
+  Future<void> _cambiarAceptaMailsAhora(bool acepta) async {
+    setState(() => _guardandoMails = true);
+    final mensajero = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(repositorioProvider)
+          .cambiarAceptaMarketing(clienteId: _i.clienteId, acepta: acepta);
+      if (!mounted) return;
+      setState(() => _i = _i.copiar(aceptaMarketing: acepta));
+      // Campañas cuenta destinatarios: tiene que enterarse del cambio.
+      ref.invalidate(destinatariosProvider);
+      ref.invalidate(conEmailProvider);
+      ref.invalidate(interesadosProvider);
+    } catch (e) {
+      mensajero.showSnackBar(SnackBar(content: Text('No se pudo guardar: $e')));
+    } finally {
+      if (mounted) setState(() => _guardandoMails = false);
+    }
+  }
+
+  ValueChanged<bool>? get _cambiarAceptaMails =>
+      _guardandoMails ? null : _cambiarAceptaMailsAhora;
+
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
@@ -255,7 +280,13 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
                     ],
 
                     const SizedBox(height: Esp.md),
-                    Aparecer(indice: 4, child: _Contacto(interesado: _i)),
+                    Aparecer(
+                      indice: 4,
+                      child: _Contacto(
+                        interesado: _i,
+                        onAceptaMails: _cambiarAceptaMails,
+                      ),
+                    ),
 
                     const SizedBox(height: Esp.md),
                     Aparecer(indice: 5, child: _Operacion(interesado: _i)),
@@ -959,9 +990,12 @@ class _Cheques extends StatelessWidget {
 }
 
 class _Contacto extends StatelessWidget {
-  const _Contacto({required this.interesado});
+  const _Contacto({required this.interesado, required this.onAceptaMails});
 
   final Interesado interesado;
+
+  /// Null mientras se guarda, para que no se pueda tocar dos veces.
+  final ValueChanged<bool>? onAceptaMails;
 
   @override
   Widget build(BuildContext context) {
@@ -987,6 +1021,22 @@ class _Contacto extends StatelessWidget {
           if (i.whatsapp != null)
             FilaDato(etiqueta: 'WhatsApp', valor: i.whatsapp!, mono: true),
           FilaDato(etiqueta: 'Email', valor: i.email ?? Fmt.sinDato),
+          // El consentimiento para campañas (checklist 4.1). Sin esto, los
+          // interesados cargados antes quedaban afuera de las campañas para
+          // siempre, porque nada dejaba cambiarlo.
+          if (i.email != null)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Acepta recibir novedades por email'),
+              subtitle: Text(
+                i.aceptaMarketing
+                    ? 'Recibe las campañas.'
+                    : 'No recibe campañas. Marcalo solo si lo aceptó.',
+              ),
+              value: i.aceptaMarketing,
+              onChanged: onAceptaMails,
+            ),
           FilaDato(
             etiqueta: 'Localidad',
             valor: [

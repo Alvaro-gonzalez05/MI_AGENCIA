@@ -146,6 +146,9 @@ class _RepoVacio implements Repositorio {
   Future<int> destinatariosPosibles() async => 0;
 
   @override
+  Future<int> interesadosConEmail() async => 0;
+
+  @override
   Future<ConfigAgencia> config() async => const ConfigAgencia();
 
   @override

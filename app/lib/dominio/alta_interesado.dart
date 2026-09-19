@@ -14,12 +14,17 @@ class AltaInteresado {
     this.presupuesto,
     this.financiacion = false,
     this.notas,
+    this.aceptaMarketing = false,
   });
 
   final String solicitud, nombre, cuit;
   final String? telefono, email, localidad, vehiculoId, notas;
   final double? presupuesto;
   final bool financiacion;
+
+  /// Aceptó recibir novedades por email. Se pregunta en el alta y no se
+  /// asume: mandarle mails a quien no lo aceptó es spam. Sin email no vale.
+  final bool aceptaMarketing;
 
   void validar() {
     if (nombre.trim().length < 2) {
@@ -47,6 +52,7 @@ class AltaInteresado {
     'presupuesto_max': presupuesto,
     'necesita_financiacion': financiacion,
     'notas': notas,
+    'acepta_marketing': aceptaMarketing && email != null,
   };
 
   Interesado comoInteresado(String id, String clienteId) => Interesado(
@@ -61,7 +67,7 @@ class AltaInteresado {
     presupuestoMax: presupuesto,
     necesitaFinanciacion: financiacion,
     notas: notas,
-    aceptaMarketing: false,
+    aceptaMarketing: aceptaMarketing && email != null,
     estadoOportunidad: 'nuevo',
     fecha: DateTime.now(),
   );

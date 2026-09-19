@@ -294,7 +294,11 @@ class Interesado {
   /// Se puede consultar el BCRA, pero todavia no se hizo.
   bool get pendienteDeConsultar => tieneCuit && consulta == null;
 
-  Interesado copiar({ConsultaBcra? consulta, String? cuit}) => Interesado(
+  Interesado copiar({
+    ConsultaBcra? consulta,
+    String? cuit,
+    bool? aceptaMarketing,
+  }) => Interesado(
     id: id,
     clienteId: clienteId,
     nombre: nombre,
@@ -306,7 +310,7 @@ class Interesado {
     localidad: localidad,
     provincia: provincia,
     origen: origen,
-    aceptaMarketing: aceptaMarketing,
+    aceptaMarketing: aceptaMarketing ?? this.aceptaMarketing,
     vehiculoId: vehiculoId,
     vehiculoCodigo: vehiculoCodigo,
     vehiculoTitulo: vehiculoTitulo,

@@ -66,6 +66,31 @@ class RepoPrueba extends RepositorioDemo {
 }
 
 void main() {
+  group('Consentimiento para mails (checklist 4.1)', () {
+    AltaInteresado alta({String? email, bool acepta = false}) => AltaInteresado(
+      solicitud: 'solicitud-de-prueba',
+      nombre: 'Ana',
+      cuit: '27230938607',
+      email: email,
+      aceptaMarketing: acepta,
+    );
+
+    test('si lo marcó y hay email, se guarda que acepta', () {
+      expect(
+        alta(email: 'a@b.com', acepta: true).json['acepta_marketing'],
+        isTrue,
+      );
+    });
+
+    test('si no lo marcó, no acepta: se pregunta, no se asume', () {
+      expect(alta(email: 'a@b.com').json['acepta_marketing'], isFalse);
+    });
+
+    test('sin email no hay consentimiento que valga', () {
+      expect(alta(acepta: true).json['acepta_marketing'], isFalse);
+    });
+  });
+
   setUpAll(() => initializeDateFormatting('es_AR'));
   Future<void> pintar(
     WidgetTester tester,
@@ -87,6 +112,25 @@ void main() {
 
   Future<void> tocar(WidgetTester tester, String texto) async {
     final f = find.text(texto);
+    // En un celular el botón puede quedar debajo de lo que la lista llegó a
+    // dibujar (una ListView solo construye lo que está cerca de la pantalla):
+    // se baja hasta encontrarlo, como haría una persona. Sin esto, cada campo
+    // nuevo del formulario rompía el test a 360 px sin que la pantalla
+    // tuviera nada mal.
+    if (f.evaluate().isEmpty) {
+      // La del formulario: abajo sigue montada la lista de interesados, que
+      // también se puede desplazar y no tiene el botón.
+      await tester.scrollUntilVisible(
+        f,
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(FormularioInteresado),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+    }
     await tester.ensureVisible(f);
     await tester.tap(f);
     await tester.pumpAndSettle();
