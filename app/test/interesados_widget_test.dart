@@ -128,6 +128,31 @@ void main() {
     });
   });
 
+  group('Historial de 24 meses (checklist 3.1)', () {
+    for (final (nombre, tamano) in [
+      ('en un celular angosto', celular),
+      ('en un escritorio ancho', escritorio),
+    ]) {
+      testWidgets(
+        'el reclamo se ve amarillo y con su línea de tiempo $nombre',
+        (tester) async {
+          await pintar(
+            tester,
+            FichaInteresado(interesado: _elReclamo),
+            tamano: tamano,
+          );
+
+          // Ya no puede decir "sin deudas": estuvo en situacion 5.
+          expect(find.text('Con reparos'), findsWidgets);
+          expect(find.textContaining('Sin deudas en 24'), findsNothing);
+          // La linea de tiempo, con su resumen.
+          expect(find.text('Últimos 18 meses'), findsOneWidget);
+          expect(find.textContaining('al día desde abril 2025'), findsWidgets);
+        },
+      );
+    }
+  });
+
   group('Ficha del interesado', () {
     for (final (nombre, tamano) in [
       ('en un celular angosto', celular),
@@ -301,6 +326,47 @@ final _limpio = Interesado(
     situacionMaxima: 1,
     entidades: const [
       EntidadBcra(entidad: 'BANCO LIMPIO', situacion: 1, montoMiles: 500),
+    ],
+  ),
+);
+
+/// El patron del reclamo del cliente, con datos inventados: hoy sin deuda,
+/// pero irrecuperable y de alto riesgo hace mas de un anio.
+final _elReclamo = Interesado(
+  id: 'op-9',
+  clienteId: 'cl-9',
+  nombre: 'Dario Reclamo',
+  cuit: '27230938607',
+  consulta: ConsultaBcra(
+    cuit: '27230938607',
+    consultadoEl: DateTime(2026, 9, 18),
+    periodo: null,
+    entidades: const [],
+    situacionMax12m: null,
+    situacionMax24m: 5,
+    ultimoPeriodoIrregular: '202503',
+    historico: [
+      for (final per in const [
+        '202607',
+        '202606',
+        '202605',
+        '202604',
+        '202603',
+        '202602',
+        '202601',
+        '202512',
+        '202511',
+        '202510',
+        '202509',
+        '202508',
+        '202507',
+        '202506',
+        '202505',
+        '202504',
+      ])
+        MesBcra(periodo: per, situacion: 0),
+      const MesBcra(periodo: '202503', situacion: 4),
+      const MesBcra(periodo: '202412', situacion: 5),
     ],
   ),
 );

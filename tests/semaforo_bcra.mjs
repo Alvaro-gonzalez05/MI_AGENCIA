@@ -82,8 +82,17 @@ for (const c of casos) {
     chequesRechazados = false,
     procesoJudicial = false,
     diasAtraso = 0,
+    max12m = null,
+    max24m = null,
+    mesesHistorico = 0,
     esperado,
   } = c;
+
+  // El historial se arma con meses sin deuda: al semaforo solo le importan
+  // las peores situaciones (max12m, max24m) y si hay meses o no.
+  const historico = JSON.stringify(
+    Array.from({ length: mesesHistorico }, (_, i) => ({ periodo: String(202607 - i), situacion: 0 })),
+  );
 
   const { rows: [{ id: cliente }] } = await db.query(
     `insert into public.clientes (agencia_id, nombre, cuit) values ($1, $2, $3) returning id`,
@@ -95,10 +104,12 @@ for (const c of casos) {
       `insert into public.bcra_consultas
          (agencia_id, cliente_id, cuit, situacion_maxima, cantidad_entidades,
           cheques_sin_pagar, tiene_cheques_rechazados, tiene_proceso_judicial,
-          dias_atraso_max)
-       values ($1, $2, (select cuit from public.clientes where id=$2), $3, $4, $5, $6, $7, $8)`,
+          dias_atraso_max, situacion_max_12m, situacion_max_24m, historico)
+       values ($1, $2, (select cuit from public.clientes where id=$2), $3, $4, $5, $6, $7, $8,
+               $9, $10, $11::jsonb)`,
       [agencia, cliente, entidades === 0 ? null : situacion, entidades,
-       chequesSinPagar, chequesRechazados, procesoJudicial, diasAtraso],
+       chequesSinPagar, chequesRechazados, procesoJudicial, diasAtraso,
+       max12m, max24m, historico],
     );
   }
 
@@ -119,7 +130,8 @@ for (const c of casos) {
 
   // La bandera que separa "sin deudas" de "sin consultar" tambien se afirma:
   // es la que decide si el informe dice "limpio" o "no sabemos".
-  const sinDeudasEsperado = consultado && entidades === 0;
+  // "Sin deudas" de verdad es nada hoy Y nada en 24 meses.
+  const sinDeudasEsperado = consultado && entidades === 0 && mesesHistorico === 0;
   if (fila.sin_deudas_informadas !== sinDeudasEsperado) {
     fallos++;
     console.log(`  FALLA ${caso}`);

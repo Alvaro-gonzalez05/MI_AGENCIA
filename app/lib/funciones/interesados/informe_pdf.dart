@@ -52,6 +52,12 @@ abstract final class InformeCrediticio {
           if (c != null) ...[
             pw.SizedBox(height: 14),
             _resumenBcra(c),
+            // Los 24 meses: sin esto el informe decia "sin deudas" de alguien
+            // que fue irrecuperable (checklist del cliente, punto 3.1).
+            if (c.historico.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              _historial(c),
+            ],
             if (c.entidades.isNotEmpty) ...[
               pw.SizedBox(height: 14),
               _entidades(c),
@@ -347,13 +353,21 @@ abstract final class InformeCrediticio {
         pw.Row(
           children: [
             _dato(
-              'Peor situación',
+              'Situación hoy',
               c.situacionMaxima == null ? '—' : '${c.situacionMaxima}',
               detalle: c.entidades.isEmpty
-                  ? 'sin deudas'
+                  ? 'sin deuda hoy'
                   : c.entidades.first.descripcionSituacion,
             ),
-            _dato('Entidades', '${c.entidades.length}'),
+            // Sin esta tarjeta, alguien que fue irrecuperable y ya pago se
+            // veia igual que alguien que nunca debio.
+            _dato(
+              'Peor en 24 meses',
+              c.situacionMax24m == null ? '—' : '${c.situacionMax24m}',
+              detalle: c.situacionMax24m == null
+                  ? 'sin deudas'
+                  : _nombreSituacion(c.situacionMax24m!),
+            ),
             _dato('Deuda informada', _pesos(c.totalDeuda)),
             _dato(
               'Atraso máximo',
@@ -386,7 +400,11 @@ abstract final class InformeCrediticio {
                 _amarilloLavado,
               ),
             if (c.sinDeudasInformadas)
-              _bandera('Sin deudas informadas', _verde, _verdeLavado),
+              _bandera('Sin deudas en 24 meses', _verde, _verdeLavado),
+            if (c.regularizo &&
+                (c.situacionMax24m ?? 0) >= 2 &&
+                c.alDiaDesde.isNotEmpty)
+              _bandera('Al día desde ${c.alDiaDesde}', _verde, _verdeLavado),
           ],
         ),
         pw.SizedBox(height: 10),
@@ -398,6 +416,108 @@ abstract final class InformeCrediticio {
       ],
     ),
   );
+
+  /// La línea de tiempo de 24 meses: un cuadradito por mes, del más viejo
+  /// al más nuevo, pintado con la peor situación de ese mes.
+  static pw.Widget _historial(ConsultaBcra c) {
+    final meses = c.historico.reversed.toList();
+    return _seccion(
+      'Últimos ${meses.length} meses',
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            height: 22,
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < meses.length; i++) ...[
+                  if (i > 0) pw.SizedBox(width: 2),
+                  pw.Expanded(
+                    child: pw.Container(
+                      decoration: pw.BoxDecoration(
+                        color: _colorSituacion(meses[i].situacion),
+                        borderRadius: pw.BorderRadius.circular(2),
+                        border: meses[i].sinDeuda
+                            ? pw.Border.all(color: _borde, width: 0.6)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                meses.first.corto,
+                style: const pw.TextStyle(fontSize: 7.5, color: _tinta3),
+              ),
+              pw.Text(
+                meses.last.corto,
+                style: const pw.TextStyle(fontSize: 7.5, color: _tinta3),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 7),
+          pw.Wrap(
+            spacing: 10,
+            runSpacing: 3,
+            children: [
+              for (final (sit, texto) in const [
+                (0, 'Sin deuda'),
+                (1, 'Normal'),
+                (2, 'Riesgo bajo'),
+                (3, 'Riesgo medio'),
+                (4, 'Alto / irrecuperable'),
+              ])
+                pw.Row(
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    pw.Container(
+                      width: 7,
+                      height: 7,
+                      decoration: pw.BoxDecoration(
+                        color: _colorSituacion(sit),
+                        border: sit == 0
+                            ? pw.Border.all(color: _borde, width: 0.6)
+                            : null,
+                      ),
+                    ),
+                    pw.SizedBox(width: 3),
+                    pw.Text(
+                      texto,
+                      style: const pw.TextStyle(fontSize: 7.5, color: _tinta3),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static PdfColor _colorSituacion(int s) => switch (s) {
+    0 => _hundido,
+    1 => _verde,
+    2 => const PdfColor.fromInt(0xFFD9A62B),
+    3 => const PdfColor.fromInt(0xFFE0782F),
+    _ => _rojo,
+  };
+
+  static String _nombreSituacion(int s) => switch (s) {
+    1 => 'normal',
+    2 => 'riesgo bajo',
+    3 => 'riesgo medio',
+    4 => 'riesgo alto',
+    5 => 'irrecuperable',
+    6 => 'irrecuperable (téc.)',
+    _ => '',
+  };
 
   /// Doce filas entran holgadas en lo que queda de una hoja; mas que eso
   /// puede necesitar partirse, y ahi vale mas partir que dejar la tabla a

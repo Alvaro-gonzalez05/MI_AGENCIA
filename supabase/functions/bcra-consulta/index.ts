@@ -13,10 +13,15 @@
 //    GET /Deudas/Historicas/{cuit}       24 meses hacia atrás
 //    GET /Deudas/ChequesRechazados/{cuit}
 //
+//  Los tres. Hasta la 0.5 se usaban solo el primero y el tercero, y eso
+//  hacía que alguien que fue irrecuperable y después pagó saliera "sin
+//  deudas": /Deudas solo mira el último mes. Ver historial.ts.
+//
 //  Desplegar: supabase functions deploy bcra-consulta
 // =====================================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { resumirHistorial } from './historial.ts';
 
 const BCRA = 'https://api.bcra.gob.ar/centraldedeudores/v1.0';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -52,9 +57,10 @@ interface EntidadBcra {
   procesoJud?: boolean;
 }
 
-/// El BCRA devuelve 404 tanto cuando el CUIT no existe como cuando la
-/// persona no tiene deudas informadas. Para el negocio son lo mismo: no hay
-/// nada en su contra. Por eso 404 no es un error.
+/// El BCRA devuelve 404 cuando ESA consulta no tiene nada para ese CUIT. No
+/// es un error, pero tampoco quiere decir "limpio": un 404 en /Deudas solo
+/// dice que no debe nada ESTE mes. Por eso se miran las tres consultas y
+/// recién con las tres se puede hablar de "sin deudas".
 async function traer(url: string): Promise<unknown | null> {
   const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
   if (r.status === 404) return null;
@@ -137,6 +143,9 @@ Deno.serve(async (req) => {
         .eq('cuit', cuit)
         .is('error', null)
         .gt('expira_at', new Date().toISOString())
+        // Una consulta guardada antes de mirar el historial puede decir
+        // "sin deudas" de alguien que tuvo: no se reutiliza.
+        .not('historico', 'is', null)
         .order('consultado_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -148,14 +157,17 @@ Deno.serve(async (req) => {
   // ---- Al BCRA ----
   let deudas: Record<string, unknown> | null;
   let cheques: Record<string, unknown> | null;
+  let historicas: Record<string, unknown> | null;
   try {
-    // En paralelo: son dos servicios distintos y no dependen entre sí.
-    const [d, c] = await Promise.all([
+    // En paralelo: son tres consultas independientes.
+    const [d, c, h] = await Promise.all([
       traer(`${BCRA}/Deudas/${cuit}`),
       traer(`${BCRA}/Deudas/ChequesRechazados/${cuit}`),
+      traer(`${BCRA}/Deudas/Historicas/${cuit}`),
     ]);
     deudas = d as Record<string, unknown> | null;
     cheques = c as Record<string, unknown> | null;
+    historicas = h as Record<string, unknown> | null;
   } catch (e) {
     return responder(
       { error: `No se pudo consultar el BCRA: ${e instanceof Error ? e.message : e}` },
@@ -196,11 +208,16 @@ Deno.serve(async (req) => {
     }
   }
 
+  const historial = resumirHistorial(historicas);
+
   const fila = {
     agencia_id: agenciaId,
     cliente_id: clienteId,
     cuit,
-    denominacion: (resultados.denominacion as string) ?? null,
+    // Si hoy no tiene deuda, /Deudas no trae la razón social; el histórico
+    // sí puede traerla.
+    denominacion:
+      (resultados.denominacion as string) ?? historial.denominacion ?? null,
     periodo: (ultimo?.periodo as string) ?? null,
     situacion_maxima: situacionMaxima,
     total_deuda_miles: totalMiles,
@@ -214,8 +231,13 @@ Deno.serve(async (req) => {
     cheques_sin_pagar: sinPagar,
     entidades,
     cheques: causales,
+    situacion_max_12m: historial.situacionMax12m,
+    situacion_max_24m: historial.situacionMax24m,
+    ultimo_periodo_irregular: historial.ultimoPeriodoIrregular,
+    historico: historial.historico,
     payload_deudas: deudas,
     payload_cheques: cheques,
+    payload_historico: historicas,
     consultado_at: new Date().toISOString(),
     expira_at: new Date(Date.now() + DIAS_VIGENCIA * 86400000).toISOString(),
   };
@@ -239,7 +261,8 @@ Deno.serve(async (req) => {
   return responder({
     ok: true,
     cacheada: false,
-    sinDeudasInformadas: entidades.length === 0,
+    // "Sin deudas" solo si no hay nada hoy Y nada en 24 meses.
+    sinDeudasInformadas: entidades.length === 0 && historial.historico.length === 0,
     consulta: fila,
   });
 });

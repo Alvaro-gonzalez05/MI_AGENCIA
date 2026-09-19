@@ -12,7 +12,12 @@
     "Este archivo es el contrato entre las dos. Lo leen:",
     "  tests/semaforo_bcra.mjs   -> lo corre contra Postgres de verdad",
     "  app/test/bcra_test.dart   -> lo corre contra el codigo de la app",
-    "Si alguien cambia un criterio en un solo lado, uno de los dos falla."
+    "Si alguien cambia un criterio en un solo lado, uno de los dos falla.",
+    "",
+    "Desde la 0017 el semaforo tambien mira el historial de 24 meses del BCRA",
+    "(max12m, max24m, mesesHistorico). Lo pidio el cliente en el checklist,",
+    "punto 3.1: alguien que fue irrecuperable y despues pago salia 'sin",
+    "deudas', porque el periodo actual contesta 404 y nadie miraba atras."
   ],
   "casos": [
     {
@@ -136,6 +141,64 @@
       "entidades": 0,
       "chequesRechazados": true,
       "esperado": "amarillo"
+    },
+    {
+      "caso": "EL RECLAMO: hoy sin deuda, pero fue irrecuperable hace 16 meses",
+      "entidades": 0,
+      "max12m": null,
+      "max24m": 5,
+      "mesesHistorico": 24,
+      "esperado": "amarillo"
+    },
+    {
+      "caso": "hoy sin deuda, pero situacion 4 en los ultimos 12 meses",
+      "entidades": 0,
+      "max12m": 4,
+      "max24m": 4,
+      "mesesHistorico": 12,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "hoy en situacion 1, pero situacion 5 en los ultimos 12 meses",
+      "situacion": 1,
+      "entidades": 1,
+      "max12m": 5,
+      "max24m": 5,
+      "mesesHistorico": 24,
+      "esperado": "rojo"
+    },
+    {
+      "caso": "hoy en situacion 1, con situacion 3 hace mas de un anio",
+      "situacion": 1,
+      "entidades": 1,
+      "max12m": 1,
+      "max24m": 3,
+      "mesesHistorico": 24,
+      "esperado": "amarillo"
+    },
+    {
+      "caso": "hoy sin deuda, historial de 24 meses siempre en situacion 1: pago y cerro",
+      "entidades": 0,
+      "max12m": 1,
+      "max24m": 1,
+      "mesesHistorico": 24,
+      "esperado": "verde"
+    },
+    {
+      "caso": "hoy sin deuda, atrasos leves (situacion 2) hace un anio y medio",
+      "entidades": 0,
+      "max12m": null,
+      "max24m": 2,
+      "mesesHistorico": 20,
+      "esperado": "verde"
+    },
+    {
+      "caso": "hoy sin deuda y el historial solo tiene meses sin deuda",
+      "entidades": 0,
+      "max12m": null,
+      "max24m": null,
+      "mesesHistorico": 6,
+      "esperado": "sin_datos"
     }
   ]
 }

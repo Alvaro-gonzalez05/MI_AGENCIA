@@ -136,6 +136,52 @@ void main() {
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
   });
 
+  test('genera el informe con el historial de 24 meses', () async {
+    // El caso del reclamo del cliente (checklist 3.1): hoy sin deuda, pero
+    // irrecuperable hace mas de un anio. El PDF decia "sin deudas".
+    final bytes = await InformeCrediticio.generar(
+      interesado: Interesado(
+        id: 'op-4',
+        clienteId: 'cl-4',
+        nombre: 'Con Historial',
+        cuit: '27230938607',
+        consulta: ConsultaBcra(
+          cuit: '27230938607',
+          consultadoEl: DateTime(2026, 9, 18),
+          entidades: const [],
+          situacionMax24m: 5,
+          ultimoPeriodoIrregular: '202503',
+          historico: [
+            for (final per in const [
+              '202607',
+              '202606',
+              '202605',
+              '202604',
+              '202603',
+              '202602',
+              '202601',
+              '202512',
+              '202511',
+              '202510',
+              '202509',
+              '202508',
+              '202507',
+              '202506',
+              '202505',
+              '202504',
+            ])
+              MesBcra(periodo: per, situacion: 0),
+            const MesBcra(periodo: '202503', situacion: 4),
+            const MesBcra(periodo: '202412', situacion: 5),
+          ],
+        ),
+      ),
+      agencia: 'Agencia del Oeste',
+    );
+
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+  });
+
   test('genera el informe aunque no se haya consultado nada', () async {
     // Sin consulta el PDF igual tiene que salir: sirve como ficha del
     // interesado, y decir "no se consulto" tambien es informacion.

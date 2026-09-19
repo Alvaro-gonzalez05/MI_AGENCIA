@@ -67,6 +67,14 @@ void main() {
           tieneProcesoJudicial: c['procesoJudicial'] as bool? ?? false,
           tieneRefinanciaciones: c['refinanciaciones'] as bool? ?? false,
           diasAtrasoMax: c['diasAtraso'] as int? ?? 0,
+          // El historial: meses sin deuda, igual que en el test de SQL. Al
+          // semaforo solo le importan las peores situaciones y si hay meses.
+          situacionMax12m: c['max12m'] as int?,
+          situacionMax24m: c['max24m'] as int?,
+          historico: [
+            for (var i = 0; i < (c['mesesHistorico'] as int? ?? 0); i++)
+              MesBcra(periodo: '${202607 - i}', situacion: 0),
+          ],
         );
 
         expect(
@@ -77,7 +85,11 @@ void main() {
               'Compara ConsultaBcra.semaforo con v_clientes_semaforo.',
         );
 
-        expect(consulta.sinDeudasInformadas, cantidad == 0);
+        // "Sin deudas" de verdad es nada hoy Y nada en 24 meses.
+        expect(
+          consulta.sinDeudasInformadas,
+          cantidad == 0 && (c['mesesHistorico'] as int? ?? 0) == 0,
+        );
 
         // Cualquiera sea el color, siempre se explica por que. Un semaforo
         // sin motivo no le sirve al vendedor para hablar con el cliente.
@@ -85,6 +97,88 @@ void main() {
         expect(consulta.recomendacion, isNotEmpty);
       });
     }
+  });
+
+  group('Historial de 24 meses', () {
+    // La forma de una fila de v_clientes_semaforo para el caso del reclamo
+    // del cliente (checklist 3.1), con datos inventados.
+    Map<String, dynamic> elReclamo() => {
+      'cuit': '20111111112',
+      'consultado_at': '2026-09-18T12:49:31Z',
+      'situacion_maxima': null,
+      'cantidad_entidades': 0,
+      'entidades': [],
+      'situacion_max_12m': null,
+      'situacion_max_24m': 5,
+      'ultimo_periodo_irregular': '202503',
+      'historico': [
+        // 16 meses al día (abr 2025 a jul 2026)...
+        for (final p in const [
+          '202607',
+          '202606',
+          '202605',
+          '202604',
+          '202603',
+          '202602',
+          '202601',
+          '202512',
+          '202511',
+          '202510',
+          '202509',
+          '202508',
+          '202507',
+          '202506',
+          '202505',
+          '202504',
+        ])
+          {'periodo': p, 'situacion': 0},
+        // ...despues de haber sido de alto riesgo e irrecuperable.
+        {'periodo': '202503', 'situacion': 4},
+        {'periodo': '202412', 'situacion': 5},
+      ],
+    };
+
+    test('el reclamo: hoy sin deuda no alcanza para decir "sin deudas"', () {
+      final c = ConsultaBcra.desdeJson(elReclamo());
+      expect(c.sinDeudasInformadas, isFalse);
+      expect(c.regularizo, isTrue);
+    });
+
+    test('el reclamo sale amarillo, no verde ni "sin datos"', () {
+      expect(
+        ConsultaBcra.desdeJson(elReclamo()).semaforo,
+        SemaforoCrediticio.amarillo,
+      );
+    });
+
+    test('el reclamo explica qué pasó y desde cuándo está al día', () {
+      final motivos = ConsultaBcra.desdeJson(elReclamo()).motivos.join(' ');
+      expect(motivos, contains('situación 5'));
+      expect(motivos, contains('irrecuperable'));
+      expect(motivos, contains('abril 2025'));
+    });
+
+    test('lee el historial y lo ordena del mes más nuevo al más viejo', () {
+      final h = ConsultaBcra.desdeJson(elReclamo()).historico;
+      expect(h.first.periodo, '202607');
+      expect(h.last.periodo, '202412');
+      expect(h.first.sinDeuda, isTrue);
+      expect(h.last.situacion, 5);
+    });
+
+    test('al día desde: el mes siguiente al último irregular', () {
+      final dic = ConsultaBcra.desdeJson({
+        ...elReclamo(),
+        'ultimo_periodo_irregular': '202512',
+      });
+      // Diciembre + 1 cruza el año.
+      expect(dic.alDiaDesde, 'enero 2026');
+    });
+
+    test('rotulo corto de un mes', () {
+      expect(const MesBcra(periodo: '202607', situacion: 0).corto, 'jul 26');
+      expect(const MesBcra(periodo: '202412', situacion: 5).corto, 'dic 24');
+    });
   });
 
   group('Validacion de CUIT', () {

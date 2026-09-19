@@ -132,6 +132,48 @@ class ChequeBcra {
   }
 }
 
+/// Un mes del historial de 24 meses.
+class MesBcra {
+  const MesBcra({required this.periodo, required this.situacion});
+
+  /// "202607".
+  final String periodo;
+
+  /// Peor situación del mes entre todas las entidades. 0 = sin deuda ese mes.
+  final int situacion;
+
+  bool get sinDeuda => situacion == 0;
+
+  /// "jul 25": corto, porque va debajo de una barrita.
+  String get corto {
+    const m = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
+    final n = int.tryParse(periodo.substring(4)) ?? 1;
+    return '${m[(n - 1).clamp(0, 11)]} ${periodo.substring(2, 4)}';
+  }
+
+  static List<MesBcra> desdeJson(List<dynamic> filas) => [
+    for (final f in filas.whereType<Map>())
+      if (f['periodo'] is String)
+        MesBcra(
+          periodo: f['periodo'] as String,
+          situacion: (f['situacion'] as num?)?.toInt() ?? 0,
+        ),
+  ]..sort((a, b) => b.periodo.compareTo(a.periodo));
+}
+
 /// El resultado completo de una consulta al BCRA.
 class ConsultaBcra {
   const ConsultaBcra({
@@ -151,6 +193,10 @@ class ConsultaBcra {
     this.cacheada = false,
     this.vencida = false,
     this.cheques = const [],
+    this.historico = const [],
+    this.situacionMax12m,
+    this.situacionMax24m,
+    this.ultimoPeriodoIrregular,
   });
 
   final String cuit;
@@ -180,13 +226,62 @@ class ConsultaBcra {
   /// Cheques rechazados, agrupados por causal tal como los informa el BCRA.
   final List<ChequeBcra> cheques;
 
+  /// Los últimos 24 meses, del más nuevo al más viejo.
+  ///
+  /// Existe por el reclamo del cliente (checklist 3.1): /Deudas solo mira el
+  /// último mes, y alguien que fue irrecuperable y después pagó salía "sin
+  /// deudas". La web del BCRA muestra estos 24 meses; la app ahora también.
+  final List<MesBcra> historico;
+
+  /// Peor situación (1-6) en los últimos 12 meses informados, o null.
+  final int? situacionMax12m;
+
+  /// Peor situación (1-6) en los últimos 24 meses informados, o null.
+  final int? situacionMax24m;
+
+  /// Último mes con situación 2 o peor ("202503"), o null.
+  final String? ultimoPeriodoIrregular;
+
   double get totalDeuda => totalDeudaMiles * 1000;
 
-  /// Nadie informó nada sobre esta persona.
+  /// Nadie informó nada sobre esta persona: ni hoy ni en 24 meses.
   ///
-  /// No es lo mismo que "situación 1": puede no tener historial crediticio.
-  /// La ausencia de deudas no acredita solvencia ni confirma la identidad.
-  bool get sinDeudasInformadas => entidades.isEmpty;
+  /// Antes bastaba con que hoy no hubiera deudas, y ese fue justo el error:
+  /// hoy limpio no quiere decir que nunca debió. La ausencia de deudas
+  /// tampoco acredita solvencia ni confirma la identidad.
+  bool get sinDeudasInformadas => entidades.isEmpty && historico.isEmpty;
+
+  /// Hoy no debe nada, pero sí tuvo deuda en los últimos 24 meses.
+  bool get regularizo => entidades.isEmpty && (situacionMax24m ?? 0) >= 1;
+
+  /// "abril 2025": el mes siguiente al último irregular, o sea desde cuándo
+  /// está al día.
+  String get alDiaDesde {
+    final p = ultimoPeriodoIrregular;
+    if (p == null || p.length != 6) return '';
+    var a = int.parse(p.substring(0, 4));
+    var m = int.parse(p.substring(4)) + 1;
+    if (m == 13) {
+      m = 1;
+      a++;
+    }
+    return '${_meses[m - 1]} $a';
+  }
+
+  static const _meses = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ];
 
   /// El período legible: "202607" -> "julio 2026".
   String get periodoLegible {
@@ -211,31 +306,44 @@ class ConsultaBcra {
     return '${meses[m - 1]} ${p.substring(0, 4)}';
   }
 
-  /// El semáforo. Replica exactamente `semaforo_de_situacion` del SQL: si se
-  /// cambia uno hay que cambiar el otro, y por eso hay un test que los ata.
+  /// El semáforo. Replica exactamente `semaforo_con_historial` del SQL
+  /// (migración 0017): si se cambia uno hay que cambiar el otro, y por eso
+  /// los dos corren los mismos casos desde tests/casos_semaforo.json.
   SemaforoCrediticio get semaforo {
     if (vencida) return SemaforoCrediticio.sinDatos;
     if ((situacionMaxima ?? 0) >= 4 ||
         chequesSinPagar > 0 ||
-        tieneProcesoJudicial) {
+        tieneProcesoJudicial ||
+        // Alto riesgo o irrecuperable en el último año, aunque hoy esté al
+        // día: todavía está fresco.
+        (situacionMax12m ?? 0) >= 4) {
       return SemaforoCrediticio.rojo;
     }
     if (situacionMaxima == 2 ||
         situacionMaxima == 3 ||
         chequesRechazados ||
-        diasAtrasoMax > 30) {
+        diasAtrasoMax > 30 ||
+        // Atrasos serios en los últimos dos años.
+        (situacionMax24m ?? 0) >= 3) {
       return SemaforoCrediticio.amarillo;
     }
-    return situacionMaxima == 1
-        ? SemaforoCrediticio.verde
-        : SemaforoCrediticio.sinDatos;
+    if (situacionMaxima == 1) return SemaforoCrediticio.verde;
+    // Hoy sin deuda, pero con historial y nunca peor que situación 2: debió,
+    // pagó y cerró. Es un buen antecedente, no ausencia de datos.
+    if (situacionMaxima == null &&
+        (situacionMax24m == 1 || situacionMax24m == 2)) {
+      return SemaforoCrediticio.verde;
+    }
+    return SemaforoCrediticio.sinDatos;
   }
 
   /// Por qué dio ese color. Es lo que el vendedor le explica al cliente.
   List<String> get motivos {
     final m = <String>[];
     if (sinDeudasInformadas) {
-      m.add('Ninguna entidad informó deudas a su nombre.');
+      m.add(
+        'Ninguna entidad informó deudas a su nombre en los últimos 24 meses.',
+      );
     }
     if (vencida) {
       m.add('Consulta vencida: actualizá los datos antes de evaluar.');
@@ -260,6 +368,29 @@ class ConsultaBcra {
     if (diasAtrasoMax > 30) m.add('Registra $diasAtrasoMax días de atraso.');
     if (tieneRefinanciaciones) m.add('Tiene deuda refinanciada.');
     if (enRevision) m.add('Hay una clasificación en revisión.');
+
+    // El historial: lo que la web del BCRA muestra y la app no miraba.
+    final max24 = situacionMax24m ?? 0;
+    final max12 = situacionMax12m ?? 0;
+    if (max12 >= 4) {
+      m.add(
+        'En los últimos 12 meses estuvo en situación $max12 '
+        '(${_nombreSituacion(max12)}).',
+      );
+    } else if (max24 >= 3) {
+      m.add(
+        'En los últimos 24 meses estuvo en situación $max24 '
+        '(${_nombreSituacion(max24)}).',
+      );
+    }
+    if (regularizo && max24 >= 2 && alDiaDesde.isNotEmpty) {
+      m.add('Hoy no registra deudas: está al día desde $alDiaDesde.');
+    } else if (regularizo && max24 == 1) {
+      m.add(
+        'Hoy no registra deudas, y en los últimos 24 meses pagó en término.',
+      );
+    }
+
     if (m.isEmpty) {
       m.add('Todas las entidades lo informan en situación normal.');
     }
@@ -308,8 +439,22 @@ class ConsultaBcra {
       cheques: ChequeBcra.desdeCausales((j['cheques'] as List?) ?? const []),
       cacheada: cacheada,
       vencida: j['consulta_vencida'] == true,
+      historico: MesBcra.desdeJson((j['historico'] as List?) ?? const []),
+      situacionMax12m: (j['situacion_max_12m'] as num?)?.toInt(),
+      situacionMax24m: (j['situacion_max_24m'] as num?)?.toInt(),
+      ultimoPeriodoIrregular: j['ultimo_periodo_irregular'] as String?,
     );
   }
+
+  static String _nombreSituacion(int s) => switch (s) {
+    1 => 'normal',
+    2 => 'riesgo bajo',
+    3 => 'riesgo medio',
+    4 => 'riesgo alto',
+    5 => 'irrecuperable',
+    6 => 'irrecuperable por disposición técnica',
+    _ => 'sin clasificar',
+  };
 
   /// Postgres manda los numeric como string para no perder precisión.
   static double _num(dynamic v) => switch (v) {

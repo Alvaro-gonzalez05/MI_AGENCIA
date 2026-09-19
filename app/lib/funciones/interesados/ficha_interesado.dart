@@ -14,6 +14,7 @@ import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
 import '../../ui/confirmacion.dart';
+import 'historial_bcra.dart';
 import 'informe_pdf.dart';
 import 'eliminar_interesado.dart';
 
@@ -235,6 +236,13 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
                         onConsultar: _consultar,
                       ),
                     ),
+
+                    // Los 24 meses van antes del detalle de hoy: es lo que
+                    // explica un amarillo o un rojo cuando hoy no debe nada.
+                    if (c != null && c.historico.isNotEmpty) ...[
+                      const SizedBox(height: Esp.md),
+                      Aparecer(indice: 2, child: HistorialBcra(consulta: c)),
+                    ],
 
                     if (c != null && c.entidades.isNotEmpty) ...[
                       const SizedBox(height: Esp.md),
