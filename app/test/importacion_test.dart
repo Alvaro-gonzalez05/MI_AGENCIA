@@ -126,10 +126,11 @@ void main() {
       }, hoy: hoy)!;
       expect(planilla.desdeFoto, isFalse);
 
-      final foto = FilaImportada.desdeJson({
-        'marca': 'VW',
-        'modelo': 'Gol',
-      }, hoy: hoy, desdeFoto: true)!;
+      final foto = FilaImportada.desdeJson(
+        {'marca': 'VW', 'modelo': 'Gol'},
+        hoy: hoy,
+        desdeFoto: true,
+      )!;
       expect(foto.desdeFoto, isTrue);
       // Y sobrevive a que el usuario la destilde en la revision.
       expect(foto.copiar(incluir: false).desdeFoto, isTrue);
