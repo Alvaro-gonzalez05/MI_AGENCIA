@@ -107,7 +107,12 @@ Reglas, en orden de importancia:
    está claramente en dólares, dejá el número igual y aclaralo en
    observaciones.
 5. Fechas en ISO (AAAA-MM-DD). El formato de origen es día/mes/año: 03/07/2026
-   es 2026-07-03. Si solo hay mes y año, usá el día 1.
+   es 2026-07-03. Si solo hay mes y año, usá el día 1. Si hay día y mes pero
+   NO año ("ingresó 20/08"), es del año en curso; si eso diera una fecha
+   futura, es del año anterior.
+5 bis. Si el listado tiene una fecha general arriba ("stock al 15/09",
+   "anotado 12/09") y una unidad no trae fecha propia, usá esa como
+   fecha_ingreso. Es mucho más cerca de la verdad que la de hoy.
 6. Precios: si la planilla distingue compra y venta/publicación, poné
    precio_compra y precio_objetivo. Si hay un solo precio y no se aclara cuál
    es, es el de venta: va en precio_objetivo y precio_compra queda en null.
@@ -118,9 +123,19 @@ Reglas, en orden de importancia:
    "Volkswagen", modelo "Gol Trend", version "1.6". Marca y modelo con la
    ortografía real de fábrica (Volkswagen, Chevrolet, Peugeot, Renault).
 9. km: solo el número, sin "km" ni puntos. "45.000 km" son 45000.
-10. confianza: entre 0 y 1, qué tan seguro estás de ESA fila. Bajala cuando la
-    letra manuscrita es dudosa, cuando la foto está borrosa o cuando tuviste
-    que interpretar una abreviatura.
+10. confianza: entre 0 y 1, qué tan seguro estás de ESA fila. Calibrala de
+    verdad, no pongas 1 en todo: el número se usa para decidir qué revisa un
+    humano, y si todo dice 1 no sirve para nada. Guía:
+    - 0.95 a 1: texto digital (planilla, PDF exportado), todos los campos
+      explícitos y sin ambigüedad.
+    - 0.8 a 0.95: texto digital pero tuviste que interpretar algo (separar
+      marca de modelo, deducir cuál precio es cuál).
+    - 0.6 a 0.8: manuscrito claro, o foto nítida de un impreso.
+    - 0.3 a 0.6: manuscrito con abreviaturas, números dudosos, foto con
+      reflejos o fuera de foco.
+    - menos de 0.3: adivinaste más de lo que leíste.
+    Un dato faltante NO baja la confianza: la confianza es sobre lo que SÍ
+    leíste.
 11. observaciones: solo lo que estaba escrito y no entra en ningún otro campo
     (color, detalles, "a nombre de", "con GNC"). No escribas comentarios tuyos.
 12. origen: de dónde sacaste la fila, para que un humano pueda encontrarla
@@ -168,7 +183,13 @@ Deno.serve(async (req) => {
     );
   }
 
-  const partes: unknown[] = [];
+  // Sin esto, una fecha sin año ("ingresó 20/08") la completa con el año que
+  // se le ocurra: el modelo no sabe en qué día vive.
+  const hoy = new Date().toLocaleDateString('sv-SE', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
+
+  const partes: unknown[] = [{ text: `Hoy es ${hoy}.` }];
   for (const a of archivos) {
     const nombre = (a.nombre ?? 'archivo').slice(0, 120);
     if (a.tipo === 'binario') {
@@ -254,6 +275,7 @@ Deno.serve(async (req) => {
   const uso = datos?.usageMetadata ?? {};
   return responder({
     vehiculos: Array.isArray(leido.vehiculos) ? leido.vehiculos : [],
+    desde_foto: archivos.some((a) => a.tipo === 'binario'),
     nota: leido.nota ?? null,
     modelo: MODELO,
     tokens: uso.totalTokenCount ?? null,

@@ -105,16 +105,34 @@ void main() {
       expect(f.alta.km, 96000);
     });
 
-    test('avisa cuando falta un precio, sin inventarlo', () {
+    test('el precio que falta queda vacío y sale como error, una sola vez', () {
       final f = FilaImportada.desdeJson({
         'marca': 'VW',
         'modelo': 'Gol',
         'precio_objetivo': 21000000,
       }, hoy: hoy)!;
       expect(f.alta.precioCompra, isNull);
-      expect(f.advertencias.any((a) => a.contains('compra')), isTrue);
       // Falta un dato obligatorio: no se puede cargar sin que alguien lo mire.
       expect(f.completa, isFalse);
+      expect(f.errores['precioCompra'], isNotNull);
+      // Y no se repite como advertencia: seria el mismo problema dos veces.
+      expect(f.advertencias.any((a) => a.contains('precio')), isFalse);
+    });
+
+    test('recuerda si la fila salió de una foto', () {
+      final planilla = FilaImportada.desdeJson({
+        'marca': 'VW',
+        'modelo': 'Gol',
+      }, hoy: hoy)!;
+      expect(planilla.desdeFoto, isFalse);
+
+      final foto = FilaImportada.desdeJson({
+        'marca': 'VW',
+        'modelo': 'Gol',
+      }, hoy: hoy, desdeFoto: true)!;
+      expect(foto.desdeFoto, isTrue);
+      // Y sobrevive a que el usuario la destilde en la revision.
+      expect(foto.copiar(incluir: false).desdeFoto, isTrue);
     });
 
     test('confianza cero es desconfianza, no dato faltante', () {

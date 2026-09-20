@@ -703,6 +703,15 @@ class _TarjetaFila extends StatelessWidget {
       if (fila.origen != null) fila.origen!,
     ].join(' · ');
 
+    // Un 100% leido de una foto no vale lo mismo que un 100% leido de una
+    // celda: se muestra distinto para que nadie lo mire por arriba.
+    final porcentaje = (fila.confianza * 100).round();
+    final (textoConfianza, colorConfianza, lavadoConfianza) = fila.dudosa
+        ? ('Dudosa $porcentaje%', p.observar, p.observarLavado)
+        : fila.desdeFoto
+        ? ('De foto $porcentaje%', p.neutro, p.neutroLavado)
+        : ('Segura $porcentaje%', p.bien, p.bienLavado);
+
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.md + 2),
       child: Column(
@@ -742,11 +751,9 @@ class _TarjetaFila extends StatelessWidget {
               ),
               const SizedBox(width: Esp.sm),
               Pastilla(
-                texto: fila.dudosa
-                    ? 'Dudosa ${(fila.confianza * 100).round()}%'
-                    : 'Segura ${(fila.confianza * 100).round()}%',
-                color: fila.dudosa ? p.observar : p.bien,
-                lavado: fila.dudosa ? p.observarLavado : p.bienLavado,
+                texto: textoConfianza,
+                color: colorConfianza,
+                lavado: lavadoConfianza,
               ),
             ],
           ),

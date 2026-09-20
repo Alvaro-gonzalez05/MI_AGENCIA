@@ -1021,9 +1021,14 @@ class RepositorioSupabase implements Repositorio {
     final lista = datos['vehiculos'];
     if (lista is! List) return const [];
 
+    final desdeFoto = datos['desde_foto'] == true;
     return [
       for (final fila in lista)
-        if (fila is Map) ?FilaImportada.desdeJson(fila.cast<String, dynamic>()),
+        if (fila is Map)
+          ?FilaImportada.desdeJson(
+            fila.cast<String, dynamic>(),
+            desdeFoto: desdeFoto,
+          ),
     ];
   }
 }

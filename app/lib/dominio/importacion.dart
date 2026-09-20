@@ -61,6 +61,7 @@ class FilaImportada {
     this.origen,
     this.advertencias = const [],
     this.incluir = true,
+    this.desdeFoto = false,
   });
 
   final AltaVehiculo alta;
@@ -78,6 +79,11 @@ class FilaImportada {
 
   /// Si entra en la carga. El usuario puede destildar filas en la revision.
   final bool incluir;
+
+  /// Salio de una foto o un PDF, no de una planilla. Se muestra en la
+  /// revision: leer un numero de una hoja fotografiada nunca es tan seguro
+  /// como leerlo de una celda, por mas que el modelo diga que si.
+  final bool desdeFoto;
 
   Map<String, String> get errores => alta.validar();
   bool get completa => errores.isEmpty;
@@ -104,6 +110,7 @@ class FilaImportada {
     origen: origen,
     advertencias: advertencias ?? this.advertencias,
     incluir: incluir ?? this.incluir,
+    desdeFoto: desdeFoto,
   );
 
   /// Convierte una fila del modelo en un alta.
@@ -112,7 +119,11 @@ class FilaImportada {
   /// es una fila de totales o un encabezado que se coló.
   ///
   /// [hoy] se inyecta para poder probar el relleno de fechas.
-  static FilaImportada? desdeJson(Map<String, dynamic> j, {DateTime? hoy}) {
+  static FilaImportada? desdeJson(
+    Map<String, dynamic> j, {
+    DateTime? hoy,
+    bool desdeFoto = false,
+  }) {
     final marca = _texto(j['marca']);
     final modelo = _texto(j['modelo']);
     if (marca.isEmpty && modelo.isEmpty) return null;
@@ -146,15 +157,9 @@ class FilaImportada {
       advertencias.add('La patente no tenía formato argentino y se descartó.');
     }
 
-    final compraPrecio = _numero(j['precio_compra']);
-    final objetivo = _numero(j['precio_objetivo']);
-    if (compraPrecio == null) {
-      advertencias.add('Falta el precio de compra.');
-    }
-    if (objetivo == null) {
-      advertencias.add('Falta el precio de venta.');
-    }
-
+    // Los precios que faltan NO se avisan aca: `validar()` ya los marca como
+    // error, y decir dos veces lo mismo con distintas palabras hace dudar de
+    // si son dos problemas distintos.
     return FilaImportada(
       alta: AltaVehiculo(
         marca: marca,
@@ -165,13 +170,14 @@ class FilaImportada {
         patente: patente,
         fechaCompra: compra,
         fechaIngreso: ingreso,
-        precioCompra: compraPrecio,
-        precioObjetivo: objetivo,
+        precioCompra: _numero(j['precio_compra']),
+        precioObjetivo: _numero(j['precio_objetivo']),
         observaciones: _texto(j['observaciones']),
       ),
       confianza: _confianza(j['confianza']),
       origen: _texto(j['origen']).isEmpty ? null : _texto(j['origen']),
       advertencias: advertencias,
+      desdeFoto: desdeFoto,
     );
   }
 
