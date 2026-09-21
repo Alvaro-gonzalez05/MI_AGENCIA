@@ -1,13 +1,20 @@
 # Qué falta
 
-Estado al 19/09/2026. Ordenado por lo que desbloquea más cosas.
+Estado al 21/09/2026. Ordenado por lo que desbloquea más cosas.
 
-**Las correcciones del checklist del cliente (tanda 1) están respondidas una
-por una en [CHECKLIST_TANDA1.md](CHECKLIST_TANDA1.md).** Quedaron resueltos
-los dos críticos (BCRA y IPC), los dos importantes (ventas y campañas) y la
-mejora del simulador. Sigue pendiente el valor de revista, y hay dos
-decisiones para tomar con el cliente: de qué fuente sacarlo, y si el ajuste
-por inflación se cuenta desde la fecha de ingreso o la de compra.
+**Los checklists del cliente están respondidos punto por punto** en
+[CHECKLIST_TANDA1.md](CHECKLIST_TANDA1.md) y
+[CHECKLIST_TANDA2.md](CHECKLIST_TANDA2.md). De la tanda 2 quedó todo resuelto:
+la ganancia real ahora se ajusta por **dólar oficial desde la fecha de
+compra** (ya no por IPC), el simulador quedó sin anticipo, el informe del BCRA
+trae el detalle por entidad y por mes, y la función de campañas está subida.
+
+**Lo único que falta de tu lado para el email marketing** es la cuenta de
+Resend, el dominio y dos secretos en Supabase: paso a paso en
+[EMAIL_MARKETING.md](EMAIL_MARKETING.md).
+
+Sigue pendiente el valor de revista (ver abajo: ArgAutos gratis, 3 consultas
+por minuto).
 
 **La base quedó vacía y lista para cargar.** Se borraron los datos de
 ejemplo (13 unidades, gastos, precios, ventas e interesados) y quedó la
@@ -123,7 +130,7 @@ Android y web funcionan sin nada de esto.
 | ~~**Gastos**~~ | **Hecho.** Falta adjuntar el comprobante como foto o PDF. |
 | ~~**Precios**~~ | **Hecho.** Falta el gráfico de evolución del precio contra el costo. |
 | ~~**Ventas**~~ | **Hecho.** |
-| ~~**Campañas**~~ | **Hecho.** Falta desplegar la Edge Function y cargar la API key de Resend. |
+| ~~**Campañas**~~ | **Hecho y desplegado.** Falta cargar `RESEND_API_KEY` y `RESEND_FROM` ([EMAIL_MARKETING.md](EMAIL_MARKETING.md)). |
 | ~~**Configuración**~~ | **Hecho**, incluidos los datos de la agencia (nombre, CUIT, contacto). Falta la gestión de usuarios. |
 | ~~**Agencias**~~ | **Hecho.** |
 | ~~**Interesados**~~ | **Hecho, incluido el semáforo del BCRA y el informe en PDF.** |
@@ -170,8 +177,8 @@ campañas, configuración y agencias.
 |---|---|---|
 | `bcra-consulta` | Consulta la Central de Deudores por CUIT y llena `bcra_consultas` | **Desplegada y andando.** Probada contra CUIT reales |
 | `sync-catalogo` | Espeja el catálogo de ArgAutos, mensual | Verificada. **Falta la API key** (pedila gratis en argautos.com) |
-| `sync-indices` | Actualiza IPC del INDEC y cotización del dólar | Por integrar |
-| `enviar-campana` | Envío de emails por Resend | **Escrita.** Falta desplegarla y cargar `RESEND_API_KEY` |
+| ~~`sync-indices`~~ | IPC del INDEC y dólar | **Hecho dentro de la base**, sin Edge Function: `sincronizar_ipc()` (11:00 UTC) y `sincronizar_dolar()` (21:30 UTC) con pg_cron |
+| `enviar-campana` | Envío de emails por Resend | **Desplegada.** Falta cargar `RESEND_API_KEY` y `RESEND_FROM` |
 | `importar-vehiculos` | Lee el stock de una planilla, un PDF, un Word o una foto con Gemini | **Escrita.** Falta desplegarla y cargar `GEMINI_API_KEY` |
 
 El BCRA no manda cabeceras CORS y ArgAutos limita por IP: las dos **tienen** que
@@ -180,7 +187,13 @@ consumirse desde Edge Functions, nunca desde la app.
 ### Detalles chicos
 
 - **El tema no se recuerda** al cerrar la app. Falta `shared_preferences`.
-- **Valor de revista**: falta la fuente de datos. El cálculo y la comparación
+- **Valor de revista**: la decisión es usar **ArgAutos en su plan gratis**
+  (sin API key, 3 consultas por minuto) y completar los precios de a poco con
+  un proceso que respete ese límite: 3 por minuto son 180 por hora, así que
+  un stock de 60 unidades se completa en 20 minutos y se refresca una vez por
+  mes (ArgAutos actualiza sus fuentes el día 1). Falta programarlo. Lo de
+  abajo queda como alternativa.
+- **Valor de revista, alternativas**: falta la fuente de datos. El cálculo y la comparación
   porcentual ya están en la base (`v_inventario.revista_ars`,
   `var_vs_revista`). La opción gratuita verificada es la tabla de valuación
   del DNRPA: la publica el Estado todos los meses en PDF con dirección
@@ -222,9 +235,8 @@ consumirse desde Edge Functions, nunca desde la app.
 
 ## Decisiones que te tocan a vos
 
-1. **Proveedor de email**: Resend (3.000/mes gratis, más simple) o Brevo
-   (300/día gratis, con editor visual). Cambia cómo se escribe `enviar-campana`.
-2. **API key de ArgAutos**: sin ella el catálogo no se puede espejar.
+1. ~~**Proveedor de email**~~: Resend. Falta la cuenta y el dominio.
+2. ~~**API key de ArgAutos**~~: se arranca con el plan gratis, sin key.
 3. **Plan de Supabase**: el free tier pausa proyectos inactivos y tiene 500 MB
    de base. Para un cliente real conviene Pro (USD 25/mes) — decidilo con él y
    metelo en el presupuesto.
