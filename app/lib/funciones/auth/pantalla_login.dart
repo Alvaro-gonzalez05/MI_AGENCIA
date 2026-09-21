@@ -450,7 +450,7 @@ class _PanelMarca extends StatelessWidget {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 440),
                         child: Text(
-                          'Costos reales, márgenes ajustados por inflación y '
+                          'Costos reales, márgenes ajustados por dólar y '
                           'alertas de rotación. Para que el precio de venta no '
                           'sea una corazonada.',
                           style: TextStyle(

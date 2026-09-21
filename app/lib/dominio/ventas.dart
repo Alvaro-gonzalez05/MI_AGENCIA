@@ -44,7 +44,8 @@ class Venta {
       ? null
       : (precioFinal - costoTotal!) / precioFinal;
 
-  /// Lo que quedo de verdad, descontada la inflacion del periodo.
+  /// Lo que quedo de verdad, medido en dolares: el costo pasado a dolar
+  /// oficial de cada fecha y traido al dolar del dia de la venta.
   double? get gananciaReal =>
       costoTotalHoy == null ? null : precioFinal - costoTotalHoy!;
 
@@ -186,7 +187,8 @@ class ResultadoVenta {
 
   final double costoTotal;
 
-  /// Costo llevado a moneda de hoy con el IPC del INDEC.
+  /// Costo llevado a pesos de hoy por dolar oficial: la compra al dolar de
+  /// la fecha de compra, cada gasto al de su fecha (migracion 0020).
   final double costoTotalHoy;
 
   final double precioFinal;
@@ -201,7 +203,7 @@ class ResultadoVenta {
   double get margen =>
       precioFinal > 0 ? (precioFinal - costoConCierre) / precioFinal : 0;
 
-  /// La cifra que suele sorprender: lo mismo, descontada la inflacion.
+  /// La cifra que suele sorprender: lo mismo, medido en dolares.
   double get gananciaReal => precioFinal - costoConCierreHoy;
 
   double get margenReal =>
@@ -209,7 +211,8 @@ class ResultadoVenta {
 
   double get gananciaRealUsd => tipoCambio > 0 ? gananciaReal / tipoCambio : 0;
 
-  /// Cuanto se llevo la inflacion de la ganancia nominal.
+  /// Diferencia entre la ganancia en pesos y la medida en dolares. Puede
+  /// ser negativa si el dolar bajo desde la compra.
   double get erosion => ganancia - gananciaReal;
 
   bool get perdioPlata => ganancia < 0;

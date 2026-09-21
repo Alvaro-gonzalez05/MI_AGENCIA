@@ -174,7 +174,7 @@ class _Resumen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Real, descontada la inflación',
+                      'Real, ajustada por dólar (USD)',
                       style: TextStyle(fontSize: 11.5, color: p.tinta3),
                     ),
                     FittedBox(
@@ -204,9 +204,12 @@ class _Resumen extends StatelessWidget {
           Text(
             nominal <= 0
                 ? 'Todavía no hay ganancia acumulada.'
-                : 'La inflación se llevó ${Fmt.pesos(erosion)}: queda el '
-                      '${Fmt.porcentaje(proporcion, decimales: 0)} del poder '
-                      'de compra de esa ganancia.',
+                : erosion >= 0
+                ? 'Medida en dólares, la ganancia es ${Fmt.pesos(erosion)} '
+                      'menor: queda el '
+                      '${Fmt.porcentaje(proporcion, decimales: 0)} de la nominal.'
+                : 'Medida en dólares, la ganancia es ${Fmt.pesos(-erosion)} '
+                      'mayor que en pesos.',
             style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
           ),
         ],
@@ -378,7 +381,7 @@ class _Fila extends ConsumerWidget {
               ),
               Expanded(
                 child: _Mini(
-                  etiqueta: 'Real (IPC)',
+                  etiqueta: 'Real (USD)',
                   valor: Fmt.pesosCompacto(real),
                   color: color,
                 ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../datos/datos_demo.dart';
+import '../datos/dolar_demo.dart';
 import 'modelos.dart';
 
 /// Motor de calculo en Dart.
@@ -17,41 +18,6 @@ import 'modelos.dart';
 /// Cuando Supabase este conectado, las pantallas leen `v_inventario` y NO
 /// pasan por aca. Si se cambia una formula, se cambia en el SQL primero.
 abstract final class Motor {
-  /// Indice IPC acumulado por mes, base 100 en el primer mes de la serie.
-  static Map<String, double> _indices() {
-    final mapa = <String, double>{};
-    var acc = 100.0;
-    for (var i = 0; i < DatosDemo.ipc.length; i++) {
-      final fila = DatosDemo.ipc[i];
-      if (i > 0) acc *= 1 + (fila.variacion ?? 0);
-      mapa[_clave(fila.mes)] = acc;
-    }
-    return mapa;
-  }
-
-  static String _clave(DateTime f) =>
-      '${f.year}-${f.month.toString().padLeft(2, '0')}';
-
-  /// Indice vigente para una fecha.
-  ///
-  /// Si la fecha cae fuera de la serie devuelve el extremo mas cercano, sin
-  /// extrapolar. El original devolvia el indice de HOY para fechas anteriores
-  /// al inicio de la serie, lo que anulaba el ajuste por inflacion justo en
-  /// las unidades mas viejas; aca se corrige igual que en el SQL.
-  static double _indiceEn(DateTime fecha, Map<String, double> indices) {
-    final directo = indices[_clave(fecha)];
-    if (directo != null) return directo;
-
-    final claves = indices.keys.toList()..sort();
-    if (claves.isEmpty) return 100;
-    final clave = _clave(fecha);
-    if (clave.compareTo(claves.first) < 0) return indices[claves.first]!;
-    return indices[claves.last]!;
-  }
-
-  static double _indiceHoy(Map<String, double> indices) =>
-      _indiceEn(DateTime.now(), indices);
-
   /// Reconstruye el inventario completo con todo calculado.
   ///
   /// `extras` son las unidades cargadas durante la sesion en modo demo: se
@@ -63,8 +29,6 @@ abstract final class Motor {
     List<PrecioSemilla> preciosExtra = const [],
     List<VentaSemilla> ventasExtra = const [],
   }) {
-    final indices = _indices();
-    final idxHoy = _indiceHoy(indices);
     final hoy = DateTime.now();
 
     return [...DatosDemo.vehiculos, ...extras].map((v) {
@@ -99,14 +63,17 @@ abstract final class Motor {
       final vendido = venta != null;
       final estado = vendido ? EstadoVehiculo.vendido : v.estado;
 
-      // Costo llevado a moneda de hoy: la compra con el IPC de su mes, y cada
-      // gasto con el IPC del mes en que se hizo.
+      // Costo llevado a pesos de hoy por dolar oficial (migracion 0020): la
+      // compra al dolar de la fecha de COMPRA, cada gasto al de su fecha, y
+      // todo traido al dolar de hoy o, si se vendio, al del dia de la venta.
+      // Los gastos de cierre son del dia de la venta: entran nominales.
+      final dolarRef = DolarDemo.en(fechaFin);
       final gastosAjustados = gastos.fold<double>(
         0,
-        (s, g) => s + g.importe * idxHoy / _indiceEn(g.fecha, indices),
+        (s, g) => s + g.importe * dolarRef / DolarDemo.en(g.fecha),
       );
       final costoTotalHoy =
-          v.precioCompra * idxHoy / _indiceEn(v.fechaIngreso, indices) +
+          v.precioCompra * dolarRef / DolarDemo.en(v.fechaCompra) +
           gastosAjustados +
           gastosFinales;
 
@@ -121,7 +88,9 @@ abstract final class Motor {
           : null;
 
       final precioObjetivoMargen = costoTotal / (1 - cfg.margenObjetivo);
-      final gananciaRealIpc = precioActual - costoTotalHoy;
+      // Vendida: contra lo que se cobro, no contra el ultimo publicado.
+      final precioRef = venta?.precioFinal ?? precioActual;
+      final gananciaRealIpc = precioRef - costoTotalHoy;
 
       final AlertaRotacion alerta;
       if (vendido) {
@@ -164,7 +133,7 @@ abstract final class Motor {
         precioSugerido: redondearArriba(precioObjetivoMargen, cfg.redondeo),
         costoTotalHoy: costoTotalHoy,
         gananciaRealIpc: gananciaRealIpc,
-        gananciaRealUsd: gananciaRealIpc / cfg.tipoCambio,
+        gananciaRealUsd: gananciaRealIpc / dolarRef,
         fechaVenta: venta?.fecha,
         precioFinal: venta?.precioFinal,
         observaciones: v.observaciones,

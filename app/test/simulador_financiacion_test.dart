@@ -10,10 +10,11 @@ import 'package:mi_agencia/dominio/motor_calculo.dart';
 import 'package:mi_agencia/dominio/precios.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 
-/// El simulador de financiación con anticipo (checklist del cliente, 2.2).
+/// El simulador de financiación: solo monto a financiar.
 ///
-/// Antes calculaba siempre sobre el 100% del precio publicado, y casi nadie
-/// financia el auto entero: lo normal es que el comprador entregue algo.
+/// Tanda 1 (punto 2.2) pidió poder cambiar el monto; se agregaron atajos de
+/// anticipo. Tanda 2 (punto 2.2) pidió sacar el anticipo: queda el monto a
+/// financiar y nada más.
 void main() {
   setUpAll(() async => initializeDateFormatting('es_AR'));
 
@@ -75,57 +76,40 @@ void main() {
       ('en un celular', const Size(360, 780)),
       ('en un escritorio', const Size(1440, 900)),
     ]) {
-      testWidgets('el simulador tiene monto y anticipo $donde', (tester) async {
+      testWidgets('el simulador tiene monto a financiar y no anticipo $donde', (
+        tester,
+      ) async {
         await pintar(tester, tamano);
         await montoDelSimulador(tester);
 
         expect(find.text('Monto a financiar'), findsOneWidget);
-        expect(find.text('Anticipo del comprador'), findsOneWidget);
-        expect(find.text('Sin anticipo'), findsOneWidget);
-        expect(find.text('30% de anticipo'), findsOneWidget);
+        expect(find.textContaining('nticipo'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('arranca financiando el precio publicado, sin anticipo', (
-      tester,
-    ) async {
+    testWidgets('arranca financiando el precio publicado', (tester) async {
       await pintar(tester, const Size(1440, 900));
       final campo = await montoDelSimulador(tester);
       expect(campo, findsOneWidget);
-      // Anticipo en cero.
-      expect(find.text(r'$0'), findsWidgets);
+      // 20.000.000 × (1 + 6 % × 12) / 12 = 2.866.667
+      await mostrar(tester, find.text('Cuota mensual'));
+      expect(find.text(r'$2.866.667'), findsOneWidget);
     });
 
-    testWidgets('el atajo de 30% deja el anticipo y el monto que corresponde', (
-      tester,
-    ) async {
-      await pintar(tester, const Size(1440, 900));
-      await montoDelSimulador(tester);
-
-      await mostrar(tester, find.text('30% de anticipo'));
-      await tester.tap(find.text('30% de anticipo'));
-      await tester.pumpAndSettle();
-
-      // 30% de 20.000.000 = 6.000.000 de anticipo; se financian 14.000.000.
-      expect(find.widgetWithText(TextFormField, '14000000'), findsOneWidget);
-      expect(find.text(r'$6.000.000'), findsWidgets);
-      // Y aparece el total con anticipo, que es lo que paga el comprador.
-      expect(find.text('Total con anticipo'), findsOneWidget);
-    });
-
-    testWidgets('no deja financiar más que el precio publicado', (
-      tester,
-    ) async {
+    testWidgets('cambiar el monto recalcula la cuota', (tester) async {
       await pintar(tester, const Size(1440, 900));
       final campo = await montoDelSimulador(tester);
 
-      await tester.enterText(campo, '99000000');
+      await tester.enterText(campo, '14000000');
+      await tester.pumpAndSettle();
+      FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
 
-      // Queda acotado al precio: el anticipo nunca puede ser negativo.
-      expect(find.text(r'$0'), findsWidgets);
-      expect(find.textContaining('-'), findsNothing);
+      // 14.000.000 × 1,72 / 12 = 2.006.667
+      await mostrar(tester, find.text('Cuota mensual'));
+      expect(find.text(r'$2.006.667'), findsOneWidget);
+      expect(find.text(r'$24.080.000'), findsOneWidget); // total financiado
     });
   });
 }

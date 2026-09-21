@@ -4,13 +4,14 @@
   "type": "module",
   "description": "Verificacion del esquema, del semaforo crediticio y del motor de calculo contra un Postgres real (PGlite/WASM). No necesita Docker ni conexion a Supabase.",
   "scripts": {
-    "test": "node generar_sql_completo.mjs --verificar && node migraciones.mjs && node semaforo_bcra.mjs && node --experimental-strip-types --no-warnings historial_bcra.mjs && node ipc.mjs && node paridad_motor.mjs",
+    "test": "node generar_sql_completo.mjs --verificar && node migraciones.mjs && node semaforo_bcra.mjs && node --experimental-strip-types --no-warnings historial_bcra.mjs && node ipc.mjs && node dolar.mjs && node paridad_motor.mjs",
     "migraciones": "node migraciones.mjs",
     "semaforo": "node semaforo_bcra.mjs",
     "paridad": "node paridad_motor.mjs",
     "sql-completo": "node generar_sql_completo.mjs",
     "historial": "node --experimental-strip-types --no-warnings historial_bcra.mjs",
-    "ipc": "node ipc.mjs"
+    "ipc": "node ipc.mjs",
+    "dolar": "node dolar.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.11"

@@ -201,16 +201,16 @@ class _GananciaReal extends StatelessWidget {
         color: p.sobreNegro,
       ),
       _BloqueGanancia(
-        etiqueta: 'Ganancia real (IPC)',
+        etiqueta: 'Ganancia real (USD)',
         valor: Fmt.pesos(resumen.gananciaRealizadaIpc),
-        nota: 'Descontada la inflación del período',
+        nota: 'Ajustada por el dólar oficial de cada compra',
         color: p.acento,
         grande: true,
       ),
       _BloqueGanancia(
         etiqueta: 'En dólares',
         valor: Fmt.dolares(resumen.gananciaRealizadaUsd),
-        nota: 'Al tipo de cambio ${Fmt.pesos(cfg.tipoCambio)}',
+        nota: 'Al dólar oficial del día de cada venta',
         color: p.sobreNegro,
       ),
     ];
@@ -233,7 +233,7 @@ class _GananciaReal extends StatelessWidget {
               Expanded(
                 child: CabeceraBloque(
                   titulo: 'Ganancia de las unidades vendidas',
-                  descripcion: 'Nominal contra real, ajustada por inflación',
+                  descripcion: 'Nominal contra real, ajustada por dólar',
                   sobreNegro: true,
                 ),
               ),
@@ -274,9 +274,12 @@ class _GananciaReal extends StatelessWidget {
           Text(
             resumen.gananciaRealizada <= 0
                 ? 'Todavía no hay ventas cargadas.'
-                : 'La inflación se llevó ${Fmt.pesos(perdida)} de la ganancia '
-                      'nominal: queda ${Fmt.porcentaje(proporcion, decimales: 0)} '
-                      'de poder de compra real.',
+                : perdida >= 0
+                ? 'Medida en dólares, la ganancia es ${Fmt.pesos(perdida)} '
+                      'menor que en pesos: queda el '
+                      '${Fmt.porcentaje(proporcion, decimales: 0)} de la nominal.'
+                : 'Medida en dólares, la ganancia es ${Fmt.pesos(-perdida)} '
+                      'mayor que en pesos.',
             style: TextStyle(fontSize: 13, color: p.sobreNegro2, height: 1.5),
           ),
         ],

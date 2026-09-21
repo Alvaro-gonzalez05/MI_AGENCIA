@@ -116,10 +116,11 @@ const CAMPOS = [
   ['ajusteNecesario', 'ajuste_necesario'],
   ['varVsObjetivo', 'var_vs_objetivo'],
   ['gastosRatio', 'gastos_ratio'],
-  ['costoTotalHoy', 'costo_total_hoy'],
-  ['gananciaRealIPC', 'ganancia_real_ipc'],
-  ['margenRealIPC', 'margen_real_ipc'],
-  ['gananciaRealIPCUSD', 'ganancia_real_usd'],
+  // costoTotalHoy, gananciaRealIPC, margenRealIPC y gananciaRealIPCUSD ya
+  // NO se comparan: el cliente cambio la regla (checklist tanda 2, punto
+  // 2.1). El original ajustaba por IPC desde la fecha de ingreso; ahora se
+  // ajusta por dolar oficial desde la fecha de compra (migracion 0020). Esa
+  // regla nueva la verifica tests/dolar.mjs con el ejemplo del cliente.
   ['alerta', 'alerta'],
   ['cantidadGastos', 'cantidad_gastos'],
 ];

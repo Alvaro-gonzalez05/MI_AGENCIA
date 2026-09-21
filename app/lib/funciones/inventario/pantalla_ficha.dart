@@ -346,7 +346,7 @@ class _Costos extends StatelessWidget {
             ),
           ),
           FilaDato(
-            etiqueta: 'Costo a valor de hoy (IPC)',
+            etiqueta: 'Costo a valor de hoy (USD)',
             valor: Fmt.pesos(v.costoTotalHoy),
             valorColor: p.observar,
           ),
@@ -401,6 +401,7 @@ class _GananciaReal extends StatelessWidget {
     final v = vehiculo;
     final enRojo = v.gananciaRealIpc < 0;
     final color = enRojo ? p.critico : p.bien;
+    final precio = v.vendido ? (v.precioFinal ?? 0) : v.precioActual;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
@@ -420,8 +421,8 @@ class _GananciaReal extends StatelessWidget {
               const SizedBox(width: Esp.md),
               const Expanded(
                 child: CabeceraBloque(
-                  titulo: 'Ganancia real',
-                  descripcion: 'Ajustada por inflación',
+                  titulo: 'Ganancia real (USD)',
+                  descripcion: 'Ajustada por el dólar oficial desde la compra',
                 ),
               ),
             ],
@@ -444,15 +445,14 @@ class _GananciaReal extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Margen real',
+                      'Margen real (USD)',
                       style: TextStyle(fontSize: 11.5, color: p.tinta3),
                     ),
                     Text(
+                      // Vendida: contra lo que se cobró, no contra el
+                      // último precio publicado.
                       Fmt.porcentaje(
-                        v.precioActual > 0
-                            ? (v.precioActual - v.costoTotalHoy) /
-                                  v.precioActual
-                            : 0,
+                        precio > 0 ? v.gananciaRealIpc / precio : 0,
                       ),
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
@@ -469,10 +469,12 @@ class _GananciaReal extends StatelessWidget {
           const SizedBox(height: Esp.lg),
           Text(
             enRojo
-                ? 'A precio de hoy, esta unidad pierde plata una vez descontada '
-                      'la inflación acumulada desde que entró.'
-                : 'Es lo que queda después de descontar la inflación acumulada '
-                      'desde que la unidad entró al stock.',
+                ? 'Medida en dólares, esta unidad pierde plata: lo invertido, '
+                      'llevado al dólar oficial de cada fecha, vale hoy más que '
+                      'su precio.'
+                : 'Lo invertido se pasa a dólares al oficial del día de la compra '
+                      'y de cada gasto, y se trae al dólar de hoy (o al del día '
+                      'de la venta).',
             style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.5),
           ),
         ],
@@ -702,9 +704,9 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
   int _cuotas = 12;
   late double _tasa = widget.cfg.tasaFinanciacionMensual;
 
-  /// Cuánto se financia. Arranca en el precio entero, pero casi nadie
-  /// financia el 100%: lo habitual es que el comprador entregue algo
-  /// (checklist del cliente, punto 2.2).
+  /// Cuánto se financia. Arranca en el precio publicado y se escribe a
+  /// mano. Sin anticipo ni atajos: el cliente pidió que el simulador tenga
+  /// solo el monto a financiar (checklist tanda 2, punto 2.2).
   late double _monto = widget.vehiculo.precioActual;
 
   late final TextEditingController _montoCtrl = TextEditingController(
@@ -715,20 +717,6 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
   void dispose() {
     _montoCtrl.dispose();
     super.dispose();
-  }
-
-  double get _precio => widget.vehiculo.precioActual;
-  double get _anticipo => (_precio - _monto).clamp(0, _precio);
-
-  void _ponerMonto(double monto) {
-    final acotado = monto.clamp(0, _precio).toDouble();
-    setState(() => _monto = acotado);
-    _montoCtrl.value = TextEditingValue(
-      text: acotado.round().toString(),
-      selection: TextSelection.collapsed(
-        offset: acotado.round().toString().length,
-      ),
-    );
   }
 
   @override
@@ -769,22 +757,16 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
           ),
           const SizedBox(height: Esp.lg),
 
-          // Cuánto se financia, y de ahí sale el anticipo.
           CampoFormulario(
             etiqueta: 'Monto a financiar',
-            ayuda: 'El resto lo pone el comprador de anticipo',
             error: _monto <= 0 ? 'Tiene que ser mayor a cero.' : null,
             hijo: TextFormField(
               controller: _montoCtrl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 16),
-              onChanged: (t) {
-                final n = double.tryParse(t) ?? 0;
-                // Se acota al precio, pero sin reescribir el campo mientras
-                // escribe: pisar el texto en cada tecla es insoportable.
-                setState(() => _monto = n > _precio ? _precio : n);
-              },
+              onChanged: (t) =>
+                  setState(() => _monto = double.tryParse(t) ?? 0),
               decoration: InputDecoration(
                 prefixText: r'$',
                 prefixStyle: TextStyle(
@@ -795,28 +777,6 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
               ),
             ),
           ),
-          const SizedBox(height: Esp.sm),
-          Wrap(
-            spacing: Esp.sm,
-            runSpacing: Esp.sm,
-            children: [
-              for (final pct in const [0.0, 0.2, 0.3, 0.5])
-                ChipSeleccion(
-                  etiqueta: pct == 0
-                      ? 'Sin anticipo'
-                      : '${(pct * 100).round()}% de anticipo',
-                  activo: (_anticipo - _precio * pct).abs() < 1,
-                  onTap: () => _ponerMonto(_precio * (1 - pct)),
-                ),
-            ],
-          ),
-          const SizedBox(height: Esp.sm),
-          FilaDato(
-            etiqueta: 'Anticipo del comprador',
-            valor: Fmt.pesos(_anticipo),
-            valorColor: p.tinta2,
-          ),
-
           const SizedBox(height: Esp.lg),
           Text('Cuotas', style: TextStyle(fontSize: 13, color: p.tinta2)),
           const SizedBox(height: Esp.sm),
@@ -896,14 +856,6 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             valor: Fmt.pesos(r.interes),
             valorColor: p.observar,
           ),
-          // Lo que termina pagando el comprador por el auto, con anticipo
-          // incluido. Es el número que pregunta.
-          if (_anticipo > 0)
-            FilaDato(
-              etiqueta: 'Total con anticipo',
-              valor: Fmt.pesos(r.total + _anticipo),
-              destacado: true,
-            ),
         ],
       ),
     );

@@ -105,7 +105,7 @@ afirmar('una respuesta vacía se rechaza sin tocar nada', rechazo);
 const quedan = (await q(`select count(*)::int as n from public.ipc_serie`))[0].n;
 afirmar('la serie sigue entera después del rechazo', quedan >= conSep.length);
 
-// --- El caso del checklist, en el motor -----------------------------------
+// --- El motor ya no usa el IPC --------------------------------------------
 // "Hoy" es el día real en que corre el test: el motor usa current_date. Se
 // carga la serie con estimaciones hasta hoy para que la prueba no dependa
 // de la fecha.
@@ -129,8 +129,11 @@ await q(`insert into public.gastos (agencia_id, vehiculo_id, fecha, categoria, i
 const v = (await q(`select costo_total::float8 as nominal, costo_total_hoy::float8 as hoy,
                            ganancia_estimada::float8 as gan, ganancia_real_ipc::float8 as real
                       from public.v_inventario where id = $1`, [veh]))[0];
-afirmar('el costo en pesos de hoy es mayor que el nominal', v.hoy > v.nominal, JSON.stringify(v));
-afirmar('la ganancia real (IPC) queda por debajo de la nominal', v.real < v.gan, JSON.stringify(v));
+// Desde la migración 0020 la ganancia real se ajusta por DÓLAR (tanda 2,
+// punto 2.1; lo prueba tests/dolar.mjs). El IPC sigue sincronizándose como
+// dato informativo, pero ya no puede mover la ganancia: sin cotizaciones
+// cargadas, el costo de hoy tiene que ser el nominal aunque haya inflación.
+afirmar('el IPC ya no entra en la ganancia real', v.hoy === v.nominal && v.real === v.gan, JSON.stringify(v));
 
 // Cada gasto se ajusta desde SU fecha: el de febrero suma más inflación que
 // el de agosto aunque sean del mismo importe.

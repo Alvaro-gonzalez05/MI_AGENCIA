@@ -60,10 +60,12 @@ void main() {
       }
     });
 
-    test('el costo ajustado por IPC nunca es menor que el nominal', () {
-      // Con inflación positiva, traer plata del pasado a hoy siempre sube.
+    test('la ganancia real es precio menos costo ajustado por dólar', () {
+      // El costo ajustado puede quedar por debajo del nominal si el dólar
+      // bajó desde la compra; lo que no puede fallar es la resta.
       for (final v in Motor.inventario()) {
-        expect(v.costoTotalHoy, greaterThanOrEqualTo(v.costoTotal * 0.999));
+        final precio = v.vendido ? v.precioFinal! : v.precioActual;
+        expect(v.gananciaRealIpc, closeTo(precio - v.costoTotalHoy, 0.01));
       }
     });
   });

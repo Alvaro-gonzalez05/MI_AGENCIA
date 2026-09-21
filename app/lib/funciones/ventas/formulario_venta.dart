@@ -370,7 +370,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
               Icon(Icons.arrow_forward, size: 16, color: p.tinta3),
               Expanded(
                 child: ValorAntesDespues(
-                  etiqueta: 'Ganancia real (IPC)',
+                  etiqueta: 'Ganancia real (USD)',
                   valor: Fmt.pesos(r.gananciaReal),
                   color: color,
                   destacado: true,
@@ -387,7 +387,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
           ),
           FilaDato(etiqueta: 'Margen nominal', valor: Fmt.porcentaje(r.margen)),
           FilaDato(
-            etiqueta: 'Margen real',
+            etiqueta: 'Margen real (USD)',
             valor: Fmt.porcentaje(r.margenReal),
             valorColor: color,
             destacado: true,
@@ -408,11 +408,16 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                   ? 'La operación cierra a pérdida: se vendió por debajo de lo '
                         'que costó ponerla en condiciones.'
                   : r.perdioContraInflacion
-                  ? 'En pesos da ganancia, pero descontada la inflación del '
-                        'período la operación perdió poder de compra. La '
-                        'unidad estuvo ${Fmt.dias(v.diasEnStock)} en stock.'
-                  : 'La inflación se llevó ${Fmt.pesos(r.erosion)} de la '
-                        'ganancia nominal. Lo que queda de verdad es '
+                  ? 'En pesos da ganancia, pero medida en dólares la '
+                        'operación pierde: lo invertido, al dólar de cada '
+                        'fecha, vale más que el precio de venta. La unidad '
+                        'estuvo ${Fmt.dias(v.diasEnStock)} en stock.'
+                  : r.erosion >= 0
+                  ? 'Medida en dólares, la ganancia es ${Fmt.pesos(r.erosion)} '
+                        'menor que en pesos. Lo que queda de verdad es '
+                        '${Fmt.pesos(r.gananciaReal)}.'
+                  : 'Medida en dólares, la ganancia es '
+                        '${Fmt.pesos(-r.erosion)} mayor que en pesos: '
                         '${Fmt.pesos(r.gananciaReal)}.',
               style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
             ),

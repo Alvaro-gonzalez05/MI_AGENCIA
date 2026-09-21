@@ -5,6 +5,27 @@ definición**, la vista `v_inventario` (migración `0008`). Es el port del
 `computeInventory()` del HTML original, que a su vez replicaba la hoja
 "Inventario" del Excel del cliente.
 
+## La ganancia real va por dólar, no por IPC (desde la migración 0020)
+
+El cliente cambió la regla en la tanda 2 del checklist (punto 2.1). La
+ganancia real ya no descuenta inflación desde la fecha de ingreso: mide lo
+invertido **en dólares oficiales** desde la **fecha de compra**.
+
+    costo_usd  = precio_compra / dólar(fecha_compra) + Σ gasto / dólar(fecha del gasto)
+    costo_hoy  = costo_usd × dólar(hoy, o el día de la venta si se vendió)
+    ganancia   = precio (o precio final, si se vendió) − costo_hoy
+
+Las columnas conservan sus nombres (`costo_total_hoy`, `ganancia_real_ipc`,
+`margen_real_ipc`) para no romper las versiones instaladas de la app; la
+0020 agrega `dolar_compra`, `dolar_referencia`, `costo_total_usd` y
+`precio_referencia`. Las cotizaciones las carga `sincronizar_dolar()` todos
+los días en `cotizaciones`. Sin cotización para una fecha, esa parte del
+costo entra nominal. `tests/dolar.mjs` prueba el ejemplo del cliente.
+
+Por eso la paridad con el original ya no compara los campos "IPC": el
+original ajustaba por IPC y esa regla dejó de ser la del cliente. La tabla de
+más abajo es de cuando el ajuste era por IPC.
+
 ## Por qué en SQL y no en Dart
 
 Si las fórmulas viven en la app, hay que reimplementarlas por plataforma, y

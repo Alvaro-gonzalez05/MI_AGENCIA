@@ -150,7 +150,9 @@ class VehiculoInventario {
   final double precioParaMargenObjetivo;
   final double precioSugerido;
 
-  /// Costo llevado a moneda de hoy con el IPC del INDEC.
+  /// Costo llevado a pesos de hoy por dolar oficial, desde la fecha de
+  /// compra (migracion 0020). El nombre `gananciaRealIpc` es historico:
+  /// antes se ajustaba por IPC.
   final double costoTotalHoy;
   final double gananciaRealIpc;
   final double gananciaRealUsd;
