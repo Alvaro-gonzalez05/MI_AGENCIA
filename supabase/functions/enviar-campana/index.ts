@@ -11,13 +11,18 @@
 //  3. Enviar 300 mails desde un celular con la pantalla encendida no es
 //     un plan.
 //
+//  Configuración (una sola vez, ver docs/EMAIL_MARKETING.md):
+//    RESEND_API_KEY   la clave de Resend (re_...)
+//    RESEND_FROM      el remitente, con un dominio verificado en Resend:
+//                     "Automotores del Oeste <novedades@automotoresoeste.com>"
+//
 //  Desplegar:  supabase functions deploy enviar-campana
-//  Secretos:   supabase secrets set RESEND_API_KEY=re_xxx
 // =====================================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const RESEND_FROM = Deno.env.get('RESEND_FROM');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -26,7 +31,8 @@ const TAMANO_LOTE = 100;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 function responder(cuerpo: unknown, status = 200) {
@@ -57,11 +63,20 @@ function escapar(s: string): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return responder({ error: 'Usá POST.' }, 405);
 
-  if (!RESEND_API_KEY) {
+  // Sin configurar no se toca nada: ni la campaña ni los contadores. El
+  // mensaje es para quien usa la app, no para un programador.
+  if (!RESEND_API_KEY || !RESEND_FROM) {
     return responder(
-      { error: 'Falta el secreto RESEND_API_KEY en el proyecto.' },
-      500,
+      {
+        error:
+          'El envío de mails todavía no está configurado. Hace falta conectar ' +
+          'la cuenta de envío (Resend) y el dominio de la agencia. La campaña ' +
+          'quedó guardada como borrador y se puede mandar cuando esté listo.',
+        falta_configurar: true,
+      },
+      503,
     );
   }
 
@@ -86,7 +101,7 @@ Deno.serve(async (req) => {
   // 1. La campaña, leída con los permisos del usuario.
   const { data: campana, error: errorCampana } = await comoUsuario
     .from('campanas')
-    .select('id, agencia_id, nombre, asunto, cuerpo_html, estado, filtro, remitente_nombre, remitente_email')
+    .select('id, agencia_id, nombre, asunto, cuerpo_html, estado, filtro, remitente_nombre')
     .eq('id', campanaId)
     .single();
 
@@ -99,7 +114,16 @@ Deno.serve(async (req) => {
     return responder({ error: 'Esa campaña ya se envió.' }, 409);
   }
 
-  // 2. Los destinatarios: clientes con email que NO pidieron la baja.
+  // La agencia: su nombre es {{agencia}} en el mail, y su email de contacto
+  // es a donde llegan las respuestas. Antes {{agencia}} ponía el nombre de
+  // la CAMPAÑA ("Pickups septiembre") en lugar del de la agencia.
+  const { data: agencia } = await comoUsuario
+    .from('agencias')
+    .select('nombre, email_contacto')
+    .eq('id', campana.agencia_id)
+    .single();
+
+  // 2. Los destinatarios: clientes con email que aceptaron recibir mails.
   //    El filtro de baja no es configurable a propósito.
   let consulta = comoUsuario
     .from('clientes')
@@ -131,10 +155,14 @@ Deno.serve(async (req) => {
     .update({ estado: 'enviando', total_destinatarios: clientes.length })
     .eq('id', campana.id);
 
-  const remitente = campana.remitente_email
-    ? `${campana.remitente_nombre ?? 'Mi Agencia'} <${campana.remitente_email}>`
-    : 'Mi Agencia <onboarding@resend.dev>';
+  // El remitente sale de la configuración: tiene que ser de un dominio
+  // verificado en Resend, o Resend lo rechaza. Si la agencia puso un nombre
+  // propio en la campaña, se usa ese nombre con la dirección configurada.
+  const direccion = RESEND_FROM.match(/<([^>]+)>/)?.[1] ?? RESEND_FROM;
+  const nombreRemitente = campana.remitente_nombre ?? agencia?.nombre;
+  const remitente = nombreRemitente ? `${nombreRemitente} <${direccion}>` : RESEND_FROM;
 
+  const nombreAgencia = escapar(agencia?.nombre ?? '');
   let enviados = 0;
   const fallidos: { email: string; motivo: string }[] = [];
 
@@ -142,15 +170,15 @@ Deno.serve(async (req) => {
     const lote = clientes.slice(i, i + TAMANO_LOTE);
 
     const mails = lote.map((c) => {
-      const nombre = [c.nombre, c.apellido].filter(Boolean).join(' ');
+      const nombre = escapar([c.nombre, c.apellido].filter(Boolean).join(' '));
       return {
         from: remitente,
         to: [c.email as string],
-        subject: completar(campana.asunto, { nombre: escapar(nombre) }),
-        html: completar(campana.cuerpo_html, {
-          nombre: escapar(nombre),
-          agencia: escapar(campana.nombre ?? ''),
-        }),
+        // Las respuestas —incluido el "BAJA" que promete el pie del mail—
+        // le llegan a la agencia y no se pierden en una casilla sin dueño.
+        ...(agencia?.email_contacto ? { reply_to: agencia.email_contacto } : {}),
+        subject: completar(campana.asunto, { nombre, agencia: nombreAgencia }),
+        html: completar(campana.cuerpo_html, { nombre, agencia: nombreAgencia }),
       };
     });
 
@@ -211,6 +239,25 @@ Deno.serve(async (req) => {
         error: f.motivo.slice(0, 500),
       })),
       { onConflict: 'campana_id,cliente_id' },
+    );
+  }
+
+  // Si no salió NINGUNO, la campaña vuelve a borrador. Antes quedaba como
+  // "enviada" con cero mails y no había forma de reintentarla: justo lo que
+  // pasa la primera vez, mientras se termina de configurar el dominio.
+  if (enviados === 0) {
+    await admin.from('campanas').update({ estado: 'borrador' }).eq('id', campana.id);
+    return responder(
+      {
+        error:
+          'No salió ningún mail. Resend respondió: ' +
+          (fallidos[0]?.motivo ?? 'sin detalle') +
+          '. La campaña volvió a borrador para poder reintentarla.',
+        destinatarios: clientes.length,
+        enviados: 0,
+        fallidos: fallidos.length,
+      },
+      502,
     );
   }
 

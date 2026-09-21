@@ -484,7 +484,7 @@ class RepositorioSupabase implements Repositorio {
 
     if (filas.isEmpty) return const [];
 
-    // Los costos y el ajuste por IPC los calcula la vista, no la app.
+    // Los costos y el ajuste por dolar los calcula la vista, no la app.
     final ids = filas.map((f) => f['vehiculo_id'] as String).toList();
     final calculados = await _db
         .from('v_inventario')
@@ -829,10 +829,25 @@ class RepositorioSupabase implements Repositorio {
   Future<int> enviarCampana(String campanaId) async {
     // El envio lo hace el servidor: la API key de Resend no puede viajar
     // dentro de la app, y Resend tampoco manda cabeceras CORS.
-    final r = await _db.functions.invoke(
-      'enviar-campana',
-      body: {'campana_id': campanaId},
-    );
+    late FunctionResponse r;
+    try {
+      r = await _db.functions.invoke(
+        'enviar-campana',
+        body: {'campana_id': campanaId},
+      );
+    } on FunctionException catch (e) {
+      // Sin esto al usuario le llegaba el texto crudo
+      // "FunctionsHttpException(status: 404, ...)", que no dice nada.
+      final detalle = e.details;
+      if (detalle is Map && detalle['error'] != null) {
+        throw Exception(detalle['error']);
+      }
+      throw Exception(
+        e.status == 404
+            ? 'El servicio de envío de mails no está disponible todavía.'
+            : 'No se pudo enviar la campaña. Reintentá en unos minutos.',
+      );
+    }
 
     final datos = r.data;
     if (datos is Map && datos['error'] != null) {
