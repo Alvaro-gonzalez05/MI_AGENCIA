@@ -11,11 +11,27 @@
 //  /Deudas/Historicas/{cuit}, y es lo que muestra la web oficial del BCRA.
 // =====================================================================
 
+export interface EntidadMes {
+  entidad: string;
+  /** 0 = la entidad aparece ese mes pero sin deuda. */
+  situacion: number;
+  /** En MILES de pesos, como lo informa el BCRA. */
+  monto: number;
+  procesoJud: boolean;
+  enRevision: boolean;
+}
+
 export interface MesHistorico {
   /** "202607" */
   periodo: string;
   /** Peor situación del mes entre todas las entidades. 0 = sin deuda. */
   situacion: number;
+  /**
+   * Lo que informó cada entidad ese mes: el detalle por entidad y por mes
+   * que pidió el cliente para el informe (checklist tanda 2, punto 2.4).
+   * Lo peor primero.
+   */
+  entidades: EntidadMes[];
 }
 
 export interface ResumenHistorial {
@@ -72,12 +88,22 @@ export function resumirHistorial(payload: unknown): ResumenHistorial {
   const historico: MesHistorico[] = periodos
     .filter((p) => typeof p.periodo === 'string' && /^\d{6}$/.test(p.periodo as string))
     .map((p) => {
-      const entidades = (p.entidades ?? []) as Array<Record<string, unknown>>;
-      const peor = entidades.reduce((max, e) => {
-        const s = Number(e.situacion ?? 0);
-        return Number.isFinite(s) && s > max ? s : max;
-      }, 0);
-      return { periodo: p.periodo as string, situacion: peor };
+      const crudas = (p.entidades ?? []) as Array<Record<string, unknown>>;
+      const entidades: EntidadMes[] = crudas
+        .map((e) => {
+          const s = Number(e.situacion ?? 0);
+          const m = Number(e.monto ?? 0);
+          return {
+            entidad: String(e.entidad ?? 'Sin identificar').trim(),
+            situacion: Number.isFinite(s) ? s : 0,
+            monto: Number.isFinite(m) ? m : 0,
+            procesoJud: e.procesoJud === true,
+            enRevision: e.enRevision === true,
+          };
+        })
+        .sort((a, b) => b.situacion - a.situacion || b.monto - a.monto);
+      const peor = entidades.reduce((max, e) => Math.max(max, e.situacion), 0);
+      return { periodo: p.periodo as string, situacion: peor, entidades };
     })
     // No se confía en el orden en que llegan: se ordena del más nuevo al más
     // viejo, que es como se leen y como se dibujan.

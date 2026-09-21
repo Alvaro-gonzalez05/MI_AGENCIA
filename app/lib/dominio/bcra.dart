@@ -132,9 +132,47 @@ class ChequeBcra {
   }
 }
 
+/// Lo que informó UNA entidad en UN mes del historial.
+class EntidadMes {
+  const EntidadMes({
+    required this.entidad,
+    required this.situacion,
+    required this.montoMiles,
+    this.procesoJudicial = false,
+    this.enRevision = false,
+  });
+
+  final String entidad;
+
+  /// 0 = la entidad aparece ese mes, pero sin deuda.
+  final int situacion;
+
+  /// En miles de pesos, como lo informa el BCRA.
+  final double montoMiles;
+  final bool procesoJudicial;
+  final bool enRevision;
+
+  double get monto => montoMiles * 1000;
+
+  static List<EntidadMes> desdeJson(List<dynamic> filas) => [
+    for (final f in filas.whereType<Map>())
+      EntidadMes(
+        entidad: (f['entidad'] as String?)?.trim() ?? 'Sin identificar',
+        situacion: (f['situacion'] as num?)?.toInt() ?? 0,
+        montoMiles: (f['monto'] as num?)?.toDouble() ?? 0,
+        procesoJudicial: f['procesoJud'] == true,
+        enRevision: f['enRevision'] == true,
+      ),
+  ];
+}
+
 /// Un mes del historial de 24 meses.
 class MesBcra {
-  const MesBcra({required this.periodo, required this.situacion});
+  const MesBcra({
+    required this.periodo,
+    required this.situacion,
+    this.entidades = const [],
+  });
 
   /// "202607".
   final String periodo;
@@ -143,6 +181,13 @@ class MesBcra {
   final int situacion;
 
   bool get sinDeuda => situacion == 0;
+
+  /// Lo que informó cada entidad ese mes, lo peor primero. Vacío en las
+  /// consultas guardadas antes de la migración 0021 sin respuesta cruda.
+  final List<EntidadMes> entidades;
+
+  /// "jul 2025": para las tablas, donde entra el año entero.
+  String get largo => '${corto.split(' ').first} ${periodo.substring(0, 4)}';
 
   /// "jul 25": corto, porque va debajo de una barrita.
   String get corto {
@@ -170,6 +215,9 @@ class MesBcra {
         MesBcra(
           periodo: f['periodo'] as String,
           situacion: (f['situacion'] as num?)?.toInt() ?? 0,
+          entidades: EntidadMes.desdeJson(
+            (f['entidades'] as List?) ?? const [],
+          ),
         ),
   ]..sort((a, b) => b.periodo.compareTo(a.periodo));
 }
@@ -250,6 +298,34 @@ class ConsultaBcra {
   /// hoy limpio no quiere decir que nunca debió. La ausencia de deudas
   /// tampoco acredita solvencia ni confirma la identidad.
   bool get sinDeudasInformadas => entidades.isEmpty && historico.isEmpty;
+
+  /// El historial reordenado por entidad: para cada banco, financiera o
+  /// tarjeta, sus meses del más nuevo al más viejo (checklist tanda 2, punto
+  /// 2.4). Las entidades van de la peor situación en 24 meses a la mejor, y
+  /// a igualdad, la de más deuda primero.
+  List<(String, List<(MesBcra, EntidadMes)>)> get historialPorEntidad {
+    final porEntidad = <String, List<(MesBcra, EntidadMes)>>{};
+    for (final m in historico) {
+      for (final e in m.entidades) {
+        (porEntidad[e.entidad] ??= []).add((m, e));
+      }
+    }
+    int peor(List<(MesBcra, EntidadMes)> xs) =>
+        xs.fold(0, (a, x) => x.$2.situacion > a ? x.$2.situacion : a);
+    double mayor(List<(MesBcra, EntidadMes)> xs) =>
+        xs.fold(0, (a, x) => x.$2.montoMiles > a ? x.$2.montoMiles : a);
+    final salida = [
+      for (final e in porEntidad.entries)
+        (e.key, e.value..sort((a, b) => b.$1.periodo.compareTo(a.$1.periodo))),
+    ];
+    salida.sort((a, b) {
+      final porSituacion = peor(b.$2).compareTo(peor(a.$2));
+      return porSituacion != 0
+          ? porSituacion
+          : mayor(b.$2).compareTo(mayor(a.$2));
+    });
+    return salida;
+  }
 
   /// Hoy no debe nada, pero sí tuvo deuda en los últimos 24 meses.
   bool get regularizo => entidades.isEmpty && (situacionMax24m ?? 0) >= 1;

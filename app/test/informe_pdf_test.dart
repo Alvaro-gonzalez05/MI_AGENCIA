@@ -182,6 +182,105 @@ void main() {
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
   });
 
+  group('Detalle por entidad y por mes (tanda 2, 2.4)', () {
+    // Tres entidades en 24 meses: un banco que llegó a juicio, una tarjeta
+    // que se atrasó y regularizó, y otro banco siempre normal. Datos
+    // inventados: no hay personas reales en el repositorio.
+    final meses = [
+      for (var i = 0; i < 24; i++)
+        () {
+          final anio = 2026 - ((12 - 7 + i) ~/ 12);
+          final mes = ((7 - 1 - i) % 12 + 12) % 12 + 1;
+          final per = '$anio${mes.toString().padLeft(2, '0')}';
+          final entidades = [
+            EntidadMes(
+              entidad: 'BANCO DE PRUEBA S.A.',
+              situacion: i < 6 ? 5 : 1,
+              montoMiles: 5200.5 + i,
+              procesoJudicial: i < 4,
+            ),
+            if (i >= 3 && i < 15)
+              EntidadMes(
+                entidad: 'TARJETA DE PRUEBA S.A.',
+                situacion: i < 8 ? 3 : 1,
+                montoMiles: 800,
+                enRevision: i == 5,
+              ),
+            const EntidadMes(
+              entidad: 'OTRO BANCO S.A.',
+              situacion: 1,
+              montoMiles: 120,
+            ),
+          ]..sort((a, b) => b.situacion.compareTo(a.situacion));
+          return MesBcra(
+            periodo: per,
+            situacion: entidades.first.situacion,
+            entidades: entidades,
+          );
+        }(),
+    ];
+    final consulta = ConsultaBcra(
+      cuit: '20111111112',
+      consultadoEl: DateTime(2026, 9, 21),
+      entidades: const [],
+      historico: meses,
+    );
+
+    test('agrupa por entidad, la peor primero, meses del más nuevo', () {
+      final por = consulta.historialPorEntidad;
+      expect(por.map((e) => e.$1), [
+        'BANCO DE PRUEBA S.A.',
+        'TARJETA DE PRUEBA S.A.',
+        'OTRO BANCO S.A.',
+      ]);
+      expect(por[0].$2, hasLength(24));
+      expect(por[1].$2, hasLength(12)); // solo los meses en que aparece
+      expect(por[0].$2.first.$1.periodo, '202607');
+      expect(por[0].$2.first.$2.procesoJudicial, isTrue);
+      expect(por[0].$2.first.$2.monto, 5200500);
+    });
+
+    test('lee el detalle guardado por la base', () {
+      final c = ConsultaBcra.desdeJson({
+        'cuit': '20111111112',
+        'historico': [
+          {
+            'periodo': '202607',
+            'situacion': 3,
+            'entidades': [
+              {
+                'entidad': 'TARJETA DE PRUEBA S.A.',
+                'situacion': 3,
+                'monto': 800.5,
+                'procesoJud': true,
+                'enRevision': false,
+              },
+            ],
+          },
+        ],
+      });
+      final e = c.historico.single.entidades.single;
+      expect(e.entidad, 'TARJETA DE PRUEBA S.A.');
+      expect(e.monto, 800500);
+      expect(e.procesoJudicial, isTrue);
+    });
+
+    test('el PDF sale con las tres tablas y los cheques', () async {
+      final bytes = await InformeCrediticio.generar(
+        interesado: Interesado(
+          id: 'op-5',
+          clienteId: 'cl-5',
+          nombre: 'Con Detalle',
+          cuit: '20111111112',
+          consulta: consulta,
+        ),
+        agencia: 'Agencia del Oeste',
+      );
+      expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+      expect(bytes.length, greaterThan(20000));
+    });
+  });
+
   test('genera el informe aunque no se haya consultado nada', () async {
     // Sin consulta el PDF igual tiene que salir: sirve como ficha del
     // interesado, y decir "no se consulto" tambien es informacion.

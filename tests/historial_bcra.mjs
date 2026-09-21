@@ -113,8 +113,8 @@ console.log('Historial de 24 meses del BCRA\n');
       periodos: [{
         periodo: '202607',
         entidades: [
-          { entidad: 'A', situacion: 1 },
-          { entidad: 'B', situacion: 3 },
+          { entidad: 'A', situacion: 1, monto: 50 },
+          { entidad: 'B', situacion: 3, monto: 1234.5, procesoJud: true },
           { entidad: 'C', situacion: 0 },
         ],
       }],
@@ -122,6 +122,15 @@ console.log('Historial de 24 meses del BCRA\n');
   };
   const r = resumirHistorial(pay);
   igual('con varias entidades cuenta la peor del mes', r.historico[0].situacion, 3);
+
+  // El detalle por entidad y por mes (tanda 2, punto 2.4).
+  const det = r.historico[0].entidades;
+  igual('guarda las tres entidades del mes', det.length, 3);
+  igual('la peor va primero', det[0].entidad, 'B');
+  igual('con su monto en miles', det[0].monto, 1234.5);
+  igual('y la gestión judicial', det[0].procesoJud, true);
+  igual('sin monto informado queda en cero', det[2].monto, 0);
+  igual('sin marca de juicio es false', det[1].procesoJud, false);
 }
 
 // --- La cuenta de meses cruza bien el año --------------------------------

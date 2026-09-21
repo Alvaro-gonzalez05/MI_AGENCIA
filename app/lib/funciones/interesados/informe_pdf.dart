@@ -62,7 +62,13 @@ abstract final class InformeCrediticio {
               pw.SizedBox(height: 14),
               _entidades(c),
             ],
-            if (c.cheques.isNotEmpty) ...[pw.SizedBox(height: 14), _cheques(c)],
+            // Mes por mes y entidad por entidad (checklist tanda 2, 2.4).
+            for (final (entidad, meses) in c.historialPorEntidad) ...[
+              pw.SizedBox(height: 14),
+              _historialDeEntidad(entidad, meses),
+            ],
+            pw.SizedBox(height: 14),
+            _cheques(c),
           ],
           pw.SizedBox(height: 10),
           _comoSeLee(c),
@@ -501,6 +507,9 @@ abstract final class InformeCrediticio {
     );
   }
 
+  static String _capitalizar(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   static PdfColor _colorSituacion(int s) => switch (s) {
     0 => _hundido,
     1 => _verde,
@@ -585,14 +594,20 @@ abstract final class InformeCrediticio {
     ),
   );
 
-  static pw.Widget _cheques(ConsultaBcra c) => _seccion(
-    'Cheques rechazados',
-    juntos: c.cheques.length <= _filasQueEntranEnUnaHoja,
+  /// Una entidad, sus 24 meses: situación, deuda, gestión judicial.
+  static pw.Widget _historialDeEntidad(
+    String entidad,
+    List<(MesBcra, EntidadMes)> meses,
+  ) => _seccion(
+    'Historial en $entidad',
+    // Son 24 meses como mucho: entran en una hoja. Partirla dejaba el
+    // titulo huerfano al pie de una hoja y la tabla en la siguiente.
+    juntos: true,
     pw.TableHelper.fromTextArray(
       border: null,
       headerDecoration: const pw.BoxDecoration(color: _hundido),
-      headerHeight: 22,
-      cellHeight: 20,
+      headerHeight: 20,
+      cellHeight: 16,
       headerStyle: pw.TextStyle(
         fontSize: 8,
         fontWeight: pw.FontWeight.bold,
@@ -604,25 +619,93 @@ abstract final class InformeCrediticio {
       ),
       cellAlignments: {
         0: pw.Alignment.centerLeft,
-        1: pw.Alignment.centerLeft,
-        2: pw.Alignment.centerRight,
-        3: pw.Alignment.center,
+        1: pw.Alignment.center,
+        2: pw.Alignment.centerLeft,
+        3: pw.Alignment.centerRight,
         4: pw.Alignment.center,
+        5: pw.Alignment.center,
       },
-      headers: const ['Nº', 'Entidad', 'Monto', 'Rechazado', 'Estado'],
-      data: c.cheques
-          .map(
-            (q) => [
-              q.numero,
-              q.entidad ?? '—',
-              _pesos(q.monto),
-              _fecha(q.fechaRechazo),
-              q.pagado ? 'pagado ${_fecha(q.fechaPago)}' : 'SIN PAGAR',
-            ],
-          )
-          .toList(),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1.2),
+        1: const pw.FlexColumnWidth(0.6),
+        2: const pw.FlexColumnWidth(2.2),
+        3: const pw.FlexColumnWidth(1.5),
+        4: const pw.FlexColumnWidth(1.2),
+        5: const pw.FlexColumnWidth(1),
+      },
+      headers: const [
+        'Mes',
+        'Sit.',
+        'Significado',
+        'Monto adeudado',
+        'Gestión judicial',
+        'En revisión',
+      ],
+      data: [
+        for (final (m, e) in meses)
+          [
+            m.largo,
+            e.situacion == 0 ? '—' : '${e.situacion}',
+            e.situacion == 0
+                ? 'Sin deuda'
+                : _capitalizar(_nombreSituacion(e.situacion)),
+            _pesos(e.monto),
+            e.procesoJudicial ? 'SÍ' : 'No',
+            e.enRevision ? 'Sí' : 'No',
+          ],
+      ],
     ),
   );
+
+  static pw.Widget _cheques(ConsultaBcra c) => c.cheques.isEmpty
+      ? _seccion(
+          'Cheques rechazados',
+          juntos: true,
+          pw.Text(
+            'El BCRA no informa cheques rechazados a su nombre.',
+            style: const pw.TextStyle(fontSize: 9, color: _tinta2),
+          ),
+        )
+      : _seccion(
+          'Cheques rechazados',
+          juntos: c.cheques.length <= _filasQueEntranEnUnaHoja,
+          pw.TableHelper.fromTextArray(
+            border: null,
+            headerDecoration: const pw.BoxDecoration(color: _hundido),
+            headerHeight: 22,
+            cellHeight: 20,
+            headerStyle: pw.TextStyle(
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold,
+              color: _tinta2,
+            ),
+            cellStyle: const pw.TextStyle(fontSize: 8.5, color: _tinta2),
+            rowDecoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: _borde, width: 0.5),
+              ),
+            ),
+            cellAlignments: {
+              0: pw.Alignment.centerLeft,
+              1: pw.Alignment.centerLeft,
+              2: pw.Alignment.centerRight,
+              3: pw.Alignment.center,
+              4: pw.Alignment.center,
+            },
+            headers: const ['Nº', 'Entidad', 'Monto', 'Rechazado', 'Estado'],
+            data: c.cheques
+                .map(
+                  (q) => [
+                    q.numero,
+                    q.entidad ?? '—',
+                    _pesos(q.monto),
+                    _fecha(q.fechaRechazo),
+                    q.pagado ? 'pagado ${_fecha(q.fechaPago)}' : 'SIN PAGAR',
+                  ],
+                )
+                .toList(),
+          ),
+        );
 
   /// El criterio, escrito. Sin esto el informe es una opinión con colores.
   static pw.Widget _comoSeLee(ConsultaBcra? c) => pw.Container(
