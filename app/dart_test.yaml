@@ -1,0 +1,7 @@
+# Las capturas de diseño (capturas_diseno_test.dart) dibujan pantallas y las
+# guardan como PNG para mirarlas. No son pruebas de regresión: cada sistema
+# operativo dibuja las fuentes distinto, así que en CI se excluyen con
+# `flutter test --exclude-tags capturas`.
+tags:
+  capturas:
+    skip: false

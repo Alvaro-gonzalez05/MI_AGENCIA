@@ -38,7 +38,7 @@ jobs:
 
       - name: Tests
         working-directory: app
-        run: flutter test
+        run: flutter test --exclude-tags capturas
 
   base:
     name: Esquema y motor de calculo

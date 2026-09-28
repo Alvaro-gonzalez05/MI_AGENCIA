@@ -58,3 +58,6 @@ Thumbs.db
 # ---- Tests ----
 tests/node_modules/
 tests/package-lock.json
+
+# Capturas de diseño: se generan a mano para mirar, no se versionan.
+app/test/capturas/

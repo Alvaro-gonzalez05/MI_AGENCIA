@@ -1,6 +1,12 @@
 # Qué falta
 
-Estado al 21/09/2026. Ordenado por lo que desbloquea más cosas.
+Estado al 28/09/2026. Ordenado por lo que desbloquea más cosas.
+
+**El diseño nuevo ("Clarity Drive") ya está aplicado**: tema claro por
+defecto, tipografías Atkinson Hyperlegible Next y Work Sans, componentes y
+pantalla de Clientes según el export que mandó el cliente. Dónde vive cada
+cosa, en [DISENO.md](DISENO.md). El zip traía **una sola pantalla**: cuando
+lleguen las demás, lo que se ajusta son layouts puntuales.
 
 **Los checklists del cliente están respondidos punto por punto** en
 [CHECKLIST_TANDA1.md](CHECKLIST_TANDA1.md) y
@@ -187,6 +193,11 @@ consumirse desde Edge Functions, nunca desde la app.
 ### Detalles chicos
 
 - **El tema no se recuerda** al cerrar la app. Falta `shared_preferences`.
+  Ahora que el claro es el que arranca, quien prefiera oscuro lo tiene que
+  elegir en cada sesión.
+- **Quedan encabezados de tabla en 13 px** (el diseño pide 14 como piso).
+  Son los de las columnas del inventario, donde 14 no entra en el ancho de
+  columna: hay que rediseñar esa tabla, no solo agrandar la letra.
 - **Valor de revista**: la decisión es usar **ArgAutos en su plan gratis**
   (sin API key, 3 consultas por minuto) y completar los precios de a poco con
   un proceso que respete ese límite: 3 por minuto son 180 por hora, así que
