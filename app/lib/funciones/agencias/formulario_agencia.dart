@@ -230,7 +230,7 @@ class _FormularioAgenciaState extends ConsumerState<FormularioAgencia> {
                     'ese email, la base lo vincula sola a esta agencia como '
                     'dueño. La invitación vale 7 días.',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: p.tinta3,
                       height: 1.45,
                     ),

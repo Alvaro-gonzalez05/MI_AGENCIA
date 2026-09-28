@@ -115,7 +115,7 @@ class _Audiencia extends ConsumerWidget {
             ),
             error: (_, _) => Text(
               'No se pudo contar la audiencia.',
-              style: TextStyle(fontSize: 13, color: p.tinta3),
+              style: TextStyle(fontSize: 14, color: p.tinta3),
             ),
             data: (n) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,11 +131,7 @@ class _Audiencia extends ConsumerWidget {
                 ),
                 Text(
                   textoAudiencia(n, conEmail),
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: p.tinta3,
-                    height: 1.4,
-                  ),
+                  style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
                 ),
               ],
             ),
@@ -191,7 +187,7 @@ class _Tarjeta extends ConsumerWidget {
                       c.asunto,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                   ],
                 ),
@@ -248,7 +244,7 @@ class _Tarjeta extends ConsumerWidget {
                     'Todavía no salió. Revisala antes de enviarla: un mail '
                     'mandado no se puede deshacer.',
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 13,
                       color: p.tinta3,
                       height: 1.4,
                     ),
@@ -315,14 +311,14 @@ class _Mini extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 10.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         Text(
           valor,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: p.tinta2,
           ),

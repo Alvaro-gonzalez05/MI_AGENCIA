@@ -162,7 +162,7 @@ class _FormularioPrecioState extends ConsumerState<FormularioPrecio> {
                 children: [
                   Text(
                     'Publicado hoy',
-                    style: TextStyle(fontSize: 12.5, color: p.tinta3),
+                    style: TextStyle(fontSize: 13, color: p.tinta3),
                   ),
                   const Spacer(),
                   Text(
@@ -245,7 +245,7 @@ class _FormularioPrecioState extends ConsumerState<FormularioPrecio> {
               child: Text(
                 'Escribí el precio y te muestro a qué margen queda, con todo '
                 'lo que ya lleva invertido.',
-                style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
+                style: TextStyle(fontSize: 14, color: p.tinta3, height: 1.4),
               ),
             ),
           ],
@@ -326,7 +326,7 @@ class _FormularioPrecioState extends ConsumerState<FormularioPrecio> {
                   : 'Sigue arriba del margen mínimo. Para el objetivo de '
                         '${Fmt.porcentaje(cfg.margenObjetivo)} sería '
                         '${Fmt.pesos(i.costoTotal / (1 - cfg.margenObjetivo))}.',
-              style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+              style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
             ),
           ),
         ],

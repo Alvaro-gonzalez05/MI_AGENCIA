@@ -57,7 +57,7 @@ class HistorialBcra extends StatelessWidget {
                 meses.first.corto,
                 style: TextStyle(
                   fontFamily: TemaApp.mono,
-                  fontSize: 10.5,
+                  fontSize: 13,
                   color: p.tinta3,
                 ),
               ),
@@ -66,7 +66,7 @@ class HistorialBcra extends StatelessWidget {
                 meses.last.corto,
                 style: TextStyle(
                   fontFamily: TemaApp.mono,
-                  fontSize: 10.5,
+                  fontSize: 13,
                   color: p.tinta3,
                 ),
               ),
@@ -100,9 +100,16 @@ class HistorialBcra extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      texto,
-                      style: TextStyle(fontSize: 11, color: p.tinta3),
+                    // Flexible y no Text pelado: adentro de un Wrap, la
+                    // referencia mas larga ("Alto / irrecuperable") se pasaba
+                    // por dos pixeles en un celular de 360.
+                    Flexible(
+                      child: Text(
+                        texto,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: p.tinta3),
+                      ),
                     ),
                   ],
                 ),

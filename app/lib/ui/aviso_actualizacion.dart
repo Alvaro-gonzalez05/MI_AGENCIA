@@ -196,7 +196,7 @@ class _TarjetaAviso extends StatelessWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             height: 1.4,
                             color: p.sobreNegro2,
                           ),
@@ -280,7 +280,7 @@ class _EstadoDescarga extends StatelessWidget {
     if (error != null) {
       return Padding(
         padding: const EdgeInsets.only(bottom: Esp.md),
-        child: Text(error!, style: TextStyle(fontSize: 12.5, color: p.critico)),
+        child: Text(error!, style: TextStyle(fontSize: 13, color: p.critico)),
       );
     }
     return const SizedBox.shrink();
@@ -367,7 +367,7 @@ class _Bloqueo extends StatelessWidget {
                             child: Text(
                               version.notas,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 height: 1.5,
                                 color: p.tinta2,
                               ),
@@ -434,7 +434,7 @@ class _EstadoDescargaClaro extends StatelessWidget {
           : Text(
               error ?? '',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: p.critico),
+              style: TextStyle(fontSize: 13, color: p.critico),
             ),
     );
   }

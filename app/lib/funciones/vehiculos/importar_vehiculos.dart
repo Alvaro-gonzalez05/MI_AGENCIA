@@ -306,7 +306,7 @@ class _Seleccion extends StatelessWidget {
                   'de la hoja donde anotás el stock. Se leen los datos, los '
                   'revisás en pantalla y después se cargan.',
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     height: 1.5,
                     color: p.sobreNegro2,
                   ),
@@ -340,7 +340,7 @@ class _Seleccion extends StatelessWidget {
         const SizedBox(height: Esp.sm),
         Text(
           'Excel (.xlsx), CSV, PDF, Word (.docx) y fotos.',
-          style: TextStyle(fontSize: 12, color: p.tinta3),
+          style: TextStyle(fontSize: 13, color: p.tinta3),
         ),
 
         if (archivos.isNotEmpty) ...[
@@ -371,7 +371,7 @@ class _Seleccion extends StatelessWidget {
                   Expanded(
                     child: Text(
                       r,
-                      style: TextStyle(fontSize: 12.5, color: p.observar),
+                      style: TextStyle(fontSize: 13, color: p.observar),
                     ),
                   ),
                 ],
@@ -395,7 +395,7 @@ class _Seleccion extends StatelessWidget {
                 Expanded(
                   child: Text(
                     error!,
-                    style: TextStyle(fontSize: 13, color: p.critico),
+                    style: TextStyle(fontSize: 14, color: p.critico),
                   ),
                 ),
               ],
@@ -425,7 +425,7 @@ class _Seleccion extends StatelessWidget {
           'Los archivos se mandan al servidor de la app solo para leerlos. No '
           'quedan guardados en ningún lado.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11.5, color: p.tinta3, height: 1.4),
+          style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
         ),
       ],
     );
@@ -468,7 +468,7 @@ class _FilaArchivo extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: p.tinta,
                   ),
@@ -476,7 +476,7 @@ class _FilaArchivo extends StatelessWidget {
                 Text(
                   '${_peso(archivo.bytesOriginales)} · '
                   '${archivo.tipo == TipoContenido.texto ? 'texto' : 'imagen o PDF'}',
-                  style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                  style: TextStyle(fontSize: 13, color: p.tinta3),
                 ),
               ],
             ),
@@ -531,7 +531,7 @@ class _Leyendo extends StatelessWidget {
           Text(
             'Puede tardar hasta un minuto si hay fotos o PDF largos.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: p.tinta3),
+            style: TextStyle(fontSize: 13, color: p.tinta3),
           ),
         ],
       ),
@@ -633,14 +633,14 @@ class _Revision extends StatelessWidget {
                     ? Text(
                         'Cargando… $cargadas de $listas',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: p.tinta,
                         ),
                       )
                     : Text(
                         '$listas lista${listas == 1 ? '' : 's'} para cargar',
-                        style: TextStyle(fontSize: 13, color: p.tinta2),
+                        style: TextStyle(fontSize: 14, color: p.tinta2),
                       ),
               ),
               const SizedBox(width: Esp.md),
@@ -744,7 +744,7 @@ class _TarjetaFila extends StatelessWidget {
                         subtitulo,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: p.tinta3),
+                        style: TextStyle(fontSize: 13, color: p.tinta3),
                       ),
                   ],
                 ),
@@ -821,13 +821,13 @@ class _Dato extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         const SizedBox(width: Esp.sm - 2),
         Text(
           valor,
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: falta ? p.tinta3 : p.tinta,
           ),
@@ -854,7 +854,7 @@ class _Aviso extends StatelessWidget {
         Expanded(
           child: Text(
             texto,
-            style: TextStyle(fontSize: 12, color: color, height: 1.35),
+            style: TextStyle(fontSize: 13, color: color, height: 1.35),
           ),
         ),
       ],
@@ -919,7 +919,7 @@ class _Resumen extends StatelessWidget {
                   'Ya están en el inventario con sus días en stock contando '
                   'desde la fecha de ingreso.',
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     height: 1.5,
                     color: p.sobreNegro2,
                   ),
@@ -971,10 +971,7 @@ class _Resumen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                height: 1.4,
-                              ),
+                              style: const TextStyle(fontSize: 13, height: 1.4),
                             ),
                           ),
                         ],

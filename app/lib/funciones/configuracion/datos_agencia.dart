@@ -85,13 +85,13 @@ class _DatosDeLaAgenciaState extends ConsumerState<DatosDeLaAgencia> {
         ),
         error: (e, _) => Text(
           'No se pudieron cargar los datos de la agencia.',
-          style: TextStyle(fontSize: 13, color: p.tinta3),
+          style: TextStyle(fontSize: 14, color: p.tinta3),
         ),
         data: (agencia) {
           if (agencia == null) {
             return Text(
               'Tu usuario todavía no está asociado a ninguna agencia.',
-              style: TextStyle(fontSize: 13, color: p.tinta3),
+              style: TextStyle(fontSize: 14, color: p.tinta3),
             );
           }
 

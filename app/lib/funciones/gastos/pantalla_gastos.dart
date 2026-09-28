@@ -175,7 +175,7 @@ class _Resumen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             e.key.etiqueta,
-                            style: TextStyle(fontSize: 13, color: p.sobreNegro),
+                            style: TextStyle(fontSize: 14, color: p.sobreNegro),
                           ),
                         ),
                         Text(
@@ -185,7 +185,7 @@ class _Resumen extends StatelessWidget {
                           ),
                           style: TextStyle(
                             fontFamily: TemaApp.mono,
-                            fontSize: 12,
+                            fontSize: 13,
                             color: p.sobreNegro2,
                           ),
                         ),
@@ -194,7 +194,7 @@ class _Resumen extends StatelessWidget {
                           Fmt.pesosCompacto(e.value),
                           style: TextStyle(
                             fontFamily: TemaApp.mono,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: p.sobreNegro,
                           ),
@@ -289,7 +289,7 @@ class _FilaState extends ConsumerState<_Fila> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: p.tinta,
                   ),
@@ -302,7 +302,7 @@ class _FilaState extends ConsumerState<_Fila> {
                   ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                  style: TextStyle(fontSize: 13, color: p.tinta3),
                 ),
               ],
             ),
@@ -324,7 +324,7 @@ class _FilaState extends ConsumerState<_Fila> {
                 Fmt.fecha(g.fecha),
                 style: TextStyle(
                   fontFamily: TemaApp.mono,
-                  fontSize: 11,
+                  fontSize: 13,
                   color: p.tinta3,
                 ),
               ),

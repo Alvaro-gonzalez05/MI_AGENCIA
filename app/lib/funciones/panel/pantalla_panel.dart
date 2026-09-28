@@ -280,7 +280,7 @@ class _GananciaReal extends StatelessWidget {
                       '${Fmt.porcentaje(proporcion, decimales: 0)} de la nominal.'
                 : 'Medida en dólares, la ganancia es ${Fmt.pesos(-perdida)} '
                       'mayor que en pesos.',
-            style: TextStyle(fontSize: 13, color: p.sobreNegro2, height: 1.5),
+            style: TextStyle(fontSize: 14, color: p.sobreNegro2, height: 1.5),
           ),
         ],
       ),
@@ -308,7 +308,7 @@ class _BloqueGanancia extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 12.5, color: p.sobreNegro2)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.sobreNegro2)),
         const SizedBox(height: Esp.xs),
         FittedBox(
           fit: BoxFit.scaleDown,
@@ -328,7 +328,7 @@ class _BloqueGanancia extends StatelessWidget {
         Text(
           nota,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: 13,
             color: p.sobreNegro2.withValues(alpha: 0.8),
           ),
         ),
@@ -474,7 +474,7 @@ class _ItemLeyenda extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: p.tinta2,
                   ),
@@ -496,7 +496,7 @@ class _ItemLeyenda extends StatelessWidget {
             rango,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 11, color: p.tinta3),
+            style: TextStyle(fontSize: 13, color: p.tinta3),
           ),
         ],
       ),
@@ -547,7 +547,7 @@ class _ListaAtencion extends StatelessWidget {
                   Text(
                     'Ninguna unidad en esta situación.',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: p.tinta2,
                     ),
@@ -588,7 +588,7 @@ class _ListaAtencion extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 13.5,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: p.tinta,
                                   ),
@@ -597,7 +597,7 @@ class _ListaAtencion extends StatelessWidget {
                                   v.codigo,
                                   style: TextStyle(
                                     fontFamily: TemaApp.mono,
-                                    fontSize: 11.5,
+                                    fontSize: 13,
                                     color: p.tinta3,
                                   ),
                                 ),

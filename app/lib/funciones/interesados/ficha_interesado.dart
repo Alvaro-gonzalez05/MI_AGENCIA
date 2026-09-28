@@ -430,7 +430,7 @@ class _Veredicto extends StatelessWidget {
                       c?.recomendacion ??
                           'Todavía no se consultó el BCRA para esta persona.',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         color: p.tinta2,
                         height: 1.45,
                       ),
@@ -464,7 +464,7 @@ class _Veredicto extends StatelessWidget {
                       child: Text(
                         motivo,
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 13,
                           color: p.tinta2,
                           height: 1.4,
                         ),
@@ -556,7 +556,7 @@ class _Mini extends StatelessWidget {
             etiqueta,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 10.5, color: p.tinta3),
+            style: TextStyle(fontSize: 13, color: p.tinta3),
           ),
           const SizedBox(height: 2),
           Text(
@@ -575,7 +575,7 @@ class _Mini extends StatelessWidget {
               detalle!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10, color: p.tinta3),
+              style: TextStyle(fontSize: 13, color: p.tinta3),
             ),
         ],
       ),
@@ -698,7 +698,7 @@ class _ConsultaState extends State<_Consulta> {
                           : 'Consultado el ${Fmt.fecha(c.consultadoEl)}. El '
                                 'BCRA publica una vez por mes.',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 13,
                         color: c.vencida ? p.observar : p.tinta3,
                         height: 1.4,
                       ),
@@ -840,7 +840,7 @@ class _FilaEntidad extends StatelessWidget {
             '${e.situacion}',
             style: TextStyle(
               fontFamily: TemaApp.mono,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -854,7 +854,7 @@ class _FilaEntidad extends StatelessWidget {
               Text(
                 e.entidad,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: p.tinta,
                   height: 1.3,
@@ -862,12 +862,12 @@ class _FilaEntidad extends StatelessWidget {
               ),
               Text(
                 '${e.descripcionSituacion} · ${e.queSignifica}',
-                style: TextStyle(fontSize: 11.5, color: p.tinta3, height: 1.35),
+                style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.35),
               ),
               if (e.diasAtraso > 0)
                 Text(
                   '${e.diasAtraso} días de atraso',
-                  style: TextStyle(fontSize: 11.5, color: p.atencion),
+                  style: TextStyle(fontSize: 13, color: p.atencion),
                 ),
               if (marcas.isNotEmpty) ...[
                 const SizedBox(height: Esp.xs + 2),
@@ -892,7 +892,7 @@ class _FilaEntidad extends StatelessWidget {
           Fmt.pesosCompacto(e.monto),
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: p.tinta2,
           ),
@@ -946,7 +946,7 @@ class _Cheques extends StatelessWidget {
                           'Cheque ${q.numero}',
                           style: TextStyle(
                             fontFamily: TemaApp.mono,
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: p.tinta,
                           ),
@@ -962,7 +962,7 @@ class _Cheques extends StatelessWidget {
                               'SIN PAGAR',
                           ].join(' · '),
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 13,
                             color: q.pagado ? p.tinta3 : p.critico,
                             height: 1.35,
                           ),
@@ -975,7 +975,7 @@ class _Cheques extends StatelessWidget {
                     Fmt.pesosCompacto(q.monto),
                     style: TextStyle(
                       fontFamily: TemaApp.mono,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: p.tinta2,
                     ),
@@ -1122,7 +1122,7 @@ class _Operacion extends StatelessWidget {
             const SizedBox(height: Esp.md),
             Text(
               i.notas!,
-              style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+              style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
             ),
           ],
         ],

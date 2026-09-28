@@ -134,7 +134,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
                               child: Text(
                                 _errorGeneral!,
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: p.critico,
                                   height: 1.4,
                                 ),
@@ -234,7 +234,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
                               v.codigo,
                               style: TextStyle(
                                 fontFamily: TemaApp.mono,
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: p.tinta3,
                               ),
                             ),
@@ -262,7 +262,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
               padding: const EdgeInsets.only(top: Esp.xs, left: 2),
               child: Text(
                 error,
-                style: TextStyle(fontSize: 11.5, color: p.critico),
+                style: TextStyle(fontSize: 13, color: p.critico),
               ),
             )
           else
@@ -270,7 +270,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
               padding: const EdgeInsets.only(top: Esp.xs, left: 2),
               child: Text(
                 'Las unidades vendidas no aparecen: sus costos ya están cerrados.',
-                style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                style: TextStyle(fontSize: 13, color: p.tinta3),
               ),
             ),
         ],
@@ -292,7 +292,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
           Text(
             'Categoría',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: p.tinta2,
             ),
@@ -420,7 +420,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
         Text(
           etiqueta,
           style: TextStyle(
-            fontSize: 12.5,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: p.tinta2,
           ),
@@ -432,7 +432,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
             padding: const EdgeInsets.only(top: Esp.xs, left: 2),
             child: Text(
               error,
-              style: TextStyle(fontSize: 11.5, color: p.critico),
+              style: TextStyle(fontSize: 13, color: p.critico),
             ),
           ),
       ],
@@ -460,7 +460,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
               child: Text(
                 'Escribí el importe y te muestro cómo queda el margen de '
                 '${v.titulo}.',
-                style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
+                style: TextStyle(fontSize: 14, color: p.tinta3, height: 1.4),
               ),
             ),
           ],
@@ -540,7 +540,7 @@ class _FormularioGastoState extends ConsumerState<FormularioGasto> {
                         'habría que publicarla a '
                         '${Fmt.pesos(i.costoDespues / (1 - cfg.margenMinimo))}.'
                   : 'La unidad sigue arriba del margen mínimo.',
-              style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+              style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
             ),
           ),
         ],
@@ -567,7 +567,7 @@ class _Antes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         const SizedBox(height: 2),
         Text(
           valor,

@@ -49,7 +49,7 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
       child: Text(
         texto,
         style: TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           color: p.tinta,
         ),
@@ -148,7 +148,7 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
                       Expanded(
                         child: Text(
                           error,
-                          style: TextStyle(fontSize: 12.5, color: p.critico),
+                          style: TextStyle(fontSize: 13, color: p.critico),
                         ),
                       ),
                     ],
@@ -204,7 +204,7 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
                 : 'Las cuentas las da de alta el administrador',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: p.tinta2,
             ),
@@ -530,7 +530,7 @@ class _Punto extends StatelessWidget {
           Text(
             texto,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: p.sobreNegro,
             ),

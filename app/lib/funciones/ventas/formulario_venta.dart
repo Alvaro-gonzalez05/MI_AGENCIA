@@ -255,7 +255,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
           Text(
             'Forma de pago',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: p.tinta2,
             ),
@@ -325,7 +325,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
               child: Text(
                 'Escribí el precio de cierre y te muestro qué dejó la '
                 'operación de verdad.',
-                style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
+                style: TextStyle(fontSize: 14, color: p.tinta3, height: 1.4),
               ),
             ),
           ],
@@ -419,7 +419,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                   : 'Medida en dólares, la ganancia es '
                         '${Fmt.pesos(-r.erosion)} mayor que en pesos: '
                         '${Fmt.pesos(r.gananciaReal)}.',
-              style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+              style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
             ),
           ),
         ],

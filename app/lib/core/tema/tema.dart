@@ -16,13 +16,13 @@ abstract final class Esp {
   static const xxxl = 48.0;
 }
 
-/// Radios. Generosos a proposito: la identidad es de formas blandas, con
-/// botones en pildora y tarjetas bien redondeadas.
+/// Radios. Los del diseno "Clarity Drive": formas solidas, de boton fisico,
+/// no pildoras. Botones y campos en [md], tarjetas en [lg], modales en [xl].
 abstract final class Curva {
-  static const sm = 10.0;
-  static const md = 16.0;
-  static const lg = 22.0;
-  static const xl = 30.0;
+  static const sm = 8.0;
+  static const md = 12.0;
+  static const lg = 16.0;
+  static const xl = 24.0;
   static const completo = 999.0;
 }
 
@@ -96,7 +96,16 @@ class TransicionSuave extends PageTransitionsBuilder {
 }
 
 abstract final class TemaApp {
-  static const _sans = 'IBMPlexSans';
+  /// Todo lo que se lee: formularios, tablas, botones, descripciones.
+  ///
+  /// Atkinson Hyperlegible Next esta disenada para que no se confundan los
+  /// caracteres parecidos (0 y O, 1 y l y I). En una app donde se tipean
+  /// patentes, CUIT y precios, eso no es un detalle estetico.
+  static const _sans = 'Atkinson';
+
+  /// Titulos y cifras grandes. Mas estrecha y con mas caracter que la de
+  /// texto: marca la jerarquia sin subir el tamano.
+  static const titulo = 'WorkSans';
 
   /// Mono para TODO numero: precios, porcentajes, dias, fechas.
   ///
@@ -108,7 +117,13 @@ abstract final class TemaApp {
   static ThemeData oscuro() => _construir(Paleta.oscura, Brightness.dark);
   static ThemeData claro() => _construir(Paleta.clara, Brightness.light);
 
-  static const _pildora = StadiumBorder();
+  /// Los botones del diseno no son pildoras: son rectangulos redondeados,
+  /// con aspecto de tecla. El alto minimo (52) tambien es del diseno: apunta
+  /// a que no se falle el toque en una tablet en el playon.
+  static final _boton = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(Curva.md),
+  );
+  static const _altoBoton = Size(0, 52);
 
   static ThemeData _construir(Paleta p, Brightness brillo) {
     final base = ThemeData(brightness: brillo, useMaterial3: true);
@@ -127,11 +142,13 @@ abstract final class TemaApp {
 
     final texto = _tipografia(p, base.textTheme);
 
+    // label-lg del diseno: 16 px en negrita. Un boton que dice "Registrar
+    // venta" tiene que leerse desde parado al lado del escritorio.
     const textoBoton = TextStyle(
       fontFamily: _sans,
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0.1,
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0,
     );
 
     return base.copyWith(
@@ -173,24 +190,28 @@ abstract final class TemaApp {
         titleTextStyle: texto.titleLarge,
       ),
 
+      // Campos de 52 px de alto, borde de 2 px y texto de 16: el diseno los
+      // quiere "de switch fisico", no de formulario web apretado.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: p.superficieHundida,
+        fillColor: brillo == Brightness.dark
+            ? p.superficieHundida
+            : p.superficieElevada,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: Esp.lg,
-          vertical: Esp.md + 2,
+          vertical: Esp.lg,
         ),
-        hintStyle: TextStyle(color: p.tinta3, fontSize: 14),
-        labelStyle: TextStyle(color: p.tinta2, fontSize: 13),
-        floatingLabelStyle: TextStyle(color: p.acentoTexto, fontSize: 13),
+        hintStyle: TextStyle(color: p.tinta3, fontSize: 16),
+        labelStyle: TextStyle(color: p.tinta2, fontSize: 15),
+        floatingLabelStyle: TextStyle(color: p.acentoTexto, fontSize: 15),
         prefixIconColor: p.tinta3,
         suffixIconColor: p.tinta3,
-        border: _borde(p.borde),
-        enabledBorder: _borde(p.borde),
-        focusedBorder: _borde(p.acentoTexto, ancho: 1.6),
-        errorBorder: _borde(p.critico),
-        focusedErrorBorder: _borde(p.critico, ancho: 1.6),
-        errorStyle: TextStyle(color: p.critico, fontSize: 12),
+        border: _borde(p.bordeFuerte, ancho: 1.6),
+        enabledBorder: _borde(p.bordeFuerte, ancho: 1.6),
+        focusedBorder: _borde(p.tinta, ancho: 2),
+        errorBorder: _borde(p.critico, ancho: 1.6),
+        focusedErrorBorder: _borde(p.critico, ancho: 2),
+        errorStyle: TextStyle(color: p.critico, fontSize: 14),
       ),
 
       textSelectionTheme: TextSelectionThemeData(
@@ -210,7 +231,8 @@ abstract final class TemaApp {
             horizontal: Esp.xl,
             vertical: Esp.lg,
           ),
-          shape: _pildora,
+          shape: _boton,
+          minimumSize: _altoBoton,
           textStyle: textoBoton,
         ),
       ),
@@ -224,7 +246,8 @@ abstract final class TemaApp {
             horizontal: Esp.xl,
             vertical: Esp.lg,
           ),
-          shape: _pildora,
+          shape: _boton,
+          minimumSize: _altoBoton,
           textStyle: textoBoton,
         ),
       ),
@@ -232,12 +255,13 @@ abstract final class TemaApp {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: p.tinta,
-          side: BorderSide(color: p.bordeFuerte),
+          side: BorderSide(color: p.tinta, width: 1.6),
           padding: const EdgeInsets.symmetric(
             horizontal: Esp.lg + 2,
             vertical: Esp.md,
           ),
-          shape: _pildora,
+          minimumSize: _altoBoton,
+          shape: _boton,
           textStyle: textoBoton.copyWith(fontWeight: FontWeight.w500),
         ),
       ),
@@ -245,7 +269,7 @@ abstract final class TemaApp {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: p.acentoTexto,
-          shape: _pildora,
+          shape: _boton,
           padding: const EdgeInsets.symmetric(
             horizontal: Esp.md + 2,
             vertical: Esp.sm + 2,
@@ -265,7 +289,7 @@ abstract final class TemaApp {
         focusElevation: 0,
         hoverElevation: 2,
         highlightElevation: 0,
-        shape: _pildora,
+        shape: const StadiumBorder(),
         extendedTextStyle: textoBoton,
       ),
 
@@ -283,7 +307,7 @@ abstract final class TemaApp {
         valueIndicatorTextStyle: TextStyle(
           color: p.sobreNegro,
           fontFamily: mono,
-          fontSize: 12,
+          fontSize: 13,
         ),
       ),
 
@@ -307,7 +331,11 @@ abstract final class TemaApp {
           (e) => e.contains(WidgetState.selected) ? p.acento : null,
         ),
         checkColor: WidgetStatePropertyAll(p.acentoTinta),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        side: BorderSide(color: p.tinta, width: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Curva.sm - 2),
+        ),
+        visualDensity: VisualDensity.standard,
       ),
 
       snackBarTheme: SnackBarThemeData(
@@ -315,13 +343,13 @@ abstract final class TemaApp {
         contentTextStyle: TextStyle(
           color: p.sobreNegro,
           fontFamily: _sans,
-          fontSize: 13.5,
+          fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
         actionTextColor: p.acento,
         behavior: SnackBarBehavior.floating,
         elevation: 0,
-        shape: _pildora,
+        shape: const StadiumBorder(),
       ),
 
       dialogTheme: DialogThemeData(
@@ -388,7 +416,7 @@ abstract final class TemaApp {
         textStyle: TextStyle(
           color: p.sobreNegro,
           fontFamily: _sans,
-          fontSize: 12,
+          fontSize: 13,
         ),
         waitDuration: const Duration(milliseconds: 400),
       ),
@@ -415,55 +443,80 @@ abstract final class TemaApp {
         borderSide: BorderSide(color: color, width: ancho),
       );
 
+  /// La escala del diseno. Dos reglas que no se negocian:
+  ///
+  /// - **Nada por debajo de 14 px.** Los usuarios de una agencia son, muchas
+  ///   veces, gente grande mirando una pantalla todo el dia.
+  /// - **Los datos que importan, 16 o mas.** Un precio, un nombre o una
+  ///   patente nunca van en letra chica.
+  ///
+  /// Los titulos van en Work Sans; todo lo demas, en Atkinson.
   static TextTheme _tipografia(Paleta p, TextTheme base) => base
       .apply(fontFamily: _sans, bodyColor: p.tinta, displayColor: p.tinta)
       .copyWith(
+        // headline-xl: el titulo de una pantalla.
         displaySmall: TextStyle(
-          fontFamily: _sans,
-          fontSize: 30,
+          fontFamily: titulo,
+          fontSize: 34,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.8,
-          height: 1.15,
+          letterSpacing: -0.7,
+          height: 1.2,
           color: p.tinta,
         ),
+        // headline-lg
         headlineMedium: TextStyle(
-          fontFamily: _sans,
-          fontSize: 24,
+          fontFamily: titulo,
+          fontSize: 26,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
+          letterSpacing: -0.3,
+          height: 1.25,
           color: p.tinta,
         ),
+        // headline-md: titulo de tarjeta o de bloque.
         titleLarge: TextStyle(
-          fontFamily: _sans,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.2,
-          color: p.tinta,
-        ),
-        titleMedium: TextStyle(
-          fontFamily: _sans,
-          fontSize: 15.5,
+          fontFamily: titulo,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
+          height: 1.3,
           color: p.tinta,
         ),
-        bodyLarge: TextStyle(fontFamily: _sans, fontSize: 14.5, color: p.tinta),
+        // headline-sm
+        titleMedium: TextStyle(
+          fontFamily: titulo,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          height: 1.35,
+          color: p.tinta,
+        ),
+        // body-lg
+        bodyLarge: TextStyle(
+          fontFamily: _sans,
+          fontSize: 16,
+          height: 1.45,
+          color: p.tinta,
+        ),
+        // body-md: el tamano por defecto de la app.
         bodyMedium: TextStyle(
           fontFamily: _sans,
-          fontSize: 13.5,
+          fontSize: 15,
+          height: 1.45,
           color: p.tinta2,
         ),
+        // label-md: ayudas y metadatos. El piso de toda la app.
         bodySmall: TextStyle(
           fontFamily: _sans,
-          fontSize: 12.5,
+          fontSize: 14,
+          height: 1.4,
           color: p.tinta3,
         ),
-        // Etiquetas de seccion: chicas y con tracking, para que se lean como
+        // Etiquetas de seccion: con tracking, para que se lean como
         // estructura y no compitan con los datos.
         labelSmall: TextStyle(
           fontFamily: _sans,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.9,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
           color: p.tinta3,
         ),
       );

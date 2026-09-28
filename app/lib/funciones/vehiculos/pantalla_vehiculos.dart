@@ -101,7 +101,7 @@ class PantallaVehiculos extends ConsumerWidget {
                           '${activos.length} unidad'
                           '${activos.length == 1 ? '' : 'es'} en el predio',
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: p.sobreNegro,
                           ),
@@ -253,7 +253,7 @@ class _FilaState extends ConsumerState<_Fila> {
                   '${v.km != null ? ' · ${Fmt.km(v.km)}' : ''}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: p.tinta3),
+                  style: TextStyle(fontSize: 13, color: p.tinta3),
                 ),
               ],
             ),
@@ -262,12 +262,12 @@ class _FilaState extends ConsumerState<_Fila> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Ingresó', style: TextStyle(fontSize: 11, color: p.tinta3)),
+              Text('Ingresó', style: TextStyle(fontSize: 13, color: p.tinta3)),
               Text(
                 Fmt.fecha(v.fechaIngreso),
                 style: TextStyle(
                   fontFamily: TemaApp.mono,
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: p.tinta2,
                 ),

@@ -200,7 +200,7 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
                                   '03 · Evaluación',
                                 ][n],
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   color: n == _paso ? p.tinta : p.tinta3,
                                 ),
                               ),

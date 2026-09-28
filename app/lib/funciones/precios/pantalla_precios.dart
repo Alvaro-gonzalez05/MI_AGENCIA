@@ -178,7 +178,7 @@ class _Resumen extends StatelessWidget {
                       'Cuando una unidad necesita varios ajustes, el problema '
                       'suele estar en el precio de compra.',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13,
                         color: p.tinta2,
                         height: 1.45,
                       ),
@@ -210,7 +210,7 @@ class _Dato extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         Text(
           valor,
           style: TextStyle(
@@ -263,7 +263,7 @@ class _Fila extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: p.tinta,
                   ),
@@ -273,7 +273,7 @@ class _Fila extends StatelessWidget {
                     c.motivo!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                    style: TextStyle(fontSize: 13, color: p.tinta3),
                   ),
               ],
             ),
@@ -289,7 +289,7 @@ class _Fila extends StatelessWidget {
                       Fmt.pesosCompacto(c.precioAnterior),
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
-                        fontSize: 11.5,
+                        fontSize: 13,
                         color: p.tinta3,
                         decoration: TextDecoration.lineThrough,
                       ),
@@ -314,7 +314,7 @@ class _Fila extends StatelessWidget {
                       Fmt.porcentajeConSigno(v),
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: color,
                       ),
@@ -324,7 +324,7 @@ class _Fila extends StatelessWidget {
                     Fmt.fecha(c.fecha),
                     style: TextStyle(
                       fontFamily: TemaApp.mono,
-                      fontSize: 11,
+                      fontSize: 13,
                       color: p.tinta3,
                     ),
                   ),

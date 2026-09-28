@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 
-/// Paleta del sistema de diseno.
+/// Paleta del sistema de diseno "Clarity Drive".
 ///
-/// Identidad: blanco y negro con acento amarillo. Tres reglas explican casi
-/// todas las decisiones de abajo:
+/// Viene del diseno que entrego el cliente (Stitch, 09/2026). Cuatro reglas
+/// explican casi todas las decisiones de abajo:
 ///
-/// 1. **El amarillo se usa como RELLENO, no como tinta.** Amarillo sobre blanco
-///    no se lee. Por eso hay dos colores de acento: [acento] para fondos
+/// 1. **El tema base es CLARO**: un blanco calido tipo papel (#FCF9F8) que no
+///    encandila despues de ocho horas de pantalla, con tarjetas blancas puras
+///    encima. El oscuro existe y se elige en Mas.
+///
+/// 2. **El ambar se usa como RELLENO, no como tinta.** Ambar sobre blanco no
+///    se lee. Por eso hay dos colores de acento: [acento] para fondos
 ///    (botones, pastillas activas, indicadores) y [acentoTexto] para cuando el
 ///    acento tiene que leerse como texto o icono sobre una superficie. En
-///    oscuro es el mismo amarillo; en claro es negro.
+///    oscuro es el mismo ambar; en claro es el marron oscuro de la marca.
 ///
-/// 2. **Los semaforos no se confunden con el acento.** El amarillo de marca es
-///    un limon saturado y siempre va de relleno con texto negro; el semaforo
-///    "observar" es ambar, siempre va como pastilla lavada con punto y
-///    etiqueta. Nunca aparecen con la misma forma.
+/// 3. **Los semaforos no se confunden con el acento.** El ambar de marca
+///    siempre va de relleno con texto oscuro; el semaforo "observar" va como
+///    pastilla lavada con punto y etiqueta. Nunca aparecen con la misma forma.
 ///
-/// 3. **Hay superficies negras en los dos temas.** La barra lateral, la barra
-///    inferior del movil y las tarjetas destacadas son negras tambien en claro:
-///    es lo que le da caracter al tema claro y ancla la vista.
+/// 4. **Hay superficies oscuras en los dos temas.** La barra lateral, la barra
+///    inferior del movil, la pestana activa y las tarjetas destacadas son
+///    oscuras tambien en claro: es lo que ancla la vista y le da caracter.
+///
+/// Contraste: el diseno pide superar AAA en los textos. Por eso la tinta
+/// principal es casi negra (#1C1B1B, 15:1 sobre el fondo) y la secundaria es
+/// un marron oscuro (#4F4634), nunca un gris claro.
 class Paleta {
   const Paleta({
     required this.fondo,
@@ -124,74 +131,77 @@ class Paleta {
   final Color neutro;
   final Color neutroLavado;
 
-  /// Tema por defecto. Negro casi puro con un toque calido, para que el
-  /// amarillo no quede estridente.
+  /// El mismo sistema en oscuro: carbon calido (no negro azulado) para que el
+  /// ambar de marca se vea igual de calido que en claro. Los estados suben de
+  /// luminosidad para mantener el contraste sobre fondo oscuro.
   static const oscura = Paleta(
-    fondo: Color(0xFF0A0A0B),
-    superficie: Color(0xFF151517),
-    superficieElevada: Color(0xFF1D1D20),
-    superficieHundida: Color(0xFF101012),
-    superficieHover: Color(0xFF222226),
-    borde: Color(0xFF242428),
-    bordeFuerte: Color(0xFF3A3A40),
-    tinta: Color(0xFFF6F6F3),
-    tinta2: Color(0xFFA6A6A3),
-    tinta3: Color(0xFF707070),
-    acento: Color(0xFFFFC83D),
-    acentoTinta: Color(0xFF111111),
-    acentoLavado: Color(0x24FFC83D),
-    acentoTexto: Color(0xFFFFC83D),
-    negro: Color(0xFF131315),
-    negroElevado: Color(0xFF1F1F22),
-    negroBorde: Color(0xFF28282C),
-    sobreNegro: Color(0xFFF6F6F3),
-    sobreNegro2: Color(0xFF8E8E8C),
+    fondo: Color(0xFF15140F),
+    superficie: Color(0xFF1E1D19),
+    superficieElevada: Color(0xFF272620),
+    superficieHundida: Color(0xFF1A1915),
+    superficieHover: Color(0xFF2E2D26),
+    borde: Color(0xFF322F28),
+    bordeFuerte: Color(0xFF4A463C),
+    tinta: Color(0xFFF3F0EF),
+    tinta2: Color(0xFFCBC3B4),
+    tinta3: Color(0xFF9A9183),
+    acento: Color(0xFFFFC53D),
+    acentoTinta: Color(0xFF261900),
+    acentoLavado: Color(0x24FFC53D),
+    acentoTexto: Color(0xFFF7BE36),
+    negro: Color(0xFF1B1A16),
+    negroElevado: Color(0xFF262521),
+    negroBorde: Color(0xFF34322B),
+    sobreNegro: Color(0xFFF3F0EF),
+    sobreNegro2: Color(0xFFB4ADA0),
     sombra: Color(0x40000000),
-    bien: Color(0xFF3DD68C),
-    bienLavado: Color(0x1F3DD68C),
-    observar: Color(0xFFF29D38),
-    observarLavado: Color(0x1FF29D38),
-    atencion: Color(0xFFFF7A45),
-    atencionLavado: Color(0x1FFF7A45),
-    critico: Color(0xFFF4555E),
-    criticoLavado: Color(0x1FF4555E),
-    neutro: Color(0xFF8A8A8F),
-    neutroLavado: Color(0x1F8A8A8F),
+    bien: Color(0xFF62DF7D),
+    bienLavado: Color(0x1F62DF7D),
+    observar: Color(0xFFF7BE36),
+    observarLavado: Color(0x1FF7BE36),
+    atencion: Color(0xFFFF9A52),
+    atencionLavado: Color(0x1FFF9A52),
+    critico: Color(0xFFFF5449),
+    criticoLavado: Color(0x1FFF5449),
+    neutro: Color(0xFF9E9A90),
+    neutroLavado: Color(0x1F9E9A90),
   );
 
-  /// Tema claro: blanco calido, tarjetas blancas con sombra suave y detalles
-  /// en negro. Los colores de estado se oscurecen para no perder contraste.
+  /// Tema por defecto: el del diseno. Fondo papel calido, tarjetas blancas
+  /// puras con borde marcado (nada de sombras difusas), tinta casi negra y
+  /// detalles en carbon. Los colores de estado son los del diseno, elegidos
+  /// para leerse sin esfuerzo sobre fondo claro.
   static const clara = Paleta(
-    fondo: Color(0xFFF3F3F0),
+    fondo: Color(0xFFFCF9F8),
     superficie: Color(0xFFFFFFFF),
     superficieElevada: Color(0xFFFFFFFF),
-    superficieHundida: Color(0xFFF2F2EF),
-    superficieHover: Color(0xFFEAEAE6),
-    borde: Color(0xFFE8E8E3),
-    bordeFuerte: Color(0xFFD3D3CD),
-    tinta: Color(0xFF111112),
-    tinta2: Color(0xFF55555A),
-    tinta3: Color(0xFF8B8B90),
-    acento: Color(0xFFFFC83D),
-    acentoTinta: Color(0xFF111111),
-    acentoLavado: Color(0x38FFC83D),
-    acentoTexto: Color(0xFF111112),
-    negro: Color(0xFF111112),
-    negroElevado: Color(0xFF222225),
-    negroBorde: Color(0xFF2C2C30),
-    sobreNegro: Color(0xFFFFFFFF),
-    sobreNegro2: Color(0xFF9A9A9E),
-    sombra: Color(0x14000000),
-    bien: Color(0xFF0E9A5E),
-    bienLavado: Color(0x170E9A5E),
-    observar: Color(0xFFC27400),
-    observarLavado: Color(0x17C27400),
-    atencion: Color(0xFFD9591C),
-    atencionLavado: Color(0x17D9591C),
-    critico: Color(0xFFD7373F),
-    criticoLavado: Color(0x17D7373F),
-    neutro: Color(0xFF6B6B72),
-    neutroLavado: Color(0x176B6B72),
+    superficieHundida: Color(0xFFF6F3F2),
+    superficieHover: Color(0xFFF0EDED),
+    borde: Color(0xFFE5E2E1),
+    bordeFuerte: Color(0xFFD3C5AE),
+    tinta: Color(0xFF1C1B1B),
+    tinta2: Color(0xFF4F4634),
+    tinta3: Color(0xFF817662),
+    acento: Color(0xFFFFC53D),
+    acentoTinta: Color(0xFF715200),
+    acentoLavado: Color(0x38FFC53D),
+    acentoTexto: Color(0xFF795900),
+    negro: Color(0xFF313030),
+    negroElevado: Color(0xFF3D3B3B),
+    negroBorde: Color(0xFF4A4747),
+    sobreNegro: Color(0xFFF3F0EF),
+    sobreNegro2: Color(0xFFC8C6C5),
+    sombra: Color(0x14161616),
+    bien: Color(0xFF166534),
+    bienLavado: Color(0xFFDCFCE7),
+    observar: Color(0xFF78350F),
+    observarLavado: Color(0xFFFEF3C7),
+    atencion: Color(0xFF9A3412),
+    atencionLavado: Color(0xFFFFEDD5),
+    critico: Color(0xFFBA1A1A),
+    criticoLavado: Color(0xFFFFDAD6),
+    neutro: Color(0xFF1F2937),
+    neutroLavado: Color(0xFFF3F4F6),
   );
 }
 

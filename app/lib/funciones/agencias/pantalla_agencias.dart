@@ -160,7 +160,7 @@ class _Dato extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         Text(
           valor,
           style: TextStyle(
@@ -221,7 +221,7 @@ class _Tarjeta extends ConsumerWidget {
                       ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                   ],
                 ),
@@ -318,14 +318,14 @@ class _Mini extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 10.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         Text(
           valor,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: color ?? p.tinta2,
           ),

@@ -1031,9 +1031,9 @@ abstract final class InformeCrediticio {
         pw.Font.ttf(await rootBundle.load('assets/fuentes/$archivo'));
 
     return pw.ThemeData.withFont(
-      base: await cargar('IBMPlexSans-Regular.ttf'),
-      bold: await cargar('IBMPlexSans-SemiBold.ttf'),
-      italic: await cargar('IBMPlexSans-Regular.ttf'),
+      base: await cargar('AtkinsonHyperlegibleNext-Regular.ttf'),
+      bold: await cargar('WorkSans-Bold.ttf'),
+      italic: await cargar('AtkinsonHyperlegibleNext-Regular.ttf'),
     );
   }
 

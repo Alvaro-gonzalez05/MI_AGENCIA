@@ -125,7 +125,7 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
                   _codigoSugerido!,
                   style: TextStyle(
                     fontFamily: TemaApp.mono,
-                    fontSize: 13,
+                    fontSize: 14,
                     color: p.tinta3,
                   ),
                 ),
@@ -300,7 +300,7 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
                               child: Text(
                                 _errorGeneral!,
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: p.critico,
                                   height: 1.4,
                                 ),
@@ -394,7 +394,7 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
         Text(
           etiqueta,
           style: TextStyle(
-            fontSize: 12.5,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: p.tinta2,
           ),
@@ -406,16 +406,13 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
             padding: const EdgeInsets.only(top: Esp.xs, left: 2),
             child: Text(
               error,
-              style: TextStyle(fontSize: 11.5, color: p.critico),
+              style: TextStyle(fontSize: 13, color: p.critico),
             ),
           )
         else if (ayuda != null)
           Padding(
             padding: const EdgeInsets.only(top: Esp.xs, left: 2),
-            child: Text(
-              ayuda,
-              style: TextStyle(fontSize: 11.5, color: p.tinta3),
-            ),
+            child: Text(ayuda, style: TextStyle(fontSize: 13, color: p.tinta3)),
           ),
       ],
     );
@@ -641,7 +638,7 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
                       : 'Arriba del objetivo de '
                             '${Fmt.porcentaje(cfg.margenObjetivo)}. Tenés aire '
                             'para los gastos de preparación.',
-                  style: TextStyle(fontSize: 12, color: p.tinta2, height: 1.4),
+                  style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.4),
                 ),
               ],
             ),

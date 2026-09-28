@@ -33,12 +33,15 @@ class CampoFormulario extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // La etiqueta va SIEMPRE arriba del campo y en 16 px: el diseño
+        // prohíbe las etiquetas flotantes y los campos que solo se explican
+        // con el placeholder, que desaparece apenas se empieza a escribir.
         Text(
           etiqueta,
           style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: p.tinta2,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: p.tinta,
           ),
         ),
         const SizedBox(height: Esp.sm),
@@ -48,7 +51,7 @@ class CampoFormulario extends StatelessWidget {
             padding: const EdgeInsets.only(top: Esp.xs, left: 2),
             child: Text(
               error!,
-              style: TextStyle(fontSize: 11.5, color: p.critico),
+              style: TextStyle(fontSize: 14, color: p.critico),
             ),
           )
         else if (ayuda != null)
@@ -56,7 +59,7 @@ class CampoFormulario extends StatelessWidget {
             padding: const EdgeInsets.only(top: Esp.xs, left: 2),
             child: Text(
               ayuda!,
-              style: TextStyle(fontSize: 11.5, color: p.tinta3),
+              style: TextStyle(fontSize: 14, color: p.tinta2),
             ),
           ),
       ],
@@ -192,7 +195,7 @@ class SelectorVehiculo extends StatelessWidget {
                               v.codigo,
                               style: TextStyle(
                                 fontFamily: TemaApp.mono,
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: p.tinta3,
                               ),
                             ),
@@ -217,7 +220,7 @@ class SelectorVehiculo extends StatelessWidget {
               padding: const EdgeInsets.only(top: Esp.xs, left: 2),
               child: Text(
                 error!,
-                style: TextStyle(fontSize: 11.5, color: p.critico),
+                style: TextStyle(fontSize: 13, color: p.critico),
               ),
             )
           else if (ayuda != null)
@@ -225,7 +228,7 @@ class SelectorVehiculo extends StatelessWidget {
               padding: const EdgeInsets.only(top: Esp.xs, left: 2),
               child: Text(
                 ayuda!,
-                style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                style: TextStyle(fontSize: 13, color: p.tinta3),
               ),
             ),
         ],
@@ -258,7 +261,7 @@ class AvisoError extends StatelessWidget {
           Expanded(
             child: Text(
               mensaje,
-              style: TextStyle(fontSize: 13, color: p.critico, height: 1.4),
+              style: TextStyle(fontSize: 14, color: p.critico, height: 1.4),
             ),
           ),
         ],
@@ -345,7 +348,7 @@ class ValorAntesDespues extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 11.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         const SizedBox(height: 2),
         FittedBox(
           fit: BoxFit.scaleDown,

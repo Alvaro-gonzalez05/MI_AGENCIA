@@ -114,7 +114,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
             Center(
               child: Text(
                 'No hay cambios sin guardar',
-                style: TextStyle(fontSize: 12.5, color: context.paleta.tinta3),
+                style: TextStyle(fontSize: 13, color: context.paleta.tinta3),
               ),
             ),
         ],
@@ -229,7 +229,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
             const SizedBox(height: Esp.md),
             Text(
               'Con estos umbrales, de tus ${enStock.length} unidades:',
-              style: TextStyle(fontSize: 12.5, color: p.tinta3),
+              style: TextStyle(fontSize: 13, color: p.tinta3),
             ),
             const SizedBox(height: Esp.sm),
             Wrap(
@@ -346,7 +346,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
                     ? 'Ninguna unidad queda por debajo del mínimo.'
                     : '$bajoMinimo de ${enStock.length} unidades quedan por '
                           'debajo del mínimo con este umbral.',
-                style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.4),
+                style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.4),
               ),
             ),
           ],
@@ -395,7 +395,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
           Text(
             'Redondeo del precio a publicar',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: p.tinta2,
             ),
@@ -429,7 +429,7 @@ class _PantallaConfigState extends ConsumerState<PantallaConfiguracion> {
           const SizedBox(height: Esp.xs),
           Text(
             'El simulador redondea siempre para arriba, nunca a favor del cliente.',
-            style: TextStyle(fontSize: 11.5, color: p.tinta3),
+            style: TextStyle(fontSize: 13, color: p.tinta3),
           ),
         ],
       ),
@@ -472,7 +472,7 @@ class _Deslizador extends StatelessWidget {
             Expanded(
               child: Text(
                 etiqueta,
-                style: TextStyle(fontSize: 13, color: p.tinta2),
+                style: TextStyle(fontSize: 14, color: p.tinta2),
               ),
             ),
             Text(

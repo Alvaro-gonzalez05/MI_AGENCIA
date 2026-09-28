@@ -23,7 +23,7 @@ class Pastilla extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Esp.md, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: Esp.lg, vertical: Esp.sm),
       decoration: BoxDecoration(
         color: lavado,
         borderRadius: BorderRadius.circular(Curva.completo),
@@ -31,13 +31,16 @@ class Pastilla extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // El punto solido es la tercera senal del diseno, despues del
+          // color de fondo y del texto: quien no distingue verde de rojo
+          // igual lee la etiqueta, y quien mira de lejos ve el punto.
           if (conPunto) ...[
             Container(
-              width: 7,
-              height: 7,
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-            const SizedBox(width: Esp.sm - 2),
+            const SizedBox(width: Esp.sm),
           ],
           // Flexible y no Text pelado: con mainAxisSize.min la pastilla
           // toma su ancho natural cuando hay lugar, pero adentro de una
@@ -50,8 +53,8 @@ class Pastilla extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 height: 1.2,
               ),
             ),
@@ -110,8 +113,8 @@ class _TarjetaState extends State<Tarjeta> {
         : widget.destacada
         ? p.negroBorde
         : elevada
-        ? p.bordeFuerte
-        : (oscuro ? p.borde : p.borde.withValues(alpha: 0.7));
+        ? p.tinta
+        : p.borde;
 
     return AnimatedScale(
       scale: _presionada ? 0.985 : 1,
@@ -121,15 +124,19 @@ class _TarjetaState extends State<Tarjeta> {
         duration: Duracion.media,
         curve: Curves.easeOutCubic,
         transform: Matrix4.translationValues(0, elevada ? -3 : 0, 0),
+        // El diseno evita las sombras difusas: la profundidad la da el
+        // borde (1,5 px en reposo, 2 px y oscuro al pasar el mouse) mas una
+        // sombra corta y direccional. Con un monitor mal calibrado, un borde
+        // se ve siempre; una sombra suave, no.
         decoration: BoxDecoration(
           color: fondo,
           borderRadius: radio,
-          border: Border.all(color: borde),
+          border: Border.all(color: borde, width: elevada ? 2 : 1.5),
           boxShadow: [
             BoxShadow(
               color: oscuro ? Colors.transparent : p.sombra,
-              blurRadius: elevada ? 30 : 18,
-              offset: Offset(0, elevada ? 12 : 4),
+              blurRadius: elevada ? 12 : 6,
+              offset: Offset(0, elevada ? 4 : 2),
             ),
           ],
         ),
@@ -252,7 +259,7 @@ class CabeceraBloque extends StatelessWidget {
                 Text(
                   descripcion!,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     color: sobreNegro ? p.sobreNegro2 : p.tinta3,
                   ),
                 ),
@@ -347,11 +354,15 @@ class BotonCircular extends StatelessWidget {
   }
 }
 
-/// Chip seleccionable en pildora.
+/// Chip / pestana seleccionable.
 ///
-/// Sin [color], el estado activo es amarillo con texto negro (seleccion
-/// comun). Con [color] (un semaforo), el activo toma ese color lavado: asi un
-/// filtro "Critico" nunca se ve amarillo.
+/// Sin [color], el activo es la pestana oscura del diseno: fondo carbon y
+/// texto claro, que se distingue de un vistazo aunque la pantalla este
+/// lavada por el sol. Con [color] (un semaforo), el activo toma ese color
+/// lavado: asi un filtro "Riesgo alto" nunca se ve ambar.
+///
+/// [contador] es el numero entre parentesis del diseno. Va en su propia
+/// burbuja y no pegado al texto: se lee como dato, no como parte del nombre.
 class ChipSeleccion extends StatelessWidget {
   const ChipSeleccion({
     super.key,
@@ -360,6 +371,7 @@ class ChipSeleccion extends StatelessWidget {
     required this.onTap,
     this.color,
     this.icono,
+    this.contador,
   });
 
   final String etiqueta;
@@ -367,6 +379,7 @@ class ChipSeleccion extends StatelessWidget {
   final VoidCallback onTap;
   final Color? color;
   final IconData? icono;
+  final int? contador;
 
   @override
   Widget build(BuildContext context) {
@@ -376,64 +389,97 @@ class ChipSeleccion extends StatelessWidget {
     final Color fondo;
     final Color tinta;
     final Color borde;
+    final Color fondoContador;
     if (!activo) {
-      fondo = p.superficie;
+      fondo = p.superficieHundida;
       tinta = p.tinta2;
       borde = p.borde;
+      fondoContador = p.superficieHover;
     } else if (c == null) {
-      fondo = p.acento;
-      tinta = p.acentoTinta;
-      borde = p.acento;
+      // En claro, la pestana activa es la oscura del diseno. En oscuro esa
+      // misma pastilla se confundiria con el fondo, asi que manda el ambar.
+      final oscuro = context.esOscuro;
+      fondo = oscuro ? p.acento : p.negro;
+      tinta = oscuro ? p.acentoTinta : p.sobreNegro;
+      borde = fondo;
+      fondoContador = (oscuro ? p.acentoTinta : p.sobreNegro).withValues(
+        alpha: 0.16,
+      );
     } else {
       fondo = c.withValues(alpha: 0.16);
       tinta = c;
       borde = c.withValues(alpha: 0.55);
+      fondoContador = c.withValues(alpha: 0.18);
     }
+
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Curva.md),
+      side: BorderSide(color: borde, width: 1.5),
+    );
 
     return AnimatedContainer(
       duration: Duracion.media,
       curve: Curves.easeOutCubic,
-      decoration: ShapeDecoration(
-        color: fondo,
-        shape: StadiumBorder(side: BorderSide(color: borde)),
-      ),
+      decoration: ShapeDecoration(color: fondo, shape: forma),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
-          customBorder: const StadiumBorder(),
+          customBorder: forma,
           // Sin `alignment` ni Center: estirarian el chip hasta las
           // constraints maximas y en movil cada uno ocuparia todo el ancho.
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 40),
+            // 48: el toque minimo comodo que pide el diseno.
+            constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Esp.lg - 2),
+              padding: const EdgeInsets.symmetric(horizontal: Esp.lg),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (c != null) ...[
                     Container(
-                      width: 7,
-                      height: 7,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         color: c,
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: Esp.sm - 1),
+                    const SizedBox(width: Esp.sm),
                   ],
                   if (icono != null) ...[
-                    Icon(icono, size: 16, color: activo ? tinta : p.tinta3),
+                    Icon(icono, size: 20, color: activo ? tinta : p.tinta3),
                     const SizedBox(width: Esp.sm - 2),
                   ],
                   Text(
                     etiqueta,
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: activo ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 15,
+                      fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
                       color: tinta,
                     ),
                   ),
+                  if (contador != null) ...[
+                    const SizedBox(width: Esp.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Esp.sm,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: fondoContador,
+                        borderRadius: BorderRadius.circular(Curva.completo),
+                      ),
+                      child: Text(
+                        '$contador',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: tinta,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -441,6 +487,130 @@ class ChipSeleccion extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Buscador del diseno: alto de 54, lupa grande y texto de 16.
+///
+/// Aparece igual en inventario, clientes y ventas: buscar es lo primero que
+/// hace alguien que ya tiene datos cargados.
+class Buscador extends StatelessWidget {
+  const Buscador({
+    super.key,
+    required this.texto,
+    required this.onCambio,
+    this.pista = 'Buscar...',
+    this.controlador,
+  });
+
+  final String texto;
+  final ValueChanged<String> onCambio;
+  final String pista;
+  final TextEditingController? controlador;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      decoration: BoxDecoration(
+        color: p.superficie,
+        borderRadius: BorderRadius.circular(Curva.lg),
+        border: Border.all(color: p.borde, width: 1.5),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: Esp.lg),
+      child: Row(
+        children: [
+          Icon(Icons.search_rounded, size: 26, color: p.tinta2),
+          const SizedBox(width: Esp.md),
+          Expanded(
+            child: TextField(
+              controller: controlador,
+              onChanged: onCambio,
+              textInputAction: TextInputAction.search,
+              style: TextStyle(fontSize: 16, color: p.tinta),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: Esp.lg),
+                hintText: pista,
+                hintStyle: TextStyle(fontSize: 16, color: p.tinta3),
+              ),
+            ),
+          ),
+          if (texto.isNotEmpty)
+            IconButton(
+              tooltip: 'Limpiar',
+              icon: const Icon(Icons.close_rounded, size: 22),
+              onPressed: () {
+                controlador?.clear();
+                onCambio('');
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Encabezado de pantalla: titulo grande, cuanto hay y la accion principal.
+///
+/// El subtitulo con el conteo ("24 clientes en total") es del diseno y no es
+/// decorativo: responde de entrada la pregunta con la que uno entra a una
+/// pantalla de listado.
+class CabeceraPantalla extends StatelessWidget {
+  const CabeceraPantalla({
+    super.key,
+    required this.titulo,
+    this.subtitulo,
+    this.accion,
+  });
+
+  final String titulo;
+  final String? subtitulo;
+  final Widget? accion;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final textos = Theme.of(context).textTheme;
+    final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
+
+    final titulos = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(titulo, style: textos.displaySmall),
+        if (subtitulo != null) ...[
+          const SizedBox(height: 2),
+          Text(subtitulo!, style: TextStyle(fontSize: 16, color: p.tinta2)),
+        ],
+      ],
+    );
+
+    if (accion == null) return titulos;
+
+    // En celular la accion baja a su propia linea y ocupa el ancho: un boton
+    // de 52 px al alcance del pulgar vale mas que una fila prolija.
+    return angosto
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              titulos,
+              const SizedBox(height: Esp.md),
+              accion!,
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: titulos),
+              const SizedBox(width: Esp.lg),
+              accion!,
+            ],
+          );
   }
 }
 
@@ -510,7 +680,7 @@ class TarjetaMetrica extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: tenue,
                   ),
@@ -538,7 +708,7 @@ class TarjetaMetrica extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: resaltada ? tinta : (detalleColor ?? p.tinta3),
                     ),
@@ -587,7 +757,7 @@ class FilaDato extends StatelessWidget {
             flex: 5,
             child: Text(
               etiqueta,
-              style: TextStyle(fontSize: 13, color: p.tinta2),
+              style: TextStyle(fontSize: 14, color: p.tinta2),
             ),
           ),
           const SizedBox(width: Esp.md),
@@ -672,7 +842,7 @@ class EstadoVacio extends StatelessWidget {
         padding: const EdgeInsets.all(Esp.xl),
         child: Aparecer(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -697,8 +867,8 @@ class EstadoVacio extends StatelessWidget {
                     descripcion!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13.5,
-                      color: p.tinta3,
+                      fontSize: 16,
+                      color: p.tinta2,
                       height: 1.5,
                     ),
                   ),
@@ -739,8 +909,8 @@ class CintaDemo extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 color: p.acentoTinta,
               ),
             ),
@@ -793,7 +963,7 @@ class MontoDual extends StatelessWidget {
           Fmt.dolares(tipoCambio > 0 ? pesos / tipoCambio : 0),
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 12,
+            fontSize: 14,
             color: colorSecundario ?? p.tinta3,
           ),
         ),

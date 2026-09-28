@@ -99,7 +99,7 @@ class _Ficha extends StatelessWidget {
             Text(
               'Inventario',
               style: TextStyle(
-                fontSize: 13.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: context.paleta.tinta2,
               ),
@@ -176,7 +176,7 @@ class _Cabecera extends StatelessWidget {
                     Text(
                       '${v.codigo} · ${v.subtitulo}'
                       '${v.km != null ? ' · ${Fmt.km(v.km)}' : ''}',
-                      style: TextStyle(fontSize: 13, color: p.sobreNegro2),
+                      style: TextStyle(fontSize: 14, color: p.sobreNegro2),
                     ),
                   ],
                 ),
@@ -235,7 +235,7 @@ class _Cabecera extends StatelessWidget {
             Text(
               'Observaciones',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: p.sobreNegro,
               ),
@@ -243,7 +243,7 @@ class _Cabecera extends StatelessWidget {
             const SizedBox(height: Esp.xs),
             Text(
               v.observaciones!,
-              style: TextStyle(fontSize: 13, color: p.sobreNegro2, height: 1.5),
+              style: TextStyle(fontSize: 14, color: p.sobreNegro2, height: 1.5),
             ),
           ],
         ],
@@ -287,10 +287,7 @@ class _Mosaico extends StatelessWidget {
             child: Icon(icono, size: 15, color: color),
           ),
           const SizedBox(height: Esp.sm + 2),
-          Text(
-            etiqueta,
-            style: TextStyle(fontSize: 11.5, color: p.sobreNegro2),
-          ),
+          Text(etiqueta, style: TextStyle(fontSize: 13, color: p.sobreNegro2)),
           const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -446,7 +443,7 @@ class _GananciaReal extends StatelessWidget {
                   children: [
                     Text(
                       'Margen real (USD)',
-                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                     Text(
                       // Vendida: contra lo que se cobró, no contra el
@@ -475,7 +472,7 @@ class _GananciaReal extends StatelessWidget {
                 : 'Lo invertido se pasa a dólares al oficial del día de la compra '
                       'y de cada gasto, y se trae al dólar de hoy (o al del día '
                       'de la venta).',
-            style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.5),
+            style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.5),
           ),
         ],
       ),
@@ -570,7 +567,7 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
                 Text(
                   'Precio a publicar',
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: p.acentoTinta.withValues(alpha: 0.7),
                   ),
@@ -595,7 +592,7 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
             children: [
               Text(
                 'Margen deseado',
-                style: TextStyle(fontSize: 13, color: p.tinta2),
+                style: TextStyle(fontSize: 14, color: p.tinta2),
               ),
               const Spacer(),
               Container(
@@ -611,7 +608,7 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
                   Fmt.porcentaje(_margen, decimales: 0),
                   style: TextStyle(
                     fontFamily: TemaApp.mono,
-                    fontSize: 13.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: p.acento,
                   ),
@@ -675,7 +672,7 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
                                 '${Fmt.porcentaje(ajuste.abs())} y todavía '
                                 'alcanzar ese margen.',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13,
                         color: p.tinta2,
                         height: 1.45,
                       ),
@@ -753,7 +750,7 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
           const SizedBox(height: Esp.md),
           Text(
             'Es como se vende en el rubro: “$_cuotas cuotas fijas de…”.',
-            style: TextStyle(fontSize: 12, color: p.tinta3, height: 1.4),
+            style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
           ),
           const SizedBox(height: Esp.lg),
 
@@ -778,7 +775,7 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             ),
           ),
           const SizedBox(height: Esp.lg),
-          Text('Cuotas', style: TextStyle(fontSize: 13, color: p.tinta2)),
+          Text('Cuotas', style: TextStyle(fontSize: 14, color: p.tinta2)),
           const SizedBox(height: Esp.sm),
           Row(
             children: [
@@ -799,7 +796,7 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
             children: [
               Text(
                 'Tasa mensual',
-                style: TextStyle(fontSize: 13, color: p.tinta2),
+                style: TextStyle(fontSize: 14, color: p.tinta2),
               ),
               const Spacer(),
               Text(
@@ -832,7 +829,7 @@ class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
               children: [
                 Text(
                   'Cuota mensual',
-                  style: TextStyle(fontSize: 12.5, color: p.sobreNegro2),
+                  style: TextStyle(fontSize: 13, color: p.sobreNegro2),
                 ),
                 const SizedBox(height: 2),
                 _CifraAnimada(

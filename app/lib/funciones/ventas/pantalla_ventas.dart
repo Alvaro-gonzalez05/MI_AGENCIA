@@ -150,7 +150,7 @@ class _Resumen extends StatelessWidget {
                   children: [
                     Text(
                       'Ganancia nominal',
-                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
@@ -175,7 +175,7 @@ class _Resumen extends StatelessWidget {
                   children: [
                     Text(
                       'Real, ajustada por dólar (USD)',
-                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
@@ -210,7 +210,7 @@ class _Resumen extends StatelessWidget {
                       '${Fmt.porcentaje(proporcion, decimales: 0)} de la nominal.'
                 : 'Medida en dólares, la ganancia es ${Fmt.pesos(-erosion)} '
                       'mayor que en pesos.',
-            style: TextStyle(fontSize: 12.5, color: p.tinta2, height: 1.45),
+            style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
           ),
         ],
       ),
@@ -313,7 +313,7 @@ class _Fila extends ConsumerWidget {
                       ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                   ],
                 ),
@@ -417,12 +417,12 @@ class _Mini extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(etiqueta, style: TextStyle(fontSize: 10.5, color: p.tinta3)),
+        Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
         Text(
           valor,
           style: TextStyle(
             fontFamily: TemaApp.mono,
-            fontSize: 13.5,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: color,
           ),

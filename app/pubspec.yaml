@@ -98,15 +98,24 @@ flutter:
   # Empaquetadas en vez de descargadas en runtime (google_fonts): la app tiene
   # que verse igual en Windows, Android y web, y funcionar sin internet.
   fonts:
-    - family: IBMPlexSans
+    # Diseno "Clarity Drive": Atkinson Hyperlegible Next para todo lo que se
+    # lee (esta hecha para que 0 y O, 1 y l no se confundan) y Work Sans para
+    # titulos. Las dos son de Google Fonts, licencia OFL.
+    - family: Atkinson
       fonts:
-        - asset: assets/fuentes/IBMPlexSans-Regular.ttf
+        - asset: assets/fuentes/AtkinsonHyperlegibleNext-Regular.ttf
           weight: 400
-        - asset: assets/fuentes/IBMPlexSans-Medium.ttf
-          weight: 500
-        - asset: assets/fuentes/IBMPlexSans-SemiBold.ttf
+        - asset: assets/fuentes/AtkinsonHyperlegibleNext-SemiBold.ttf
           weight: 600
-        - asset: assets/fuentes/IBMPlexSans-Bold.ttf
+        - asset: assets/fuentes/AtkinsonHyperlegibleNext-Bold.ttf
+          weight: 700
+    - family: WorkSans
+      fonts:
+        - asset: assets/fuentes/WorkSans-Regular.ttf
+          weight: 400
+        - asset: assets/fuentes/WorkSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fuentes/WorkSans-Bold.ttf
           weight: 700
     - family: IBMPlexMono
       fonts:

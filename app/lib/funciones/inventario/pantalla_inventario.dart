@@ -250,7 +250,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       'Mostrando ${mostrados.length} de ${lista.length}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: p.sobreNegro2),
+                      style: TextStyle(fontSize: 13, color: p.sobreNegro2),
                     ),
                   ),
                   Container(
@@ -266,7 +266,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       'Capital ${Fmt.pesosCompacto(capital)}',
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: p.acentoTinta,
                       ),
@@ -296,7 +296,7 @@ class _PieLista extends StatelessWidget {
         child: Center(
           child: Text(
             'No hay más unidades',
-            style: TextStyle(fontSize: 12, color: p.tinta3),
+            style: TextStyle(fontSize: 13, color: p.tinta3),
           ),
         ),
       );
@@ -403,7 +403,7 @@ class _BarraFiltros extends ConsumerWidget {
               hint: Text(
                 'Marca',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: p.tinta2,
                 ),
@@ -423,20 +423,20 @@ class _BarraFiltros extends ConsumerWidget {
                     child: Text(
                       m,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: p.acentoTinta,
                       ),
                     ),
                   ),
               ],
-              style: TextStyle(fontSize: 13, color: p.tinta),
+              style: TextStyle(fontSize: 14, color: p.tinta),
               items: [
                 DropdownMenuItem(
                   value: null,
                   child: Text(
                     'Todas las marcas',
-                    style: TextStyle(fontSize: 13, color: p.tinta2),
+                    style: TextStyle(fontSize: 14, color: p.tinta2),
                   ),
                 ),
                 for (final m in marcas)
@@ -580,7 +580,7 @@ class _FilaVehiculo extends StatelessWidget {
                   '${v.codigo} · ${v.subtitulo}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: p.tinta3),
+                  style: TextStyle(fontSize: 13, color: p.tinta3),
                 ),
               ],
             ),
@@ -601,13 +601,13 @@ class _FilaVehiculo extends StatelessWidget {
             color: margenColor,
           ),
           _Columna(
-            etiqueta: 'Ganancia real',
+            etiqueta: 'Ganancia real (USD)',
             valor: Fmt.pesosCompacto(v.gananciaRealIpc),
             color: v.gananciaRealIpc < 0 ? p.critico : p.tinta,
           ),
           const SizedBox(width: Esp.lg),
           SizedBox(
-            width: 104,
+            width: 132,
             child: Align(
               alignment: Alignment.centerRight,
               child: Pastilla(
@@ -644,7 +644,7 @@ class _Columna extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(etiqueta, style: TextStyle(fontSize: 11, color: p.tinta3)),
+          Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
           const SizedBox(height: 2),
           Text(
             valor,
@@ -652,7 +652,7 @@ class _Columna extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: TemaApp.mono,
-              fontSize: 13.5,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: color ?? p.tinta,
             ),
@@ -703,7 +703,7 @@ class _TarjetaVehiculo extends StatelessWidget {
                       '${v.codigo} · ${v.subtitulo}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: p.tinta3),
+                      style: TextStyle(fontSize: 13, color: p.tinta3),
                     ),
                   ],
                 ),
@@ -788,7 +788,7 @@ class _MiniDato extends StatelessWidget {
                   etiqueta,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: p.tinta3),
+                  style: TextStyle(fontSize: 13, color: p.tinta3),
                 ),
               ),
             ],
@@ -801,7 +801,7 @@ class _MiniDato extends StatelessWidget {
               valor,
               style: TextStyle(
                 fontFamily: TemaApp.mono,
-                fontSize: 13.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color ?? p.tinta,
               ),

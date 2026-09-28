@@ -155,7 +155,7 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
                           const SizedBox(height: Esp.md),
                           Text(
                             'Insertar en el mensaje',
-                            style: TextStyle(fontSize: 11.5, color: p.tinta3),
+                            style: TextStyle(fontSize: 13, color: p.tinta3),
                           ),
                           const SizedBox(height: Esp.sm),
                           Wrap(
@@ -241,7 +241,7 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
                 const SizedBox(height: Esp.md),
                 Text(
                   ejemplo(_c.cuerpo),
-                  style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.6),
+                  style: TextStyle(fontSize: 14, color: p.tinta2, height: 1.6),
                 ),
                 const SizedBox(height: Esp.md),
                 Divider(color: p.borde, height: 1),
@@ -249,7 +249,7 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
                 Text(
                   'Recibís este mail porque dejaste tus datos en tu agencia. '
                   'Si no querés recibir más, respondé con la palabra BAJA.',
-                  style: TextStyle(fontSize: 11, color: p.tinta3, height: 1.5),
+                  style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.5),
                 ),
               ],
             ),
@@ -265,11 +265,7 @@ class _FormularioCampanaState extends ConsumerState<FormularioCampana> {
                   'El pie con la opción de baja se agrega solo y no se puede '
                   'sacar. Sin eso, los mails terminan en spam y la reputación '
                   'del dominio se quema para siempre.',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: p.tinta3,
-                    height: 1.45,
-                  ),
+                  style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.45),
                 ),
               ),
             ],
