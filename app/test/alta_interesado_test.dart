@@ -149,7 +149,7 @@ void main() {
     testWidgets('alta accesible y validación a ${size.width}', (tester) async {
       final repo = RepoPrueba();
       await pintar(tester, repo, const PantallaInteresados(), size);
-      await tocar(tester, 'Nuevo interesado');
+      await tocar(tester, 'Nuevo cliente');
       await tocar(tester, 'Continuar');
       expect(find.text('Ingresá el nombre y apellido.'), findsOneWidget);
       expect(repo.altas, 0);

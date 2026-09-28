@@ -56,14 +56,17 @@ abstract final class Secciones {
     enBarraInferior: true,
   );
 
+  /// La ruta sigue siendo /interesados: la cambian los enlaces guardados y
+  /// los deep links de las campañas. Lo que cambió es el nombre visible, que
+  /// es como la agencia los llama de verdad.
   static const interesados = Seccion(
     id: 'interesados',
-    etiqueta: 'Interesados',
+    etiqueta: 'Clientes',
     ruta: '/interesados',
     icono: Icons.people_outline,
     grupo: 'Gestión',
-    titulo: 'Interesados',
-    subtitulo: 'Embudo de venta con semáforo crediticio del BCRA',
+    titulo: 'Clientes',
+    subtitulo: 'Interesados y compradores, con semáforo crediticio del BCRA',
     enBarraInferior: true,
   );
 
@@ -75,7 +78,6 @@ abstract final class Secciones {
     grupo: 'Carga de datos',
     titulo: 'Vehículos',
     subtitulo: 'Alta y edición de unidades',
-    enBarraInferior: true,
   );
 
   static const gastos = Seccion(
@@ -158,6 +160,11 @@ abstract final class Secciones {
 
   static List<Seccion> get barraInferior =>
       todas.where((s) => s.enBarraInferior).toList(growable: false);
+
+  /// Lo que se carga a mano, en el orden en que sucede en la agencia: entra
+  /// la unidad, se le hacen gastos, se le pone precio, se vende. Es lo que
+  /// ofrece el botón "+" de la barra inferior.
+  static const cargar = <Seccion>[vehiculos, gastos, precios, ventas];
 
   static Seccion? porRuta(String ruta) {
     for (final s in todas) {

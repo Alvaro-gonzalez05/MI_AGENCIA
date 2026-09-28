@@ -246,10 +246,7 @@ class _Marca extends StatelessWidget {
                           agencia!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: p.sobreNegro2,
-                          ),
+                          style: TextStyle(fontSize: 13, color: p.sobreNegro2),
                         ),
                     ],
                   ),
@@ -304,7 +301,7 @@ class _EnlaceNavState extends State<_EnlaceNav> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
                     color: color,
                   ),
@@ -461,7 +458,7 @@ class _PieUsuario extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: p.sobreNegro,
                   ),
@@ -472,7 +469,7 @@ class _PieUsuario extends ConsumerWidget {
                       : (usuario?.rol ?? ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: p.sobreNegro2),
+                  style: TextStyle(fontSize: 13, color: p.sobreNegro2),
                 ),
               ],
             ),
@@ -522,7 +519,7 @@ class _EncabezadoPantalla extends StatelessWidget {
                     seccion.subtitulo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: p.tinta3),
+                    style: TextStyle(fontSize: 14, color: p.tinta3),
                   ),
                 ],
               ),
@@ -547,7 +544,7 @@ class _EncabezadoPantalla extends StatelessWidget {
                   Fmt.fecha(DateTime.now()),
                   style: TextStyle(
                     fontFamily: TemaApp.mono,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: p.tinta,
                   ),
@@ -611,7 +608,7 @@ class _ShellMovil extends ConsumerWidget {
                       esPanel ? _tituloDe(seccion, usuario) : seccion.grupo,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: p.tinta3),
+                      style: TextStyle(fontSize: 14, color: p.tinta3),
                     ),
                     Text(
                       seccion.titulo,
@@ -646,16 +643,115 @@ class _ShellMovil extends ConsumerWidget {
             : null,
       ),
       body: child,
+      // La barra es la del diseño y la que ya estaba: pastilla oscura
+      // flotante, con el "+" de cargar en el medio y "Más" al final, que abre
+      // el resto de las secciones y el cambio de tema.
       bottomNavigationBar: _BarraInferior(
-        indiceActivo: indiceVisible,
+        indiceActivo: indiceVisible < principales.length
+            ? (indiceVisible >= _lugarDelMas
+                  ? indiceVisible + 1
+                  : indiceVisible)
+            : principales.length + 1,
         items: [
-          for (final s in principales) (s.icono, s.etiqueta),
+          for (var i = 0; i < principales.length; i++) ...[
+            if (i == _lugarDelMas) (Icons.add_circle_outline_rounded, 'Cargar'),
+            (principales[i].icono, principales[i].etiqueta),
+          ],
           (Icons.more_horiz_rounded, 'Más'),
         ],
-        onTap: (i) => i < principales.length
-            ? context.go(principales[i].ruta)
-            : _abrirMenu(context, ref),
+        // El "+" no marca sección activa: es una acción, no un destino.
+        indiceAccion: _lugarDelMas,
+        onTap: (i) {
+          if (i == _lugarDelMas) return _abrirCargar(context);
+          final real = i > _lugarDelMas ? i - 1 : i;
+          if (real >= principales.length) return _abrirMenu(context, ref);
+          context.go(principales[real].ruta);
+        },
       ),
+    );
+  }
+
+  /// El "+" va en el medio de la barra, entre la segunda y la tercera
+  /// sección: es donde cae el pulgar.
+  static const _lugarDelMas = 2;
+
+  /// La hoja del "+": todo lo que se carga a mano, en un solo lugar.
+  ///
+  /// Antes había que acordarse de en qué sección se daba de alta cada cosa.
+  void _abrirCargar(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final p = ctx.paleta;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Cargar', style: Theme.of(ctx).textTheme.titleLarge),
+                const SizedBox(height: Esp.xs),
+                Text(
+                  'Elegí qué querés dar de alta.',
+                  style: TextStyle(fontSize: 15, color: p.tinta2),
+                ),
+                const SizedBox(height: Esp.lg),
+                for (var i = 0; i < Secciones.cargar.length; i++)
+                  Aparecer(
+                    indice: i,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: Esp.sm),
+                      child: Tarjeta(
+                        padding: const EdgeInsets.all(Esp.lg),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          context.go(Secciones.cargar[i].ruta);
+                        },
+                        child: Row(
+                          children: [
+                            IconoEnCirculo(
+                              icono: Secciones.cargar[i].icono,
+                              tamano: 44,
+                              color: p.acentoTinta,
+                              fondo: p.acento,
+                            ),
+                            const SizedBox(width: Esp.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    Secciones.cargar[i].etiqueta,
+                                    style: Theme.of(ctx).textTheme.titleMedium,
+                                  ),
+                                  Text(
+                                    Secciones.cargar[i].subtitulo,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: p.tinta2,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: p.tinta3,
+                              size: 24,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -808,7 +904,7 @@ class _MosaicoSeccion extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: activa ? p.acentoTinta : p.tinta,
                 ),
@@ -828,11 +924,15 @@ class _BarraInferior extends StatelessWidget {
     required this.indiceActivo,
     required this.items,
     required this.onTap,
+    this.indiceAccion,
   });
 
   final int indiceActivo;
   final List<(IconData, String)> items;
   final ValueChanged<int> onTap;
+
+  /// El "+": va siempre en ámbar, se marque o no la sección.
+  final int? indiceAccion;
 
   static const _anchoInactivo = 46.0;
 
@@ -878,6 +978,7 @@ class _BarraInferior extends StatelessWidget {
                     icono: items[i].$1,
                     etiqueta: items[i].$2,
                     activo: i == indiceActivo,
+                    accion: i == indiceAccion,
                     anchoEtiqueta: anchoEtiqueta,
                     onTap: () => onTap(i),
                   ),
@@ -897,6 +998,7 @@ class _ItemBarra extends StatelessWidget {
     required this.activo,
     required this.anchoEtiqueta,
     required this.onTap,
+    this.accion = false,
   });
 
   final IconData icono;
@@ -905,20 +1007,27 @@ class _ItemBarra extends StatelessWidget {
   final double anchoEtiqueta;
   final VoidCallback onTap;
 
+  /// El "+" de cargar: siempre visible, nunca "seleccionado".
+  final bool accion;
+
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    final conEtiqueta = activo && anchoEtiqueta >= 36;
+    final conEtiqueta = activo && !accion && anchoEtiqueta >= 36;
 
     return Semantics(
       label: etiqueta,
-      selected: activo,
+      selected: activo && !accion,
       button: true,
       child: AnimatedContainer(
         duration: Duracion.media,
         curve: Curves.easeOutCubic,
         decoration: ShapeDecoration(
-          color: activo ? p.acento : p.negro.withValues(alpha: 0),
+          color: accion
+              ? p.acento
+              : activo
+              ? p.acento
+              : p.negro.withValues(alpha: 0),
           shape: const StadiumBorder(),
         ),
         child: Material(
@@ -942,8 +1051,8 @@ class _ItemBarra extends StatelessWidget {
                   children: [
                     Icon(
                       icono,
-                      size: 22,
-                      color: activo ? p.acentoTinta : p.sobreNegro2,
+                      size: accion ? 26 : 22,
+                      color: activo || accion ? p.acentoTinta : p.sobreNegro2,
                     ),
                     AnimatedSize(
                       duration: Duracion.media,
@@ -960,7 +1069,7 @@ class _ItemBarra extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: p.acentoTinta,
                                   ),
