@@ -115,6 +115,11 @@ class VehiculoInventario {
     this.precioFinal,
     this.observaciones,
     this.revistaArs,
+    this.color,
+    this.combustible,
+    this.transmision,
+    this.nroMotor,
+    this.nroChasis,
   });
 
   final String id;
@@ -156,6 +161,14 @@ class VehiculoInventario {
   final double costoTotalHoy;
   final double gananciaRealIpc;
   final double gananciaRealUsd;
+
+  /// Ficha tecnica. Se carga en el alta y la muestra la ficha del auto
+  /// (migracion 0022): antes se guardaba pero no llegaba a la app.
+  final String? color;
+  final String? combustible;
+  final String? transmision;
+  final String? nroMotor;
+  final String? nroChasis;
 
   final DateTime? fechaVenta;
   final double? precioFinal;

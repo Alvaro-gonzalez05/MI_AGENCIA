@@ -120,6 +120,16 @@ abstract final class Secciones {
     subtitulo: 'Email marketing a la base de interesados',
   );
 
+  static const simulador = Seccion(
+    id: 'simulador',
+    etiqueta: 'Simulador',
+    ruta: '/simulador',
+    icono: Icons.calculate_outlined,
+    grupo: 'Gestión',
+    titulo: 'Simulador de financiamiento',
+    subtitulo: 'Calculá la cuota para mostrarle al cliente',
+  );
+
   static const configuracion = Seccion(
     id: 'configuracion',
     etiqueta: 'Configuración',
@@ -150,6 +160,7 @@ abstract final class Secciones {
     precios,
     ventas,
     campanas,
+    simulador,
     configuracion,
     agencias,
   ];

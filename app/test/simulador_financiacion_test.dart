@@ -4,163 +4,182 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mi_agencia/core/tema/tema.dart';
 import 'package:mi_agencia/datos/repositorio.dart';
-import 'package:mi_agencia/dominio/gastos.dart';
 import 'package:mi_agencia/dominio/modelos.dart';
 import 'package:mi_agencia/dominio/motor_calculo.dart';
-import 'package:mi_agencia/dominio/precios.dart';
-import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
+import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
+import 'package:mi_agencia/ui/componentes.dart';
 
-/// El simulador de financiación: solo monto a financiar.
+/// El simulador de financiamiento.
 ///
-/// Tanda 1 (punto 2.2) pidió poder cambiar el monto; se agregaron atajos de
-/// anticipo. Tanda 2 (punto 2.2) pidió sacar el anticipo: queda el monto a
-/// financiar y nada más.
+/// Historia: tanda 1 (2.2) pidió poder cambiar el monto; tanda 2 (2.2) sacar
+/// el anticipo. El diseño nuevo lo saca de la ficha del auto, lo pone como
+/// pantalla propia y le agrega los cuatro sistemas de amortización con los
+/// que trabajan las financieras.
 void main() {
   setUpAll(() async => initializeDateFormatting('es_AR'));
 
-  Future<void> pintar(WidgetTester tester, Size tamano) async {
-    tester.view.physicalSize = tamano;
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [repositorioProvider.overrideWithValue(_Repo())],
-        child: MaterialApp(
-          theme: TemaApp.oscuro(),
-          home: const Scaffold(body: PantallaFicha(id: 'v-1')),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
-  /// Deja algo a la vista. La ficha tiene varias listas (las tarjetas, y los
-  /// chips en horizontal), asi que no sirve pedir "la" scrollable.
-  Future<void> mostrar(WidgetTester tester, Finder f) async {
-    await tester.ensureVisible(f);
-    await tester.pumpAndSettle();
-  }
-
-  /// Baja hasta el simulador y devuelve su campo de monto.
-  Future<Finder> montoDelSimulador(WidgetTester tester) async {
-    await mostrar(tester, find.text('Monto a financiar'));
-    return find.widgetWithText(TextFormField, '20000000');
-  }
-
   group('Cálculo', () {
-    test('financiar menos baja la cuota', () {
-      final entero = Motor.financiacion(
-        monto: 20000000,
+    // Caso de control: $10.000.000 a 12 meses con TNA 36 % (3 % mensual).
+    const monto = 10000000.0;
+
+    test('francés: cuota fija, y es la del diseño', () {
+      final r = Motor.financiacionPor(
+        sistema: SistemaAmortizacion.frances,
+        monto: monto,
         cuotas: 12,
-        tasaMensual: 0.06,
+        tna: 0.36,
       );
-      final conAnticipo = Motor.financiacion(
-        monto: 14000000,
+      expect(r.primera, closeTo(1004621, 1));
+      expect(r.ultima, closeTo(r.primera, 0.01));
+      expect(r.total, closeTo(12055451, 10));
+      expect(r.interes, closeTo(2055451, 10));
+    });
+
+    test('alemán: arranca más alta, termina más baja y sale más barato', () {
+      final a = Motor.financiacionPor(
+        sistema: SistemaAmortizacion.aleman,
+        monto: monto,
         cuotas: 12,
-        tasaMensual: 0.06,
+        tna: 0.36,
       );
-      expect(conAnticipo.cuota, lessThan(entero.cuota));
-      // 30% menos financiado, 30% menos de cuota: el interés es directo.
-      expect(conAnticipo.cuota, closeTo(entero.cuota * 0.7, 1));
+      final f = Motor.financiacionPor(
+        sistema: SistemaAmortizacion.frances,
+        monto: monto,
+        cuotas: 12,
+        tna: 0.36,
+      );
+      // Capital 833.333 + interés del primer mes (300.000).
+      expect(a.primera, closeTo(1133333, 1));
+      expect(a.ultima, lessThan(a.primera));
+      expect(a.interes, lessThan(f.interes));
+    });
+
+    test('directo: el interés se cobra sobre el capital entero', () {
+      final r = Motor.financiacionPor(
+        sistema: SistemaAmortizacion.directo,
+        monto: monto,
+        cuotas: 12,
+        tna: 0.36,
+      );
+      // 10.000.000 × 3 % × 12 = 3.600.000 de interés.
+      expect(r.interes, closeTo(3600000, 1));
+      expect(r.primera, closeTo(13600000 / 12, 1));
+      expect(r.primera, equals(r.ultima));
+    });
+
+    test('global: un solo pago al final', () {
+      final r = Motor.financiacionPor(
+        sistema: SistemaAmortizacion.global,
+        monto: monto,
+        cuotas: 12,
+        tna: 0.36,
+      );
+      expect(r.primera, 0);
+      expect(r.ultima, closeTo(monto * 1.03 * 1.03, 1e9)); // crece compuesto
+      expect(r.total, greaterThan(monto));
+      expect(r.interes, closeTo(r.total - monto, 0.01));
+    });
+
+    test('sin tasa, la cuota es el capital dividido por los meses', () {
+      for (final s in SistemaAmortizacion.values) {
+        final r = Motor.financiacionPor(
+          sistema: s,
+          monto: monto,
+          cuotas: 10,
+          tna: 0,
+        );
+        expect(r.total, closeTo(monto, 1), reason: s.name);
+        expect(r.interes, closeTo(0, 1), reason: s.name);
+      }
     });
 
     test('sin monto no divide por cero', () {
-      final r = Motor.financiacion(monto: 0, cuotas: 12, tasaMensual: 0.06);
-      expect(r.cuota, 0);
-      expect(r.cuota.isNaN, isFalse);
+      for (final s in SistemaAmortizacion.values) {
+        final r = Motor.financiacionPor(
+          sistema: s,
+          monto: 0,
+          cuotas: 12,
+          tna: 0.36,
+        );
+        expect(r.primera, 0);
+        expect(r.total, 0);
+        expect(r.primera.isNaN, isFalse);
+      }
     });
   });
 
   group('Pantalla', () {
+    Future<void> pintar(WidgetTester tester, Size tamano) async {
+      tester.view.physicalSize = tamano;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [repositorioProvider.overrideWithValue(_Repo())],
+          child: MaterialApp(
+            theme: TemaApp.claro(),
+            home: const Scaffold(body: PantallaSimulador()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
     for (final (donde, tamano) in [
-      ('en un celular', const Size(360, 780)),
+      ('en un celular', const Size(390, 844)),
       ('en un escritorio', const Size(1440, 900)),
     ]) {
-      testWidgets('el simulador tiene monto a financiar y no anticipo $donde', (
+      testWidgets('tiene monto, sistemas, tasa y cuotas $donde', (
         tester,
       ) async {
         await pintar(tester, tamano);
-        await montoDelSimulador(tester);
 
         expect(find.text('Monto a financiar'), findsOneWidget);
+        expect(find.text('Sistema de amortización'), findsOneWidget);
+        for (final s in SistemaAmortizacion.values) {
+          expect(find.widgetWithText(ChipSeleccion, s.etiqueta), findsOneWidget);
+        }
+        expect(find.text('Tasa anual (TNA)'), findsOneWidget);
+        expect(find.text('Cuotas'), findsOneWidget);
+        // Sin anticipo: el cliente lo pidió expresamente (tanda 2, 2.2).
         expect(find.textContaining('nticipo'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('arranca financiando el precio publicado', (tester) async {
+    testWidgets('cambiar de sistema cambia lo que se muestra', (tester) async {
       await pintar(tester, const Size(1440, 900));
-      final campo = await montoDelSimulador(tester);
-      expect(campo, findsOneWidget);
-      // 20.000.000 × (1 + 6 % × 12) / 12 = 2.866.667
-      await mostrar(tester, find.text('Cuota mensual'));
-      expect(find.text(r'$2.866.667'), findsOneWidget);
+
+      expect(find.text('Cuota mensual'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChipSeleccion, 'Alemán'));
+      await tester.pumpAndSettle();
+
+      // Con cuotas que bajan, el encabezado lo dice y aparece la última.
+      expect(find.text('Primera cuota (van bajando)'), findsOneWidget);
+      expect(find.textContaining('Última cuota:'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('cambiar el monto recalcula la cuota', (tester) async {
+    testWidgets('el contador de cuotas no baja de una', (tester) async {
       await pintar(tester, const Size(1440, 900));
-      final campo = await montoDelSimulador(tester);
 
-      await tester.enterText(campo, '14000000');
-      await tester.pumpAndSettle();
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pumpAndSettle();
-
-      // 14.000.000 × 1,72 / 12 = 2.006.667
-      await mostrar(tester, find.text('Cuota mensual'));
-      expect(find.text(r'$2.006.667'), findsOneWidget);
-      expect(find.text(r'$24.080.000'), findsOneWidget); // total financiado
+      for (var i = 0; i < 20; i++) {
+        await tester.tap(find.byTooltip('Una cuota menos'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('1'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }
 
-final _vehiculo = VehiculoInventario(
-  id: 'v-1',
-  codigo: 'V001',
-  marca: 'Toyota',
-  modelo: 'Corolla',
-  anio: 2022,
-  estado: EstadoVehiculo.enStock,
-  alerta: AlertaRotacion.normal,
-  fechaIngreso: DateTime(2026, 9, 1),
-  fechaCompra: DateTime(2026, 9, 1),
-  precioCompra: 16000000,
-  precioObjetivo: 20000000,
-  costoTotal: 16000000,
-  gastosAcum: 0,
-  cantidadGastos: 0,
-  diasEnStock: 18,
-  precioActual: 20000000,
-  capitalInmovilizado: 16000000,
-  gananciaEstimada: 4000000,
-  margenActual: .2,
-  margenEsperado: .2,
-  precioParaMargenObjetivo: 22857142,
-  precioSugerido: 22857142,
-  costoTotalHoy: 16000000,
-  gananciaRealIpc: 4000000,
-  gananciaRealUsd: 2666,
-);
-
 class _Repo implements Repositorio {
-  @override
-  Future<List<VehiculoInventario>> inventario({
-    int desde = 0,
-    int cantidad = 500,
-  }) async => [_vehiculo];
-
   @override
   Future<ConfigAgencia> config() async => const ConfigAgencia();
 
   @override
-  Future<List<Gasto>> gastos({String? vehiculoId}) async => const [];
-
-  @override
-  Future<List<CambioPrecio>> cambiosPrecio({String? vehiculoId}) async =>
-      const [];
-
-  @override
   dynamic noSuchMethod(Invocation i) => throw UnimplementedError(
-    'La ficha llamó a ${i.memberName}: agregalo a este falso si hace falta.',
+    'El simulador llamó a ${i.memberName}: agregalo a este falso si hace falta.',
   );
 }

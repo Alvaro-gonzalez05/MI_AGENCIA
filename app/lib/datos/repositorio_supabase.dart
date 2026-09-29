@@ -964,6 +964,11 @@ class RepositorioSupabase implements Repositorio {
       precioFinal: _decimal(f['precio_final']),
       observaciones: f['observaciones'] as String?,
       revistaArs: _decimal(f['revista_ars']),
+      color: f['color'] as String?,
+      combustible: f['combustible'] as String?,
+      transmision: f['transmision'] as String?,
+      nroMotor: f['nro_motor'] as String?,
+      nroChasis: f['nro_chasis'] as String?,
     );
   }
 

@@ -17,7 +17,9 @@ import 'package:mi_agencia/dominio/precios.dart';
 import 'package:mi_agencia/dominio/ventas.dart';
 import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_inventario.dart';
+import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 import 'package:mi_agencia/funciones/panel/pantalla_panel.dart';
+import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
 
 /// Capturas para revisar el diseno a ojo. No es una prueba: se corre a mano
 /// con `flutter test --update-goldens test/capturas_tmp_test.dart`.
@@ -104,6 +106,25 @@ void main() {
   });
   testWidgets('panel', (t) async {
     await capturar(t, 'panel', const PantallaPanel());
+  });
+  testWidgets('ficha', (t) async {
+    await capturar(
+      t,
+      'ficha',
+      const PantallaFicha(id: 'v0'),
+      tamano: const Size(1280, 1800),
+    );
+  });
+  testWidgets('ficha celular', (t) async {
+    await capturar(
+      t,
+      'ficha-celular',
+      const PantallaFicha(id: 'v0'),
+      tamano: const Size(390, 1500),
+    );
+  });
+  testWidgets('simulador', (t) async {
+    await capturar(t, 'simulador', const PantallaSimulador());
   });
 }
 

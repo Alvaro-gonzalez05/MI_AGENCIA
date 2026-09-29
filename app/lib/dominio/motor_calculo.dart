@@ -17,6 +17,18 @@ import 'modelos.dart';
 ///
 /// Cuando Supabase este conectado, las pantallas leen `v_inventario` y NO
 /// pasan por aca. Si se cambia una formula, se cambia en el SQL primero.
+/// Como se devuelve un credito. Los cuatro que pide el diseno.
+enum SistemaAmortizacion {
+  frances('Francés', 'Cuota fija todos los meses'),
+  aleman('Alemán', 'Arranca mas alta y va bajando'),
+  directo('Directo', 'Interes sobre el capital entero'),
+  global('Global', 'Un solo pago al final');
+
+  const SistemaAmortizacion(this.etiqueta, this.explicacion);
+  final String etiqueta;
+  final String explicacion;
+}
+
 abstract final class Motor {
   /// Reconstruye el inventario completo con todo calculado.
   ///
@@ -209,6 +221,84 @@ abstract final class Motor {
     final interes = monto * tasaMensual * cuotas;
     final total = monto + interes;
     return (cuota: total / cuotas, total: total, interes: interes);
+  }
+
+  /// Los cuatro sistemas que pide el diseno nuevo. Devuelve la primera
+  /// cuota, la ultima, el total y los intereses.
+  ///
+  /// La diferencia entre ellos es QUE se paga cada mes:
+  ///
+  /// - **Frances**: cuota fija. Al principio casi todo es interes.
+  /// - **Aleman**: capital fijo. La primera cuota es la mas alta y despues
+  ///   bajan; se paga menos interes en total que en frances.
+  /// - **Directo**: el interes se calcula sobre el capital entero, como si
+  ///   nunca se amortizara. Es el mas caro y el mas usado en el rubro.
+  /// - **Global**: un solo pago al final, con todo el interes acumulado.
+  ///
+  /// [tna] es la tasa NOMINAL ANUAL, que es como la informan las
+  /// financieras; adentro se divide por 12.
+  static ({double primera, double ultima, double total, double interes})
+  financiacionPor({
+    required SistemaAmortizacion sistema,
+    required double monto,
+    required int cuotas,
+    required double tna,
+  }) {
+    if (monto <= 0 || cuotas <= 0) {
+      return (primera: 0, ultima: 0, total: 0, interes: 0);
+    }
+    final i = tna / 12;
+
+    switch (sistema) {
+      case SistemaAmortizacion.frances:
+        // Sin interes, la cuota es el capital dividido por los meses: la
+        // formula con (1+i)^n se indefine cuando i vale cero.
+        final cuota = i == 0
+            ? monto / cuotas
+            : monto *
+                  i *
+                  math.pow(1 + i, cuotas) /
+                  (math.pow(1 + i, cuotas) - 1);
+        final total = cuota * cuotas;
+        return (
+          primera: cuota,
+          ultima: cuota,
+          total: total,
+          interes: total - monto,
+        );
+
+      case SistemaAmortizacion.aleman:
+        final capital = monto / cuotas;
+        final primera = capital + monto * i;
+        final ultima = capital + capital * i;
+        // Suma de una progresion aritmetica: no hace falta iterar.
+        final total = (primera + ultima) * cuotas / 2;
+        return (
+          primera: primera,
+          ultima: ultima,
+          total: total,
+          interes: total - monto,
+        );
+
+      case SistemaAmortizacion.directo:
+        final interes = monto * i * cuotas;
+        final total = monto + interes;
+        return (
+          primera: total / cuotas,
+          ultima: total / cuotas,
+          total: total,
+          interes: interes,
+        );
+
+      case SistemaAmortizacion.global:
+        final total = monto * math.pow(1 + i, cuotas).toDouble();
+        return (
+          primera: 0,
+          ultima: total,
+          total: total,
+          interes: total - monto,
+        );
+    }
   }
 
   /// Capital inmovilizado y ganancia acumulada mes a mes, para los graficos.

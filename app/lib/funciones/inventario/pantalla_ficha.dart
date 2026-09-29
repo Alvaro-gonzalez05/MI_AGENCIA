@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,7 +9,6 @@ import '../../datos/repositorio.dart';
 import '../../dominio/modelos.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
-import '../../ui/formulario.dart';
 
 /// Ficha de una unidad: todo lo que se sabe de ella, mas los dos simuladores.
 class PantallaFicha extends ConsumerWidget {
@@ -62,27 +60,35 @@ class _Ficha extends StatelessWidget {
     final v = vehiculo;
     const hueco = SizedBox(height: Esp.lg);
 
+    // El orden es el del diseno: primero la unidad y lo que se puede hacer
+    // con ella, despues la plata, y al final los datos de archivo.
     final izquierda = <Widget>[
       Aparecer(child: _Cabecera(vehiculo: v)),
       hueco,
-      Aparecer(indice: 1, child: _Costos(vehiculo: v)),
+      Aparecer(indice: 1, child: _Valuacion(vehiculo: v)),
+      hueco,
+      Aparecer(indice: 2, child: _Costos(vehiculo: v)),
       hueco,
       Aparecer(
-        indice: 2,
+        indice: 3,
         child: _GananciaReal(vehiculo: v, cfg: cfg),
       ),
+      hueco,
+      Aparecer(indice: 4, child: _GastosUnidad(vehiculo: v)),
     ];
 
     final derecha = <Widget>[
       Aparecer(
-        indice: dosColumnas ? 1 : 3,
+        indice: dosColumnas ? 1 : 5,
         child: _SimuladorPrecio(vehiculo: v, cfg: cfg),
       ),
       hueco,
       Aparecer(
-        indice: dosColumnas ? 2 : 4,
-        child: _SimuladorFinanciacion(vehiculo: v, cfg: cfg),
+        indice: dosColumnas ? 2 : 6,
+        child: _DatosTecnicos(vehiculo: v),
       ),
+      hueco,
+      Aparecer(indice: dosColumnas ? 3 : 7, child: const _Papeles()),
     ];
 
     return ListView(
@@ -135,115 +141,135 @@ class _Cabecera extends StatelessWidget {
     final v = vehiculo;
     final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
 
+    final estado = switch (v.estado) {
+      EstadoVehiculo.vendido => ('Vendido', p.neutro, p.neutroLavado),
+      EstadoVehiculo.reservado => ('Reservado', p.observar, p.observarLavado),
+      EstadoVehiculo.enPreparacion => (
+        'En preparación',
+        p.tinta2,
+        p.superficieHundida,
+      ),
+      EstadoVehiculo.dadoDeBaja => ('Dado de baja', p.neutro, p.neutroLavado),
+      EstadoVehiculo.enStock => ('Disponible para venta', p.bien, p.bienLavado),
+    };
+
+    final ficha = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            if (v.patente != null && v.patente!.isNotEmpty) ...[
+              _Placa(v.patente!),
+              const SizedBox(width: Esp.md),
+            ],
+            Pastilla(texto: estado.$1, color: estado.$2, lavado: estado.$3),
+          ],
+        ),
+        const SizedBox(height: Esp.md),
+        Text(v.titulo, style: Theme.of(context).textTheme.displaySmall),
+        const SizedBox(height: Esp.xs),
+        Text(
+          [
+            'Año ${v.anio}',
+            if (v.km != null) Fmt.km(v.km),
+            if (v.combustible != null) v.combustible!,
+            if (v.transmision != null) v.transmision!,
+          ].join('  ·  '),
+          style: TextStyle(fontSize: 16, color: p.tinta2),
+        ),
+        const SizedBox(height: Esp.sm),
+        Row(
+          children: [
+            Icon(Icons.event_rounded, size: 18, color: p.tinta3),
+            const SizedBox(width: Esp.sm - 2),
+            Flexible(
+              child: Text(
+                'Ingresó el ${Fmt.fecha(v.fechaIngreso)} · '
+                '${Fmt.dias(v.diasEnStock)} en stock',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: v.alerta == AlertaRotacion.normal
+                      ? p.tinta3
+                      : v.alerta.color(p),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final acciones = Wrap(
+      spacing: Esp.sm,
+      runSpacing: Esp.sm,
+      children: [
+        if (!v.vendido)
+          FilledButton.icon(
+            onPressed: () => context.go('/ventas'),
+            icon: const Icon(Icons.sell_rounded, size: 22),
+            label: const Text('Marcar como vendido'),
+          ),
+        OutlinedButton.icon(
+          onPressed: () => context.go('/gastos'),
+          icon: const Icon(Icons.receipt_long_outlined, size: 22),
+          label: const Text('Cargar un gasto'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => context.go('/precios'),
+          icon: const Icon(Icons.sell_outlined, size: 22),
+          label: const Text('Cambiar precio'),
+        ),
+      ],
+    );
+
     return Tarjeta(
-      destacada: true,
-      padding: EdgeInsets.all(angosto ? Esp.lg + 4 : Esp.xl + 4),
+      padding: EdgeInsets.all(angosto ? Esp.lg : Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: p.acento,
-                  borderRadius: BorderRadius.circular(Curva.md + 2),
-                ),
-                child: Icon(
-                  Icons.directions_car_filled_rounded,
-                  size: 28,
-                  color: p.acentoTinta,
-                ),
-              ),
-              const SizedBox(width: Esp.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      v.titulo,
-                      style: TextStyle(
-                        fontSize: angosto ? 21 : 26,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.6,
-                        height: 1.2,
-                        color: p.sobreNegro,
-                      ),
-                    ),
-                    const SizedBox(height: Esp.xs),
-                    Text(
-                      '${v.codigo} · ${v.subtitulo}'
-                      '${v.km != null ? ' · ${Fmt.km(v.km)}' : ''}',
-                      style: TextStyle(fontSize: 14, color: p.sobreNegro2),
-                    ),
-                  ],
-                ),
-              ),
-              if (!angosto) ...[
-                const SizedBox(width: Esp.md),
-                Pastilla(
-                  texto: v.alerta.etiqueta,
-                  color: v.alerta.color(p),
-                  lavado: v.alerta.color(p).withValues(alpha: 0.18),
-                ),
-              ],
-            ],
-          ),
           if (angosto) ...[
-            const SizedBox(height: Esp.md),
-            Pastilla(
-              texto: v.alerta.etiqueta,
-              color: v.alerta.color(p),
-              lavado: v.alerta.color(p).withValues(alpha: 0.18),
+            _FotoGrande(vehiculo: v, alto: 180),
+            const SizedBox(height: Esp.lg),
+            ficha,
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FotoGrande(vehiculo: v, alto: 190, ancho: 280),
+                const SizedBox(width: Esp.xl),
+                Expanded(child: ficha),
+              ],
             ),
-          ],
-          const SizedBox(height: Esp.xl),
-          Row(
-            children: [
-              Expanded(
-                child: _Mosaico(
-                  icono: Icons.schedule_rounded,
-                  etiqueta: 'En stock',
-                  valor: Fmt.dias(v.diasEnStock),
-                  color: v.alerta.color(p),
-                ),
-              ),
-              const SizedBox(width: Esp.sm + 2),
-              Expanded(
-                child: _Mosaico(
-                  icono: Icons.sell_rounded,
-                  etiqueta: 'Precio',
-                  valor: Fmt.pesos(v.precioActual),
-                  color: p.acento,
-                ),
-              ),
-              const SizedBox(width: Esp.sm + 2),
-              Expanded(
-                child: _Mosaico(
-                  icono: Icons.percent_rounded,
-                  etiqueta: 'Margen',
-                  valor: Fmt.porcentaje(v.margenActual),
-                  color: v.margenActual < 0 ? p.critico : p.bien,
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: Esp.lg),
+          Divider(color: p.borde, height: 1.5, thickness: 1.5),
+          const SizedBox(height: Esp.lg),
+          acciones,
           if (v.observaciones != null && v.observaciones!.isNotEmpty) ...[
             const SizedBox(height: Esp.lg),
-            Text(
-              'Observaciones',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: p.sobreNegro,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(Esp.md),
+              decoration: BoxDecoration(
+                color: p.superficieHundida,
+                borderRadius: BorderRadius.circular(Curva.md),
               ),
-            ),
-            const SizedBox(height: Esp.xs),
-            Text(
-              v.observaciones!,
-              style: TextStyle(fontSize: 14, color: p.sobreNegro2, height: 1.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'OBSERVACIONES',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: Esp.xs),
+                  Text(
+                    v.observaciones!,
+                    style: TextStyle(fontSize: 15, color: p.tinta, height: 1.5),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
@@ -252,17 +278,248 @@ class _Cabecera extends StatelessWidget {
   }
 }
 
-class _Mosaico extends StatelessWidget {
-  const _Mosaico({
-    required this.icono,
+/// El lugar de la foto. Las fotos llegan en la tanda siguiente; mientras
+/// tanto el hueco existe y dice qué falta, en vez de fingir que no va nada.
+class _FotoGrande extends StatelessWidget {
+  const _FotoGrande({required this.vehiculo, required this.alto, this.ancho});
+
+  final VehiculoInventario vehiculo;
+  final double alto;
+  final double? ancho;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      width: ancho ?? double.infinity,
+      height: alto,
+      decoration: BoxDecoration(
+        color: vehiculo.alerta.lavado(p),
+        borderRadius: BorderRadius.circular(Curva.lg),
+        border: Border.all(color: p.borde, width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.photo_camera_outlined,
+            size: 34,
+            color: vehiculo.alerta.color(p),
+          ),
+          const SizedBox(height: Esp.sm),
+          Text(
+            'Sin fotos cargadas',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: p.tinta2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// La patente, como la chapa.
+class _Placa extends StatelessWidget {
+  const _Placa(this.patente);
+  final String patente;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Esp.md, vertical: 4),
+      decoration: BoxDecoration(
+        color: p.superficie,
+        borderRadius: BorderRadius.circular(Curva.sm),
+        border: Border.all(color: p.tinta, width: 2),
+      ),
+      child: Text(
+        patente.toUpperCase(),
+        style: TextStyle(
+          fontFamily: TemaApp.titulo,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2,
+          color: p.tinta,
+        ),
+      ),
+    );
+  }
+}
+
+/// Valuación comercial: lo que dice la revista contra lo que se pide.
+class _Valuacion extends StatelessWidget {
+  const _Valuacion({required this.vehiculo});
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final v = vehiculo;
+    final revista = v.revistaArs;
+    final diferencia = revista == null ? null : v.precioActual - revista;
+    final porcentaje = (revista == null || revista <= 0)
+        ? null
+        : v.precioActual / revista - 1;
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CabeceraBloque(
+            titulo: 'Valuación comercial y precio',
+            descripcion: 'El valor de referencia contra lo que pedís',
+          ),
+          const SizedBox(height: Esp.lg),
+          LayoutBuilder(
+            builder: (context, r) {
+              final enFila = r.maxWidth >= 620;
+              final tarjetas = [
+                _Valor(
+                  etiqueta: 'VALOR DE MERCADO',
+                  valor: revista == null ? '—' : Fmt.pesos(revista),
+                  nota: revista == null
+                      ? 'Todavía no hay valor de revista para esta versión'
+                      : 'Guía de referencia',
+                  destacado: true,
+                ),
+                _Valor(
+                  etiqueta: 'PRECIO DE VENTA AL PÚBLICO',
+                  valor: Fmt.pesos(v.precioActual),
+                  nota: 'Publicado en el salón',
+                ),
+                _Valor(
+                  etiqueta: 'DIFERENCIAL',
+                  valor: diferencia == null
+                      ? '—'
+                      : '${diferencia >= 0 ? '+ ' : '- '}'
+                            '${Fmt.pesos(diferencia.abs())}',
+                  nota: porcentaje == null
+                      ? 'Se calcula cuando haya valor de revista'
+                      : '${Fmt.porcentaje(porcentaje.abs())} '
+                            '${porcentaje >= 0 ? 'por encima' : 'por debajo'} de la revista',
+                  color: diferencia == null
+                      ? null
+                      : (diferencia >= 0 ? p.bien : p.critico),
+                ),
+              ];
+              // IntrinsicHeight: sin el, `stretch` no sabe hasta donde
+              // estirar (la altura de una fila adentro de una columna es
+              // libre) y Flutter tira "hasSize".
+              return enFila
+                  ? IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < tarjetas.length; i++) ...[
+                            if (i > 0) const SizedBox(width: Esp.sm),
+                            Expanded(child: tarjetas[i]),
+                          ],
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < tarjetas.length; i++) ...[
+                          if (i > 0) const SizedBox(height: Esp.sm),
+                          tarjetas[i],
+                        ],
+                      ],
+                    );
+            },
+          ),
+          if (revista == null) ...[
+            const SizedBox(height: Esp.md),
+            _Aviso(
+              texto:
+                  'El valor de revista se completa con la guía de precios. '
+                  'Todavía no está conectada: mientras tanto, el precio lo '
+                  'decidís vos con el simulador de acá al lado.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Valor extends StatelessWidget {
+  const _Valor({
     required this.etiqueta,
     required this.valor,
-    required this.color,
+    required this.nota,
+    this.destacado = false,
+    this.color,
   });
 
-  final IconData icono;
-  final String etiqueta, valor;
-  final Color color;
+  final String etiqueta, valor, nota;
+  final bool destacado;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.all(Esp.md + 2),
+      decoration: BoxDecoration(
+        color: destacado ? p.acento : p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: destacado ? p.acento : p.borde),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            etiqueta,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+              color: destacado ? p.acentoTinta : p.tinta3,
+            ),
+          ),
+          const SizedBox(height: Esp.sm),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valor,
+              style: TextStyle(
+                fontFamily: TemaApp.titulo,
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+                color: destacado ? p.acentoTinta : (color ?? p.tinta),
+              ),
+            ),
+          ),
+          const SizedBox(height: Esp.xs),
+          Text(
+            nota,
+            style: TextStyle(
+              fontSize: 14,
+              color: destacado
+                  ? p.acentoTinta.withValues(alpha: 0.8)
+                  : p.tinta3,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Renglón de aviso, para lo que todavía no está conectado.
+class _Aviso extends StatelessWidget {
+  const _Aviso({required this.texto});
+
+  final String texto;
 
   @override
   Widget build(BuildContext context) {
@@ -270,38 +527,247 @@ class _Mosaico extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(Esp.md),
       decoration: BoxDecoration(
-        color: p.negroElevado,
+        color: p.superficieHundida,
         borderRadius: BorderRadius.circular(Curva.md),
-        border: Border.all(color: p.negroBorde),
       ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 20, color: p.tinta3),
+          const SizedBox(width: Esp.sm),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(fontSize: 14, color: p.tinta2, height: 1.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ficha técnica: lo que se carga en el alta.
+class _DatosTecnicos extends StatelessWidget {
+  const _DatosTecnicos({required this.vehiculo});
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = vehiculo;
+    final datos = <(String, String?)>[
+      ('Marca', v.marca),
+      ('Modelo', v.modelo),
+      ('Versión', v.version),
+      ('Año', '${v.anio}'),
+      ('Kilómetros', v.km == null ? null : Fmt.km(v.km)),
+      ('Combustible', v.combustible),
+      ('Transmisión', v.transmision),
+      ('Color', v.color),
+      ('Patente', v.patente),
+      ('Código interno', v.codigo),
+      ('Motor', v.nroMotor),
+      ('Chasis', v.nroChasis),
+    ];
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icono, size: 15, color: color),
+          const CabeceraBloque(
+            titulo: 'Datos técnicos',
+            descripcion: 'Lo que dice la ficha de la unidad',
           ),
-          const SizedBox(height: Esp.sm + 2),
-          Text(etiqueta, style: TextStyle(fontSize: 13, color: p.sobreNegro2)),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              valor,
-              style: TextStyle(
-                fontFamily: TemaApp.mono,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: color,
+          const SizedBox(height: Esp.md),
+          for (final (etiqueta, valor) in datos)
+            if (valor != null && valor.isNotEmpty)
+              FilaDato(etiqueta: etiqueta, valor: valor),
+          if (datos.where((d) => d.$2 == null || d.$2!.isEmpty).isNotEmpty) ...[
+            const SizedBox(height: Esp.sm),
+            _Aviso(
+              texto:
+                  'Faltan datos de la ficha técnica. Se completan editando la '
+                  'unidad desde Vehículos.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Papeles y documentación. Todavía no se cargan: la tarjeta existe para
+/// que se vea el lugar y para no prometer algo que la app no hace.
+class _Papeles extends StatelessWidget {
+  const _Papeles();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    const items = [
+      'Título del automotor',
+      'Cédula de identificación',
+      'Verificación técnica (VTV)',
+      'Informe de dominio',
+      'Deuda de patentes',
+      'Multas e infracciones',
+    ];
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CabeceraBloque(
+            titulo: 'Papeles y documentación',
+            descripcion: 'Estado legal y libre deuda',
+          ),
+          const SizedBox(height: Esp.md),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Esp.sm),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.radio_button_unchecked_rounded,
+                    size: 20,
+                    color: p.tinta3,
+                  ),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(fontSize: 15, color: p.tinta2),
+                    ),
+                  ),
+                  Text(
+                    'Sin cargar',
+                    style: TextStyle(fontSize: 14, color: p.tinta3),
+                  ),
+                ],
               ),
             ),
+          const SizedBox(height: Esp.sm),
+          const _Aviso(
+            texto:
+                'El seguimiento de papeles y vencimientos es lo próximo que '
+                'entra. Por ahora la app no los guarda.',
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Los gastos de esta unidad, uno por uno, como en el diseño.
+class _GastosUnidad extends ConsumerWidget {
+  const _GastosUnidad({required this.vehiculo});
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final v = vehiculo;
+    final gastos =
+        (ref.watch(gastosProvider).value ?? const [])
+            .where((g) => g.vehiculoId == v.id)
+            .toList()
+          ..sort((a, b) => b.fecha.compareTo(a.fecha));
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Gastos de la unidad',
+                  descripcion: gastos.isEmpty
+                      ? 'Todavía no se cargó ninguno'
+                      : '${gastos.length} ${gastos.length == 1 ? 'comprobante' : 'comprobantes'} imputados',
+                ),
+              ),
+              const SizedBox(width: Esp.sm),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/gastos'),
+                icon: const Icon(Icons.add_rounded, size: 22),
+                label: const Text('Agregar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.md),
+          if (gastos.isEmpty)
+            const _Aviso(
+              texto:
+                  'Cada gasto que cargues acá se descuenta de la ganancia y '
+                  'se ajusta por el dólar del día en que se hizo.',
+            )
+          else ...[
+            for (final g in gastos)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Esp.sm),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 92,
+                      child: Text(
+                        Fmt.fecha(g.fecha),
+                        style: TextStyle(
+                          fontFamily: TemaApp.mono,
+                          fontSize: 14,
+                          color: p.tinta3,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            g.descripcion?.isNotEmpty == true
+                                ? g.descripcion!
+                                : g.categoria.etiqueta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: p.tinta,
+                            ),
+                          ),
+                          if (g.proveedor != null && g.proveedor!.isNotEmpty)
+                            Text(
+                              g.proveedor!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 14, color: p.tinta3),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: Esp.sm),
+                    Text(
+                      Fmt.pesos(g.importe),
+                      style: TextStyle(
+                        fontFamily: TemaApp.mono,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: p.tinta,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Divider(color: p.borde, height: Esp.lg),
+            FilaDato(
+              etiqueta: 'Total de gastos',
+              valor: Fmt.pesos(v.gastosAcum),
+              destacado: true,
+            ),
+          ],
         ],
       ),
     );
@@ -683,223 +1149,6 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SimuladorFinanciacion extends StatefulWidget {
-  const _SimuladorFinanciacion({required this.vehiculo, required this.cfg});
-  final VehiculoInventario vehiculo;
-  final ConfigAgencia cfg;
-
-  @override
-  State<_SimuladorFinanciacion> createState() => _SimuladorFinanciacionState();
-}
-
-class _SimuladorFinanciacionState extends State<_SimuladorFinanciacion> {
-  int _cuotas = 12;
-  late double _tasa = widget.cfg.tasaFinanciacionMensual;
-
-  /// Cuánto se financia. Arranca en el precio publicado y se escribe a
-  /// mano. Sin anticipo ni atajos: el cliente pidió que el simulador tenga
-  /// solo el monto a financiar (checklist tanda 2, punto 2.2).
-  late double _monto = widget.vehiculo.precioActual;
-
-  late final TextEditingController _montoCtrl = TextEditingController(
-    text: _monto.round().toString(),
-  );
-
-  @override
-  void dispose() {
-    _montoCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    final r = Motor.financiacion(
-      monto: _monto,
-      cuotas: _cuotas,
-      tasaMensual: _tasa,
-    );
-
-    return Tarjeta(
-      padding: const EdgeInsets.all(Esp.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconoEnCirculo(
-                icono: Icons.calendar_month_rounded,
-                tamano: 38,
-                color: p.sobreNegro,
-                fondo: p.negro,
-              ),
-              const SizedBox(width: Esp.md),
-              const Expanded(
-                child: CabeceraBloque(
-                  titulo: 'Simulador de financiación',
-                  descripcion: 'Interés directo sobre el capital',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Esp.md),
-          Text(
-            'Es como se vende en el rubro: “$_cuotas cuotas fijas de…”.',
-            style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
-          ),
-          const SizedBox(height: Esp.lg),
-
-          CampoFormulario(
-            etiqueta: 'Monto a financiar',
-            error: _monto <= 0 ? 'Tiene que ser mayor a cero.' : null,
-            hijo: TextFormField(
-              controller: _montoCtrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 16),
-              onChanged: (t) =>
-                  setState(() => _monto = double.tryParse(t) ?? 0),
-              decoration: InputDecoration(
-                prefixText: r'$',
-                prefixStyle: TextStyle(
-                  fontFamily: TemaApp.mono,
-                  fontSize: 16,
-                  color: p.tinta3,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: Esp.lg),
-          Text('Cuotas', style: TextStyle(fontSize: 14, color: p.tinta2)),
-          const SizedBox(height: Esp.sm),
-          Row(
-            children: [
-              for (final n in [6, 12, 18, 24]) ...[
-                Expanded(
-                  child: _BotonCuota(
-                    n: n,
-                    activo: _cuotas == n,
-                    onTap: () => setState(() => _cuotas = n),
-                  ),
-                ),
-                if (n != 24) const SizedBox(width: Esp.sm),
-              ],
-            ],
-          ),
-          const SizedBox(height: Esp.lg),
-          Row(
-            children: [
-              Text(
-                'Tasa mensual',
-                style: TextStyle(fontSize: 14, color: p.tinta2),
-              ),
-              const Spacer(),
-              Text(
-                Fmt.porcentaje(_tasa),
-                style: TextStyle(
-                  fontFamily: TemaApp.mono,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: p.tinta,
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: _tasa,
-            min: 0,
-            max: 0.20,
-            divisions: 40,
-            onChanged: (x) => setState(() => _tasa = x),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(Esp.lg + 2),
-            decoration: BoxDecoration(
-              color: p.negro,
-              borderRadius: BorderRadius.circular(Curva.lg),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Cuota mensual',
-                  style: TextStyle(fontSize: 13, color: p.sobreNegro2),
-                ),
-                const SizedBox(height: 2),
-                _CifraAnimada(
-                  valor: r.cuota,
-                  formato: Fmt.pesos,
-                  estilo: TextStyle(
-                    fontFamily: TemaApp.mono,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.6,
-                    color: p.acento,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Esp.sm),
-          FilaDato(etiqueta: 'Total financiado', valor: Fmt.pesos(r.total)),
-          FilaDato(
-            etiqueta: 'Intereses',
-            valor: Fmt.pesos(r.interes),
-            valorColor: p.observar,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BotonCuota extends StatelessWidget {
-  const _BotonCuota({
-    required this.n,
-    required this.activo,
-    required this.onTap,
-  });
-
-  final int n;
-  final bool activo;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return AnimatedContainer(
-      duration: Duracion.media,
-      curve: Curves.easeOutCubic,
-      decoration: ShapeDecoration(
-        color: activo ? p.acento : p.superficieHundida,
-        shape: const StadiumBorder(),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const StadiumBorder(),
-          child: SizedBox(
-            height: 40,
-            child: Center(
-              child: Text(
-                '$n',
-                style: TextStyle(
-                  fontFamily: TemaApp.mono,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: activo ? p.acentoTinta : p.tinta2,
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
