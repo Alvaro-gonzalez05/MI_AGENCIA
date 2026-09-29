@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config.dart';
 import 'core/router.dart';
 import 'core/tema/control_tema.dart';
+import 'core/tema/preferencias.dart';
 import 'core/tema/tema.dart';
 import 'ui/aviso_actualizacion.dart';
 
@@ -35,8 +36,17 @@ class MiAgencia extends ConsumerWidget {
       title: 'Mi Agencia',
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(routerProvider),
-      builder: (context, child) =>
-          CapaActualizacion(child: child ?? const SizedBox.shrink()),
+      // El tamaño de letra elegido en "Más" se aplica acá, una sola vez,
+      // multiplicando el del sistema: si alguien ya agrandó la letra en
+      // Windows o en Android, se respeta y se suma.
+      builder: (context, child) {
+        final escala = ref.watch(tamanoLetraProvider).escala;
+        return MediaQuery.withClampedTextScaling(
+          minScaleFactor: escala,
+          maxScaleFactor: escala * 1.3,
+          child: CapaActualizacion(child: child ?? const SizedBox.shrink()),
+        );
+      },
       theme: TemaApp.claro(),
       darkTheme: TemaApp.oscuro(),
       themeMode: ref.watch(temaProvider),

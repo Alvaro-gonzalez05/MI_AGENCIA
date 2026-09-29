@@ -7,6 +7,7 @@ import '../../core/formato.dart';
 import '../../core/sesion.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/control_tema.dart';
+import '../../core/tema/preferencias.dart';
 import '../../core/tema/tema.dart';
 import '../componentes.dart';
 import 'secciones.dart';
@@ -809,53 +810,120 @@ class _ShellMovil extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: Esp.xl),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.only(
-                          left: Esp.lg,
-                          right: Esp.xs,
-                        ),
-                        decoration: ShapeDecoration(
-                          color: p.superficieHundida,
-                          shape: const StadiumBorder(),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Tema',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: p.tinta,
+
+                // Preferencias de visualización, como en el diseño: lo que
+                // cambia cómo se ve la app, junto y a mano.
+                Text('CÓMO SE VE', style: Theme.of(ctx).textTheme.labelSmall),
+                const SizedBox(height: Esp.sm),
+                Tarjeta(
+                  padding: const EdgeInsets.all(Esp.lg),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          IconoEnCirculo(
+                            icono: Icons.dark_mode_outlined,
+                            tamano: 40,
+                            color: p.tinta,
+                            fondo: p.superficieHundida,
+                          ),
+                          const SizedBox(width: Esp.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Modo oscuro',
+                                  style: Theme.of(ctx).textTheme.titleMedium,
                                 ),
+                                Text(
+                                  'Fondo oscuro para descansar la vista',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: p.tinta2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: ref.watch(temaProvider) == ThemeMode.dark,
+                            onChanged: (_) =>
+                                ref.read(temaProvider.notifier).alternar(),
+                          ),
+                        ],
+                      ),
+                      Divider(color: p.borde, height: Esp.xl),
+                      Row(
+                        children: [
+                          IconoEnCirculo(
+                            icono: Icons.format_size_rounded,
+                            tamano: 40,
+                            color: p.tinta,
+                            fondo: p.superficieHundida,
+                          ),
+                          const SizedBox(width: Esp.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tamaño de la letra',
+                                  style: Theme.of(ctx).textTheme.titleMedium,
+                                ),
+                                Text(
+                                  'Qué tan grande se lee todo',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: p.tinta2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: Esp.sm),
+                      Row(
+                        children: [
+                          for (final t in TamanoLetra.values) ...[
+                            Expanded(
+                              child: _BotonTamano(
+                                tamano: t,
+                                activo: ref.watch(tamanoLetraProvider) == t,
+                                onTap: () => ref
+                                    .read(tamanoLetraProvider.notifier)
+                                    .poner(t),
                               ),
                             ),
-                            _BotonTema(colorIcono: p.acentoTexto),
+                            if (t != TamanoLetra.values.last)
+                              const SizedBox(width: Esp.sm),
                           ],
-                        ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: Esp.md),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: p.criticoLavado,
-                        foregroundColor: p.critico,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Esp.lg + 2,
-                          vertical: Esp.md,
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        ref.read(sesionProvider.notifier).salir();
-                      },
-                      icon: const Icon(Icons.logout_rounded, size: 18),
-                      label: const Text('Salir'),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: Esp.lg),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: p.critico,
+                    side: BorderSide(color: p.critico, width: 1.6),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ref.read(sesionProvider.notifier).salir();
+                  },
+                  icon: const Icon(Icons.logout_rounded, size: 22),
+                  label: const Text('Cerrar sesión en este equipo'),
+                ),
+                const SizedBox(height: Esp.md),
+                Center(
+                  child: Text(
+                    'Mi Agencia · versión ${Config.version}',
+                    style: TextStyle(fontSize: 14, color: p.tinta3),
+                  ),
                 ),
               ],
             ),
@@ -1082,6 +1150,59 @@ class _ItemBarra extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A / A+ / A++: el selector de tamaño de letra del diseño.
+class _BotonTamano extends StatelessWidget {
+  const _BotonTamano({
+    required this.tamano,
+    required this.activo,
+    required this.onTap,
+  });
+
+  final TamanoLetra tamano;
+  final bool activo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Curva.md),
+      side: BorderSide(color: activo ? p.acento : p.borde, width: 1.5),
+    );
+    return Material(
+      color: activo ? p.acento : p.superficie,
+      shape: forma,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: forma,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Esp.md),
+          child: Column(
+            children: [
+              Text(
+                tamano.simbolo,
+                style: TextStyle(
+                  fontFamily: TemaApp.titulo,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: activo ? p.acentoTinta : p.tinta,
+                ),
+              ),
+              Text(
+                tamano.etiqueta,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: activo ? p.acentoTinta : p.tinta3,
+                ),
+              ),
+            ],
           ),
         ),
       ),

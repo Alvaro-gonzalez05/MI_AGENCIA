@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../funciones/agencias/pantalla_agencias.dart';
 import '../funciones/auth/pantalla_login.dart';
 import '../funciones/campanas/pantalla_campanas.dart';
+import '../funciones/estadisticas/pantalla_estadisticas.dart';
 import '../funciones/simulador/pantalla_simulador.dart';
 import '../funciones/configuracion/pantalla_configuracion.dart';
 import '../funciones/gastos/pantalla_gastos.dart';
@@ -109,6 +110,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: Secciones.campanas.ruta,
             pageBuilder: (_, estado) =>
                 Transiciones.paginaSeccion(estado, const PantallaCampanas()),
+          ),
+          GoRoute(
+            path: Secciones.estadisticas.ruta,
+            pageBuilder: (_, estado) => Transiciones.paginaSeccion(
+              estado,
+              const PantallaEstadisticas(),
+            ),
           ),
           GoRoute(
             path: Secciones.simulador.ruta,

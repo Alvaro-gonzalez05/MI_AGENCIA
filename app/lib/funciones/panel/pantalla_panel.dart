@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/formato.dart';
+import '../../core/sesion.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
+import '../../dominio/gastos.dart';
 import '../../dominio/modelos.dart';
+import '../../dominio/ventas.dart';
 import '../../ui/componentes.dart';
+import '../estadisticas/pantalla_estadisticas.dart';
 
 class PantallaPanel extends ConsumerWidget {
   const PantallaPanel({super.key});
@@ -113,6 +117,10 @@ class _Contenido extends ConsumerWidget {
       color: (v) => v.margenActual < 0 ? p.critico : p.observar,
     );
 
+    final ventas = ref.watch(ventasProvider).value ?? const <Venta>[];
+    final gastos = ref.watch(gastosProvider).value ?? const [];
+    final interesados = ref.watch(interesadosProvider).value ?? const [];
+
     return ListView(
       padding: EdgeInsets.fromLTRB(
         esMovil ? Esp.lg + 4 : Esp.xxl,
@@ -121,6 +129,34 @@ class _Contenido extends ConsumerWidget {
         Esp.xxl,
       ),
       children: [
+        // El saludo con el resumen del mes: es lo primero que se mira al
+        // abrir la app a la mañana (pantalla "Inicio" del diseño).
+        Aparecer(
+          child: _Saludo(
+            usuario: ref.watch(usuarioProvider),
+            agencia: ref.watch(miAgenciaProvider).value?.nombre,
+            ventas: ventas,
+            gastos: gastos,
+          ),
+        ),
+        const SizedBox(height: Esp.lg + 2),
+
+        Aparecer(
+          indice: 1,
+          child: _ParaAtenderHoy(
+            inventario: inventario,
+            interesados: interesados,
+            cfg: cfg,
+          ),
+        ),
+        const SizedBox(height: Esp.lg + 2),
+
+        Aparecer(
+          indice: 2,
+          child: GraficoVentasPorMes(ventas: ventas, meses: 6),
+        ),
+        const SizedBox(height: Esp.lg + 2),
+
         GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -152,9 +188,12 @@ class _Contenido extends ConsumerWidget {
         ),
 
         const SizedBox(height: Esp.lg + 2),
+        Aparecer(indice: 6, child: _AutosEnVenta(inventario: inventario)),
+
+        const SizedBox(height: Esp.lg + 2),
         if (ancho >= Corte.escritorio)
           Aparecer(
-            indice: 6,
+            indice: 7,
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -167,9 +206,9 @@ class _Contenido extends ConsumerWidget {
             ),
           )
         else ...[
-          Aparecer(indice: 6, child: antiguedad),
+          Aparecer(indice: 7, child: antiguedad),
           const SizedBox(height: Esp.lg + 2),
-          Aparecer(indice: 7, child: margen),
+          Aparecer(indice: 8, child: margen),
         ],
       ],
     );
@@ -618,6 +657,614 @@ class _ListaAtencion extends StatelessWidget {
                 ),
               ),
         ],
+      ),
+    );
+  }
+}
+
+/// Saludo y resumen del mes, en la tarjeta oscura del diseño.
+class _Saludo extends StatelessWidget {
+  const _Saludo({
+    required this.usuario,
+    required this.agencia,
+    required this.ventas,
+    required this.gastos,
+  });
+
+  final Usuario? usuario;
+  final String? agencia;
+  final List<Venta> ventas;
+  final List<Gasto> gastos;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final hoy = DateTime.now();
+    final desde = DateTime(hoy.year, hoy.month, 1);
+    final delMes = ventas.where((v) => !v.fechaVenta.isBefore(desde)).toList();
+    final mesAnterior = ventas
+        .where(
+          (v) =>
+              v.fechaVenta.isBefore(desde) &&
+              !v.fechaVenta.isBefore(DateTime(hoy.year, hoy.month - 1, 1)),
+        )
+        .length;
+    final ganancia = delMes.fold<double>(
+      0,
+      (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
+    );
+    final gastoMes = gastos
+        .where((g) => !g.fecha.isBefore(desde))
+        .fold<double>(0, (s, g) => s + g.importe);
+
+    final saludo = hoy.hour < 13
+        ? 'Buen día'
+        : hoy.hour < 20
+        ? 'Buenas tardes'
+        : 'Buenas noches';
+    final nombre = (usuario?.nombre ?? '').split(' ').first;
+
+    return Tarjeta(
+      destacada: true,
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            Fmt.fechaLarga(hoy).toUpperCase(),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: p.acento,
+            ),
+          ),
+          const SizedBox(height: Esp.xs),
+          Text(
+            nombre.isEmpty ? '¡$saludo!' : '¡$saludo, $nombre!',
+            style: TextStyle(
+              fontFamily: TemaApp.titulo,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+              color: p.sobreNegro,
+            ),
+          ),
+          if (agencia != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              agencia!,
+              style: TextStyle(fontSize: 16, color: p.sobreNegro2),
+            ),
+          ],
+          const SizedBox(height: Esp.xl),
+          LayoutBuilder(
+            builder: (context, r) {
+              final enFila = r.maxWidth >= 720;
+              final tarjetas = [
+                _DatoDelMes(
+                  etiqueta: 'VENDIDOS ESTE MES',
+                  valor:
+                      '${delMes.length} '
+                      '${delMes.length == 1 ? 'auto' : 'autos'}',
+                  nota: mesAnterior == 0
+                      ? 'El mes pasado no hubo entregas'
+                      : delMes.length == mesAnterior
+                      ? 'Igual que el mes pasado'
+                      : delMes.length > mesAnterior
+                      ? '${delMes.length - mesAnterior} más que el mes pasado'
+                      : '${mesAnterior - delMes.length} menos que el mes pasado',
+                  color: p.bien,
+                ),
+                _DatoDelMes(
+                  etiqueta: 'GANANCIA DEL MES',
+                  valor: Fmt.pesosCompacto(ganancia),
+                  nota: 'Real, ajustada por dólar',
+                  color: p.acento,
+                ),
+                _DatoDelMes(
+                  etiqueta: 'GASTOS DEL MES',
+                  valor: Fmt.pesosCompacto(gastoMes),
+                  nota: 'Repuestos, taller y trámites',
+                  color: p.critico,
+                ),
+              ];
+              return enFila
+                  ? IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < tarjetas.length; i++) ...[
+                            if (i > 0) const SizedBox(width: Esp.sm),
+                            Expanded(child: tarjetas[i]),
+                          ],
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < tarjetas.length; i++) ...[
+                          if (i > 0) const SizedBox(height: Esp.sm),
+                          tarjetas[i],
+                        ],
+                      ],
+                    );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DatoDelMes extends StatelessWidget {
+  const _DatoDelMes({
+    required this.etiqueta,
+    required this.valor,
+    required this.nota,
+    required this.color,
+  });
+
+  final String etiqueta, valor, nota;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.all(Esp.md + 2),
+      decoration: BoxDecoration(
+        color: p.negroElevado,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: p.negroBorde),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            etiqueta,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+              color: p.sobreNegro2,
+            ),
+          ),
+          const SizedBox(height: Esp.sm),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valor,
+              style: TextStyle(
+                fontFamily: TemaApp.titulo,
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                color: p.sobreNegro,
+              ),
+            ),
+          ),
+          const SizedBox(height: Esp.xs),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: Esp.sm - 2),
+              Expanded(
+                child: Text(
+                  nota,
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: p.sobreNegro2,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Para atender hoy": lo que no puede esperar, sacado de lo que ya está
+/// cargado. No es una agenda todavía —eso viene en la tanda de tareas—,
+/// pero sí lo que el sistema puede deducir solo.
+class _ParaAtenderHoy extends StatelessWidget {
+  const _ParaAtenderHoy({
+    required this.inventario,
+    required this.interesados,
+    required this.cfg,
+  });
+
+  final List<VehiculoInventario> inventario;
+  final List<Interesado> interesados;
+  final ConfigAgencia cfg;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final hoy = DateTime.now();
+
+    final pendientes = <_Pendiente>[];
+
+    // 1. Los interesados con una acción anotada que ya venció.
+    for (final i in interesados) {
+      final cuando = i.proximaAccionFecha;
+      if (cuando == null || i.proximaAccion == null) continue;
+      if (cuando.isAfter(DateTime(hoy.year, hoy.month, hoy.day))) continue;
+      final atraso = DateTime(
+        hoy.year,
+        hoy.month,
+        hoy.day,
+      ).difference(DateTime(cuando.year, cuando.month, cuando.day)).inDays;
+      pendientes.add(
+        _Pendiente(
+          icono: Icons.alarm_rounded,
+          color: atraso > 0 ? p.critico : p.observar,
+          titulo: i.nombre,
+          detalle: i.proximaAccion!,
+          marca: atraso == 0 ? 'Para hoy' : 'Hace ${Fmt.dias(atraso)}',
+          accion: 'Ver ficha',
+          onAccion: () => context.go('/interesados'),
+          orden: 100 + atraso,
+        ),
+      );
+    }
+
+    // 2. Las unidades que llevan demasiado tiempo paradas.
+    final paradas =
+        inventario
+            .where((v) => !v.vendido && v.alerta == AlertaRotacion.critico)
+            .toList()
+          ..sort((a, b) => b.diasEnStock.compareTo(a.diasEnStock));
+    for (final v in paradas.take(3)) {
+      pendientes.add(
+        _Pendiente(
+          icono: Icons.hourglass_bottom_rounded,
+          color: p.critico,
+          titulo: v.titulo,
+          detalle:
+              'Lleva ${Fmt.dias(v.diasEnStock)} en el salón. Conviene revisar '
+              'el precio o volver a publicarla.',
+          marca: '${v.diasEnStock} días',
+          accion: 'Ver ficha',
+          onAccion: () => context.go('/inventario/${v.id}'),
+          orden: 50 + v.diasEnStock,
+        ),
+      );
+    }
+
+    // 3. Consultas al BCRA vencidas: financiar con un dato viejo es el
+    //    riesgo que el semáforo vino a evitar.
+    final vencidas = interesados
+        .where((i) => i.consulta?.vencida == true)
+        .take(2);
+    for (final i in vencidas) {
+      pendientes.add(
+        _Pendiente(
+          icono: Icons.update_rounded,
+          color: p.observar,
+          titulo: i.nombre,
+          detalle:
+              'La consulta al BCRA venció. Volvé a consultarla antes de '
+              'ofrecerle financiación.',
+          marca: 'BCRA',
+          accion: 'Ver ficha',
+          onAccion: () => context.go('/interesados'),
+          orden: 10,
+        ),
+      );
+    }
+
+    pendientes.sort((a, b) => b.orden.compareTo(a.orden));
+    final lista = pendientes.take(4).toList();
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Para atender hoy',
+                  descripcion: lista.isEmpty
+                      ? 'No hay nada pendiente: está todo al día'
+                      : 'Ordenado por lo que más urge',
+                ),
+              ),
+              if (lista.isNotEmpty)
+                Pastilla(
+                  texto:
+                      '${lista.length} '
+                      '${lista.length == 1 ? 'pendiente' : 'pendientes'}',
+                  color: p.observar,
+                  lavado: p.observarLavado,
+                ),
+            ],
+          ),
+          const SizedBox(height: Esp.lg),
+          if (lista.isEmpty)
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline, size: 22, color: p.bien),
+                const SizedBox(width: Esp.sm),
+                Expanded(
+                  child: Text(
+                    'Ninguna unidad pasada de plazo y ninguna acción vencida '
+                    'con los interesados.',
+                    style: TextStyle(fontSize: 15, color: p.tinta2),
+                  ),
+                ),
+              ],
+            )
+          else
+            for (final x in lista)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Esp.sm),
+                child: Container(
+                  padding: const EdgeInsets.all(Esp.md),
+                  decoration: BoxDecoration(
+                    color: p.superficieHundida,
+                    borderRadius: BorderRadius.circular(Curva.md),
+                  ),
+                  child: Row(
+                    children: [
+                      IconoEnCirculo(
+                        icono: x.icono,
+                        tamano: 40,
+                        color: x.color,
+                        fondo: x.color.withValues(alpha: 0.14),
+                      ),
+                      const SizedBox(width: Esp.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    x.titulo,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: p.tinta,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: Esp.sm),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: Esp.sm,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: x.color.withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(
+                                      Curva.completo,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    x.marca,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: x.color,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              x.detalle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: p.tinta2,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: Esp.sm),
+                      OutlinedButton(
+                        onPressed: x.onAccion,
+                        child: Text(x.accion),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pendiente {
+  _Pendiente({
+    required this.icono,
+    required this.color,
+    required this.titulo,
+    required this.detalle,
+    required this.marca,
+    required this.accion,
+    required this.onAccion,
+    required this.orden,
+  });
+
+  final IconData icono;
+  final Color color;
+  final String titulo, detalle, marca, accion;
+  final VoidCallback onAccion;
+
+  /// Cuánto urge. Más alto, más arriba.
+  final int orden;
+}
+
+/// "Tus autos en venta": las unidades publicadas, como las muestra el
+/// diseño, con su patente y su precio.
+class _AutosEnVenta extends StatelessWidget {
+  const _AutosEnVenta({required this.inventario});
+
+  final List<VehiculoInventario> inventario;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final enStock = inventario.where((v) => !v.vendido).toList()
+      ..sort((a, b) => a.diasEnStock.compareTo(b.diasEnStock));
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Tus autos en venta',
+                  descripcion: enStock.isEmpty
+                      ? 'Todavía no hay unidades en stock'
+                      : '${enStock.length} '
+                            '${enStock.length == 1 ? 'unidad publicada' : 'unidades publicadas'}',
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => context.go('/inventario'),
+                icon: const Text('Ver todos'),
+                label: const Icon(Icons.chevron_right_rounded, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.md),
+          if (enStock.isEmpty)
+            Text(
+              'Cargá la primera unidad desde el botón "+" de la barra de abajo.',
+              style: TextStyle(fontSize: 15, color: p.tinta2),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, r) {
+                final columnas = r.maxWidth >= 1000
+                    ? 4
+                    : r.maxWidth >= 700
+                    ? 3
+                    : r.maxWidth >= 420
+                    ? 2
+                    : 1;
+                final ancho = (r.maxWidth - Esp.md * (columnas - 1)) / columnas;
+                return Wrap(
+                  spacing: Esp.md,
+                  runSpacing: Esp.md,
+                  children: [
+                    for (final v in enStock.take(columnas * 2))
+                      SizedBox(
+                        width: ancho,
+                        child: _AutoChico(vehiculo: v),
+                      ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AutoChico extends StatelessWidget {
+  const _AutoChico({required this.vehiculo});
+
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final v = vehiculo;
+    return Material(
+      color: p.superficieHundida,
+      borderRadius: BorderRadius.circular(Curva.md),
+      child: InkWell(
+        onTap: () => context.go('/inventario/${v.id}'),
+        borderRadius: BorderRadius.circular(Curva.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 96,
+              decoration: BoxDecoration(
+                color: v.alerta.lavado(p),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(Curva.md),
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.directions_car_filled_rounded,
+                  size: 32,
+                  color: v.alerta.color(p),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(Esp.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${v.anio}${v.km == null ? '' : ' · ${Fmt.km(v.km)}'}',
+                    style: TextStyle(fontSize: 14, color: p.tinta3),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    v.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: p.tinta,
+                    ),
+                  ),
+                  if (v.version != null)
+                    Text(
+                      v.version!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 14, color: p.tinta2),
+                    ),
+                  const SizedBox(height: Esp.sm),
+                  Text(
+                    Fmt.pesos(v.precioActual),
+                    style: TextStyle(
+                      fontFamily: TemaApp.titulo,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      color: p.tinta,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

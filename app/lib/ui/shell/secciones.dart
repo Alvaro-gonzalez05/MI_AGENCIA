@@ -120,6 +120,16 @@ abstract final class Secciones {
     subtitulo: 'Email marketing a la base de interesados',
   );
 
+  static const estadisticas = Seccion(
+    id: 'estadisticas',
+    etiqueta: 'Estadísticas',
+    ruta: '/estadisticas',
+    icono: Icons.insights_outlined,
+    grupo: 'Gestión',
+    titulo: 'Estadísticas',
+    subtitulo: 'Cómo vienen las ventas, los tiempos y las ganancias',
+  );
+
   static const simulador = Seccion(
     id: 'simulador',
     etiqueta: 'Simulador',
@@ -160,6 +170,7 @@ abstract final class Secciones {
     precios,
     ventas,
     campanas,
+    estadisticas,
     simulador,
     configuracion,
     agencias,

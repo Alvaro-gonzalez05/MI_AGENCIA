@@ -5,10 +5,16 @@ Viene del diseño que entregó el cliente (export de Stitch, 28/09/2026:
 documento dice dónde vive cada cosa en el código, para que la próxima
 pantalla salga igual sin tener que adivinar.
 
-**El zip traía una sola pantalla** (Clientes, con sus modales y la barra
-inferior). De ahí se sacaron los tokens y los componentes, y se aplicaron a
-toda la app. Cuando lleguen las demás pantallas, lo que va a cambiar son
-layouts puntuales, no el sistema.
+El primer zip traía una sola pantalla (Clientes) y de ahí salieron los
+tokens y los componentes. El segundo (28/09/2026) trajo **16 pantallas**, y
+con eso se rehicieron Inicio, Inventario, Ficha del auto, Clientes,
+Estadísticas y Simulador, más las preferencias de "Más".
+
+**Lo que todavía no está**, porque necesita datos que la app no guarda:
+fotos de las unidades, reservas, tareas y agenda, papeles y vencimientos,
+cuotas y cobranzas, el precio de revista (ArgAutos) y usuarios y permisos.
+En las pantallas donde el diseño los muestra, el lugar está hecho y dice
+qué falta, en vez de fingir que no va nada.
 
 ## Qué cambió, en una línea
 
@@ -66,6 +72,23 @@ diseño: pastilla oscura flotante con cinco lugares.
   No marca sección activa: es una acción, no un destino.
 - **"Más"**: el resto de las secciones y el **cambio de tema** (claro /
   oscuro), que se queda donde estaba.
+
+## Qué pantalla es cada archivo
+
+| Pantalla del diseño | En el código |
+|---|---|
+| Inicio | `funciones/panel/pantalla_panel.dart` |
+| Inventario | `funciones/inventario/pantalla_inventario.dart` |
+| Ficha del auto | `funciones/inventario/pantalla_ficha.dart` |
+| Clientes | `funciones/interesados/pantalla_interesados.dart` |
+| Estadísticas | `funciones/estadisticas/pantalla_estadisticas.dart` |
+| Simulador de financiamiento | `funciones/simulador/pantalla_simulador.dart` |
+| Más opciones | la hoja de `ui/shell/shell_adaptativo.dart` |
+
+El "Más" del diseño es una pantalla entera; en la app quedó como hoja que
+sube desde la barra inferior, porque es lo que el cliente pidió mantener.
+Tiene lo mismo: las secciones, el modo oscuro, el tamaño de letra y el
+cierre de sesión.
 
 ## Cómo mirar una pantalla sin compilar la app
 

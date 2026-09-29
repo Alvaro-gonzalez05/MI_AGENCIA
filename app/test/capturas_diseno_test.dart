@@ -11,6 +11,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mi_agencia/core/tema/tema.dart';
 import 'package:mi_agencia/datos/repositorio.dart';
 import 'package:mi_agencia/dominio/bcra.dart';
+import 'package:mi_agencia/dominio/agencias.dart';
 import 'package:mi_agencia/dominio/gastos.dart';
 import 'package:mi_agencia/dominio/modelos.dart';
 import 'package:mi_agencia/dominio/precios.dart';
@@ -19,6 +20,7 @@ import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_inventario.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 import 'package:mi_agencia/funciones/panel/pantalla_panel.dart';
+import 'package:mi_agencia/funciones/estadisticas/pantalla_estadisticas.dart';
 import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
 
 /// Capturas para revisar el diseno a ojo. No es una prueba: se corre a mano
@@ -105,7 +107,20 @@ void main() {
     await capturar(t, 'inventario', const PantallaInventario());
   });
   testWidgets('panel', (t) async {
-    await capturar(t, 'panel', const PantallaPanel());
+    await capturar(
+      t,
+      'panel',
+      const PantallaPanel(),
+      tamano: const Size(1280, 1800),
+    );
+  });
+  testWidgets('panel celular', (t) async {
+    await capturar(
+      t,
+      'panel-celular',
+      const PantallaPanel(),
+      tamano: const Size(390, 1600),
+    );
   });
   testWidgets('ficha', (t) async {
     await capturar(
@@ -125,6 +140,14 @@ void main() {
   });
   testWidgets('simulador', (t) async {
     await capturar(t, 'simulador', const PantallaSimulador());
+  });
+  testWidgets('estadisticas', (t) async {
+    await capturar(
+      t,
+      'estadisticas',
+      const PantallaEstadisticas(),
+      tamano: const Size(1280, 1600),
+    );
   });
 }
 
@@ -268,7 +291,43 @@ class _Repo implements Repositorio {
       const [];
 
   @override
-  Future<List<Venta>> ventas() async => const [];
+  Future<List<Venta>> ventas() async => [
+    Venta(
+      id: 'vt1',
+      vehiculoId: 'v9',
+      fechaVenta: _hoy.subtract(const Duration(days: 12)),
+      precioFinal: 28000000,
+      gastosFinales: 250000,
+      vehiculoCodigo: 'V009',
+      vehiculoTitulo: 'Toyota Etios XLS',
+      costoTotal: 24000000,
+      costoTotalHoy: 24500000,
+      diasEnStock: 45,
+      tipoCambio: 1535,
+    ),
+    Venta(
+      id: 'vt2',
+      vehiculoId: 'v8',
+      fechaVenta: _hoy.subtract(const Duration(days: 47)),
+      precioFinal: 19500000,
+      gastosFinales: 120000,
+      vehiculoCodigo: 'V008',
+      vehiculoTitulo: 'Fiat Cronos Drive',
+      costoTotal: 17000000,
+      costoTotalHoy: 17800000,
+      diasEnStock: 62,
+      tipoCambio: 1510,
+    ),
+  ];
+
+  @override
+  Future<Agencia?> miAgencia() async => const Agencia(
+    id: 'ag',
+    nombre: 'Automotores del Valle',
+    slug: 'del-valle',
+    activa: true,
+    plan: 'pro',
+  );
 
   @override
   dynamic noSuchMethod(Invocation i) =>

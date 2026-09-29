@@ -137,7 +137,10 @@ void main() {
         expect(find.text('Monto a financiar'), findsOneWidget);
         expect(find.text('Sistema de amortización'), findsOneWidget);
         for (final s in SistemaAmortizacion.values) {
-          expect(find.widgetWithText(ChipSeleccion, s.etiqueta), findsOneWidget);
+          expect(
+            find.widgetWithText(ChipSeleccion, s.etiqueta),
+            findsOneWidget,
+          );
         }
         expect(find.text('Tasa anual (TNA)'), findsOneWidget);
         expect(find.text('Cuotas'), findsOneWidget);

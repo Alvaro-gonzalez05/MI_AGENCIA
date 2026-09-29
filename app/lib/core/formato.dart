@@ -21,6 +21,9 @@ abstract final class Fmt {
   static final _fechaCorta = DateFormat('dd MMM', 'es_AR');
   static final _mesAnio = DateFormat('MMM yy', 'es_AR');
 
+  /// "martes 29 de septiembre": el encabezado del Inicio.
+  static final _fechaLarga = DateFormat("EEEE d 'de' MMMM", 'es_AR');
+
   /// El guion largo es el marcador de "no hay dato", igual que en el original.
   /// Se usa en vez de "0" o vacio: cero es un valor, ausencia no.
   static const sinDato = '—';
@@ -54,6 +57,9 @@ abstract final class Fmt {
   static String entero(num? n) => n == null ? sinDato : _entero.format(n);
 
   static String fecha(DateTime? f) => f == null ? sinDato : _fecha.format(f);
+
+  static String fechaLarga(DateTime? f) =>
+      f == null ? sinDato : _fechaLarga.format(f);
 
   static String fechaCorta(DateTime? f) =>
       f == null ? sinDato : _fechaCorta.format(f);
