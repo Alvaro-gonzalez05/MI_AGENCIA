@@ -9,36 +9,182 @@ import '../../datos/repositorio.dart';
 import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 
+/// Inventario, según el diseño "Clarity Drive" (pantalla
+/// `inventario_filtros_y_menu_de_opciones`).
+///
+/// La idea del diseño: primero se elige en qué estado está la unidad
+/// (pestañas), después se busca o se filtra, y recién ahí se mira la lista.
+/// Cada unidad se muestra como una tarjeta con su foto, la patente bien
+/// grande y una sola línea que dice qué le pasó por última vez.
+
+/// En qué estado está la unidad. Es la pestaña de arriba.
+enum EstadoLista {
+  disponibles('Disponibles'),
+  reservados('Reservados'),
+  vendidos('Vendidos'),
+  todos('Todos');
+
+  const EstadoLista(this.etiqueta);
+  final String etiqueta;
+
+  bool incluye(VehiculoInventario v) => switch (this) {
+    EstadoLista.disponibles =>
+      !v.vendido && v.estado != EstadoVehiculo.reservado,
+    EstadoLista.reservados => v.estado == EstadoVehiculo.reservado,
+    EstadoLista.vendidos => v.vendido,
+    EstadoLista.todos => true,
+  };
+}
+
+/// Desde cuándo mirar los ingresos. "Elegir fechas" abre el calendario.
+enum PeriodoIngreso {
+  mes('Este mes'),
+  tres('Últimos 3 meses'),
+  anio('Este año'),
+  todo('Cualquier fecha');
+
+  const PeriodoIngreso(this.etiqueta);
+  final String etiqueta;
+
+  DateTime? get desde {
+    final hoy = DateTime.now();
+    return switch (this) {
+      PeriodoIngreso.mes => DateTime(hoy.year, hoy.month, 1),
+      PeriodoIngreso.tres => DateTime(hoy.year, hoy.month - 2, 1),
+      PeriodoIngreso.anio => DateTime(hoy.year, 1, 1),
+      PeriodoIngreso.todo => null,
+    };
+  }
+}
+
+enum OrdenInventario {
+  recientes('Más recientes'),
+  antiguos('Más días en stock'),
+  precioMayor('Precio: mayor primero'),
+  precioMenor('Precio: menor primero'),
+  margenMenor('Margen: menor primero');
+
+  const OrdenInventario(this.etiqueta);
+  final String etiqueta;
+}
+
+/// Tramos de precio. Fijos y en millones: es como habla la agencia
+/// ("tenés algo hasta veinte palos?").
+enum TramoPrecio {
+  todos('Cualquier precio', 0, double.infinity),
+  hasta10('Hasta \$10 M', 0, 10000000),
+  de10a20('\$10 M a \$20 M', 10000000, 20000000),
+  de20a40('\$20 M a \$40 M', 20000000, 40000000),
+  masDe40('Más de \$40 M', 40000000, double.infinity);
+
+  const TramoPrecio(this.etiqueta, this.desde, this.hasta);
+  final String etiqueta;
+  final double desde, hasta;
+
+  bool incluye(double precio) => precio >= desde && precio < hasta;
+}
+
+/// Cuánto hace que la unidad está parada. En el diseño es el filtro "Días
+/// inmovilizado"; acá reutiliza el semáforo de rotación, que ya tiene los
+/// umbrales configurados por la agencia.
+enum DiasParado {
+  todos('Cualquier antigüedad', null),
+  observar('Más de lo esperado', AlertaRotacion.observar),
+  atencion('Demoradas', AlertaRotacion.atencion),
+  critico('Críticas', AlertaRotacion.critico);
+
+  const DiasParado(this.etiqueta, this.alerta);
+  final String etiqueta;
+  final AlertaRotacion? alerta;
+}
+
 /// Filtros activos de la lista.
 class FiltroInventario {
   const FiltroInventario({
     this.busqueda = '',
-    this.alerta,
+    this.estado = EstadoLista.disponibles,
+    this.periodo = PeriodoIngreso.todo,
+    this.rango,
     this.marca,
-    this.soloEnStock = true,
+    this.anio,
+    this.precio = TramoPrecio.todos,
+    this.parado = DiasParado.todos,
+    this.orden = OrdenInventario.recientes,
   });
 
   final String busqueda;
-  final AlertaRotacion? alerta;
+  final EstadoLista estado;
+  final PeriodoIngreso periodo;
+
+  /// Fechas elegidas a mano. Si está, manda sobre [periodo].
+  final DateTimeRange? rango;
+
   final String? marca;
-  final bool soloEnStock;
+  final int? anio;
+  final TramoPrecio precio;
+  final DiasParado parado;
+  final OrdenInventario orden;
 
   FiltroInventario copiar({
     String? busqueda,
-    AlertaRotacion? alerta,
+    EstadoLista? estado,
+    PeriodoIngreso? periodo,
+    DateTimeRange? rango,
     String? marca,
-    bool? soloEnStock,
-    bool limpiarAlerta = false,
+    int? anio,
+    TramoPrecio? precio,
+    DiasParado? parado,
+    OrdenInventario? orden,
+    bool limpiarRango = false,
     bool limpiarMarca = false,
+    bool limpiarAnio = false,
   }) => FiltroInventario(
     busqueda: busqueda ?? this.busqueda,
-    alerta: limpiarAlerta ? null : (alerta ?? this.alerta),
+    estado: estado ?? this.estado,
+    periodo: periodo ?? this.periodo,
+    rango: limpiarRango ? null : (rango ?? this.rango),
     marca: limpiarMarca ? null : (marca ?? this.marca),
-    soloEnStock: soloEnStock ?? this.soloEnStock,
+    anio: limpiarAnio ? null : (anio ?? this.anio),
+    precio: precio ?? this.precio,
+    parado: parado ?? this.parado,
+    orden: orden ?? this.orden,
   );
 
+  /// Lo que se puede limpiar de un toque. La pestaña y el orden no cuentan:
+  /// no son filtros, son cómo se está mirando la lista.
   bool get hayFiltros =>
-      busqueda.isNotEmpty || alerta != null || marca != null || !soloEnStock;
+      busqueda.isNotEmpty ||
+      periodo != PeriodoIngreso.todo ||
+      rango != null ||
+      marca != null ||
+      anio != null ||
+      precio != TramoPrecio.todos ||
+      parado != DiasParado.todos;
+
+  bool pasa(VehiculoInventario v) {
+    if (!estado.incluye(v)) return false;
+
+    final desde = rango?.start ?? periodo.desde;
+    final hasta = rango?.end;
+    if (desde != null && v.fechaIngreso.isBefore(desde)) return false;
+    if (hasta != null && v.fechaIngreso.isAfter(hasta)) return false;
+
+    if (marca != null && v.marca != marca) return false;
+    if (anio != null && v.anio != anio) return false;
+    if (!precio.incluye(v.precioActual)) return false;
+    if (parado.alerta != null && v.alerta != parado.alerta) return false;
+
+    final q = busqueda.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final heno =
+        '${v.codigo} ${v.marca} ${v.modelo} ${v.version ?? ''} '
+                '${v.patente ?? ''}'
+            .toLowerCase();
+    // Sin espacios ni guiones: la patente se busca como venga escrita.
+    final plano = heno.replaceAll(RegExp(r'[\s\-.]'), '');
+    return heno.contains(q) ||
+        plano.contains(q.replaceAll(RegExp(r'[\s\-.]'), ''));
+  }
 }
 
 /// Riverpod 3 eliminó StateProvider: el estado mutable va en un Notifier.
@@ -47,7 +193,10 @@ class ControlFiltro extends Notifier<FiltroInventario> {
   FiltroInventario build() => const FiltroInventario();
 
   void poner(FiltroInventario f) => state = f;
-  void limpiar() => state = const FiltroInventario();
+
+  /// Limpia los filtros pero deja la pestaña y el orden donde estaban.
+  void limpiar() =>
+      state = FiltroInventario(estado: state.estado, orden: state.orden);
 }
 
 final filtroProvider = NotifierProvider<ControlFiltro, FiltroInventario>(
@@ -59,22 +208,25 @@ final filtroProvider = NotifierProvider<ControlFiltro, FiltroInventario>(
 final inventarioFiltradoProvider = Provider<List<VehiculoInventario>>((ref) {
   final todos = ref.watch(inventarioProvider).value ?? const [];
   final f = ref.watch(filtroProvider);
-  final q = f.busqueda.trim().toLowerCase();
+  final lista = todos.where(f.pasa).toList();
 
-  final lista = todos.where((v) {
-    if (f.soloEnStock && v.vendido) return false;
-    if (f.alerta != null && v.alerta != f.alerta) return false;
-    if (f.marca != null && v.marca != f.marca) return false;
-    if (q.isNotEmpty) {
-      final heno = '${v.codigo} ${v.marca} ${v.modelo} ${v.version ?? ''}'
-          .toLowerCase();
-      if (!heno.contains(q)) return false;
-    }
-    return true;
-  }).toList();
-
-  // Lo más viejo primero: es lo que hay que mirar.
-  lista.sort((a, b) => b.diasEnStock.compareTo(a.diasEnStock));
+  lista.sort(switch (f.orden) {
+    OrdenInventario.recientes => (a, b) => b.fechaIngreso.compareTo(
+      a.fechaIngreso,
+    ),
+    OrdenInventario.antiguos => (a, b) => b.diasEnStock.compareTo(
+      a.diasEnStock,
+    ),
+    OrdenInventario.precioMayor => (a, b) => b.precioActual.compareTo(
+      a.precioActual,
+    ),
+    OrdenInventario.precioMenor => (a, b) => a.precioActual.compareTo(
+      b.precioActual,
+    ),
+    OrdenInventario.margenMenor => (a, b) => a.margenActual.compareTo(
+      b.margenActual,
+    ),
+  });
   return lista;
 });
 
@@ -120,8 +272,6 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
     if (_visibles >= total) return;
 
     setState(() => _cargandoMas = true);
-    // Cuando esto lea de Supabase, aca va el select con range(). La demora
-    // simulada mantiene el mismo comportamiento visual.
     Future<void>.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       setState(() {
@@ -140,7 +290,6 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
     final filtro = ref.watch(filtroProvider);
     final lista = ref.watch(inventarioFiltradoProvider);
     final ancho = MediaQuery.sizeOf(context).width;
-    final esAncho = ancho >= Corte.escritorio;
     final margen = ancho < Corte.tablet ? Esp.lg + 4 : Esp.xxl;
 
     // Al cambiar el filtro, volver a la primera pagina.
@@ -157,75 +306,104 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
       );
     }
 
-    final marcas =
-        (asincrono.value ?? const <VehiculoInventario>[])
-            .map((v) => v.marca)
-            .toSet()
-            .toList()
-          ..sort();
-
+    final todos = asincrono.value ?? const <VehiculoInventario>[];
     final mostrados = lista.take(_visibles).toList();
     final capital = lista.fold<double>(0, (s, v) => s + v.capitalInmovilizado);
 
     return Column(
       children: [
-        _BarraFiltros(
-          buscador: _buscador,
-          filtro: filtro,
-          marcas: marcas,
-          margen: margen,
-        ),
         Expanded(
-          child: lista.isEmpty
-              ? EstadoVacio(
-                  icono: Icons.search_off_rounded,
-                  titulo: 'Sin resultados',
-                  descripcion: filtro.hayFiltros
-                      ? 'Ninguna unidad coincide con los filtros aplicados.'
-                      : 'Todavía no hay vehículos cargados.',
-                  accion: filtro.hayFiltros
-                      ? OutlinedButton(
-                          onPressed: () {
-                            _buscador.clear();
-                            ref.read(filtroProvider.notifier).limpiar();
-                          },
-                          child: const Text('Limpiar filtros'),
-                        )
-                      : FilledButton.icon(
-                          onPressed: () => context.go('/vehiculos'),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Cargar un vehículo'),
-                        ),
-                )
-              : ListView.separated(
-                  controller: _scroll,
-                  padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.xl),
-                  itemCount: mostrados.length + 1,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: Esp.sm + 2),
-                  itemBuilder: (context, i) {
-                    if (i == mostrados.length) {
-                      return _PieLista(
-                        cargando: _cargandoMas,
-                        quedan: lista.length - mostrados.length,
-                      );
-                    }
-                    final v = mostrados[i];
-                    final fila = esAncho
-                        ? _FilaVehiculo(vehiculo: v)
-                        : _TarjetaVehiculo(vehiculo: v);
-                    // Solo la primera tanda entra animada: las paginas que
-                    // llegan scrolleando tienen que aparecer ya, sin demora.
-                    if (i >= _tamanoPagina) return fila;
-                    return Aparecer(
-                      // La clave por filtro hace que al filtrar las filas
-                      // entren animadas de nuevo en vez de reciclar las viejas.
-                      key: ValueKey('${v.id}-${identityHashCode(filtro)}'),
-                      indice: i,
-                      child: fila,
-                    );
+          child: ListView(
+            controller: _scroll,
+            padding: EdgeInsets.fromLTRB(margen, Esp.sm, margen, Esp.xl),
+            children: [
+              Aparecer(
+                child: CabeceraPantalla(
+                  titulo: 'Inventario',
+                  subtitulo: 'Listado de vehículos en la agencia',
+                  accion: FilledButton.icon(
+                    onPressed: () => context.go('/vehiculos'),
+                    icon: const Icon(Icons.add_rounded, size: 24),
+                    label: const Text('Cargar auto'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Esp.lg),
+              Aparecer(indice: 1, child: _Pestanas(todos: todos)),
+              const SizedBox(height: Esp.md),
+              Aparecer(
+                indice: 2,
+                child: Buscador(
+                  texto: filtro.busqueda,
+                  controlador: _buscador,
+                  pista: 'Buscar por patente, marca o modelo...',
+                  onCambio: (v) => ref
+                      .read(filtroProvider.notifier)
+                      .poner(filtro.copiar(busqueda: v)),
+                ),
+              ),
+              const SizedBox(height: Esp.md),
+              Aparecer(indice: 3, child: _Filtros(todos: todos)),
+              const SizedBox(height: Esp.md),
+              Aparecer(
+                indice: 4,
+                child: _Resumen(
+                  cuantos: lista.length,
+                  filtro: filtro,
+                  onLimpiar: () {
+                    _buscador.clear();
+                    ref.read(filtroProvider.notifier).limpiar();
                   },
                 ),
+              ),
+              const SizedBox(height: Esp.md),
+
+              if (lista.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: Esp.xl),
+                  child: EstadoVacio(
+                    icono: Icons.search_off_rounded,
+                    titulo: filtro.hayFiltros
+                        ? 'Ningún auto coincide con los filtros'
+                        : 'Todavía no hay autos en ${filtro.estado.etiqueta.toLowerCase()}',
+                    descripcion: filtro.hayFiltros
+                        ? 'Probá sacando algún filtro o cambiando de pestaña.'
+                        : 'Cargá la primera unidad y va a aparecer acá.',
+                    accion: filtro.hayFiltros
+                        ? OutlinedButton(
+                            onPressed: () {
+                              _buscador.clear();
+                              ref.read(filtroProvider.notifier).limpiar();
+                            },
+                            child: const Text('Limpiar filtros'),
+                          )
+                        : FilledButton.icon(
+                            onPressed: () => context.go('/vehiculos'),
+                            icon: const Icon(Icons.add_rounded, size: 24),
+                            label: const Text('Cargar un auto'),
+                          ),
+                  ),
+                ),
+
+              for (var i = 0; i < mostrados.length; i++) ...[
+                if (i >= _tamanoPagina)
+                  _TarjetaVehiculo(vehiculo: mostrados[i])
+                else
+                  Aparecer(
+                    key: ValueKey('${mostrados[i].id}-${filtro.hashCode}'),
+                    indice: i + 5,
+                    child: _TarjetaVehiculo(vehiculo: mostrados[i]),
+                  ),
+                const SizedBox(height: Esp.md),
+              ],
+
+              if (mostrados.isNotEmpty)
+                _PieLista(
+                  cargando: _cargandoMas,
+                  quedan: lista.length - mostrados.length,
+                ),
+            ],
+          ),
         ),
         if (mostrados.isNotEmpty)
           SafeArea(
@@ -250,7 +428,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       'Mostrando ${mostrados.length} de ${lista.length}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: p.sobreNegro2),
+                      style: TextStyle(fontSize: 14, color: p.sobreNegro2),
                     ),
                   ),
                   Container(
@@ -266,7 +444,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       'Capital ${Fmt.pesosCompacto(capital)}',
                       style: TextStyle(
                         fontFamily: TemaApp.mono,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: p.acentoTinta,
                       ),
@@ -275,6 +453,376 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                 ],
               ),
             ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Las pestañas por estado, con el conteo de cada una.
+class _Pestanas extends ConsumerWidget {
+  const _Pestanas({required this.todos});
+
+  final List<VehiculoInventario> todos;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filtro = ref.watch(filtroProvider);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final e in EstadoLista.values) ...[
+            ChipSeleccion(
+              etiqueta: e.etiqueta,
+              contador: todos.where(e.incluye).length,
+              activo: filtro.estado == e,
+              onTap: () => ref
+                  .read(filtroProvider.notifier)
+                  .poner(filtro.copiar(estado: e)),
+            ),
+            if (e != EstadoLista.values.last) const SizedBox(width: Esp.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// La fila de filtros del diseño: desde cuándo, y después marca, año, precio,
+/// antigüedad y orden.
+class _Filtros extends ConsumerWidget {
+  const _Filtros({required this.todos});
+
+  final List<VehiculoInventario> todos;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final filtro = ref.watch(filtroProvider);
+    final notificador = ref.read(filtroProvider.notifier);
+
+    final marcas = todos.map((v) => v.marca).toSet().toList()..sort();
+    final anios = todos.map((v) => v.anio).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    Future<void> elegirFechas() async {
+      final hoy = DateTime.now();
+      final r = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(hoy.year - 10),
+        lastDate: hoy,
+        initialDateRange: filtro.rango,
+        helpText: 'Ingresados entre',
+        saveText: 'Aplicar',
+      );
+      if (r != null) {
+        notificador.poner(
+          filtro.copiar(rango: r, periodo: PeriodoIngreso.todo),
+        );
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.lg),
+        border: Border.all(color: p.borde, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.schedule_rounded, size: 20, color: p.tinta2),
+              const SizedBox(width: Esp.sm),
+              Text(
+                'Ingresados:',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: p.tinta,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.sm),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final e in PeriodoIngreso.values) ...[
+                  _Pildora(
+                    etiqueta: e.etiqueta,
+                    activo: filtro.rango == null && filtro.periodo == e,
+                    onTap: () => notificador.poner(
+                      filtro.copiar(periodo: e, limpiarRango: true),
+                    ),
+                  ),
+                  const SizedBox(width: Esp.sm),
+                ],
+                _Pildora(
+                  etiqueta: filtro.rango == null
+                      ? 'Elegir fechas'
+                      : '${Fmt.fecha(filtro.rango!.start)} a ${Fmt.fecha(filtro.rango!.end)}',
+                  icono: Icons.calendar_month_rounded,
+                  activo: filtro.rango != null,
+                  onTap: elegirFechas,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.md),
+          Wrap(
+            spacing: Esp.sm,
+            runSpacing: Esp.sm,
+            children: [
+              _Selector<String?>(
+                icono: Icons.directions_car_outlined,
+                etiqueta: filtro.marca ?? 'Marca',
+                activo: filtro.marca != null,
+                valor: filtro.marca,
+                opciones: [
+                  (null, 'Todas las marcas'),
+                  for (final m in marcas) (m, m),
+                ],
+                onElegir: (v) => notificador.poner(
+                  v == null
+                      ? filtro.copiar(limpiarMarca: true)
+                      : filtro.copiar(marca: v),
+                ),
+              ),
+              _Selector<int?>(
+                icono: Icons.calendar_today_outlined,
+                etiqueta: filtro.anio?.toString() ?? 'Año',
+                activo: filtro.anio != null,
+                valor: filtro.anio,
+                opciones: [
+                  (null, 'Todos los años'),
+                  for (final a in anios) (a, '$a'),
+                ],
+                onElegir: (v) => notificador.poner(
+                  v == null
+                      ? filtro.copiar(limpiarAnio: true)
+                      : filtro.copiar(anio: v),
+                ),
+              ),
+              _Selector<TramoPrecio>(
+                icono: Icons.attach_money_rounded,
+                etiqueta: filtro.precio == TramoPrecio.todos
+                    ? 'Precio'
+                    : filtro.precio.etiqueta,
+                activo: filtro.precio != TramoPrecio.todos,
+                valor: filtro.precio,
+                opciones: [for (final t in TramoPrecio.values) (t, t.etiqueta)],
+                onElegir: (v) => notificador.poner(filtro.copiar(precio: v)),
+              ),
+              _Selector<DiasParado>(
+                icono: Icons.hourglass_top_rounded,
+                etiqueta: filtro.parado == DiasParado.todos
+                    ? 'Días en stock'
+                    : filtro.parado.etiqueta,
+                activo: filtro.parado != DiasParado.todos,
+                valor: filtro.parado,
+                opciones: [for (final d in DiasParado.values) (d, d.etiqueta)],
+                onElegir: (v) => notificador.poner(filtro.copiar(parado: v)),
+              ),
+              _Selector<OrdenInventario>(
+                icono: Icons.swap_vert_rounded,
+                etiqueta: 'Ordenar: ${filtro.orden.etiqueta}',
+                activo: false,
+                valor: filtro.orden,
+                opciones: [
+                  for (final o in OrdenInventario.values) (o, o.etiqueta),
+                ],
+                onElegir: (v) => notificador.poner(filtro.copiar(orden: v)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pastilla chica de un solo toque (los períodos de ingreso).
+class _Pildora extends StatelessWidget {
+  const _Pildora({
+    required this.etiqueta,
+    required this.activo,
+    required this.onTap,
+    this.icono,
+  });
+
+  final String etiqueta;
+  final bool activo;
+  final VoidCallback onTap;
+  final IconData? icono;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Curva.md),
+      side: BorderSide(color: activo ? p.acento : p.borde, width: 1.5),
+    );
+    return Material(
+      color: activo ? p.acento : p.superficie,
+      shape: forma,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: forma,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Esp.md,
+            vertical: Esp.sm + 2,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icono != null || activo) ...[
+                Icon(
+                  activo ? Icons.check_rounded : icono,
+                  size: 18,
+                  color: activo ? p.acentoTinta : p.tinta2,
+                ),
+                const SizedBox(width: Esp.xs + 2),
+              ],
+              Text(
+                etiqueta,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
+                  color: activo ? p.acentoTinta : p.tinta2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Un desplegable con aspecto de pastilla, como los del diseño.
+class _Selector<T> extends StatelessWidget {
+  const _Selector({
+    required this.icono,
+    required this.etiqueta,
+    required this.activo,
+    required this.valor,
+    required this.opciones,
+    required this.onElegir,
+  });
+
+  final IconData icono;
+  final String etiqueta;
+  final bool activo;
+  final T valor;
+  final List<(T, String)> opciones;
+  final ValueChanged<T> onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      decoration: BoxDecoration(
+        color: activo ? p.acentoLavado : p.superficie,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: activo ? p.acento : p.borde, width: 1.5),
+      ),
+      child: PopupMenuButton<T>(
+        tooltip: etiqueta,
+        initialValue: valor,
+        onSelected: onElegir,
+        itemBuilder: (_) => [
+          for (final (v, texto) in opciones)
+            PopupMenuItem(value: v, child: Text(texto)),
+        ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Esp.md,
+            vertical: Esp.sm + 4,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icono, size: 20, color: p.tinta2),
+              const SizedBox(width: Esp.sm - 2),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Text(
+                  etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: p.tinta,
+                  ),
+                ),
+              ),
+              Icon(Icons.expand_more_rounded, size: 20, color: p.tinta2),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Mostrando 8 autos disponibles · ingresados este año", con el atajo para
+/// sacar todos los filtros de una.
+class _Resumen extends StatelessWidget {
+  const _Resumen({
+    required this.cuantos,
+    required this.filtro,
+    required this.onLimpiar,
+  });
+
+  final int cuantos;
+  final FiltroInventario filtro;
+  final VoidCallback onLimpiar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final detalle = [
+      if (filtro.rango != null)
+        'ingresados entre el ${Fmt.fecha(filtro.rango!.start)} y el ${Fmt.fecha(filtro.rango!.end)}'
+      else if (filtro.periodo != PeriodoIngreso.todo)
+        'ingresados ${filtro.periodo.etiqueta.toLowerCase()}',
+      if (filtro.marca != null) filtro.marca!,
+      if (filtro.anio != null) 'del ${filtro.anio}',
+      if (filtro.precio != TramoPrecio.todos)
+        filtro.precio.etiqueta.toLowerCase(),
+      if (filtro.parado != DiasParado.todos)
+        filtro.parado.etiqueta.toLowerCase(),
+    ].join(' · ');
+
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: p.bien, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: Esp.sm),
+        Expanded(
+          child: Text(
+            'Mostrando $cuantos '
+            '${cuantos == 1 ? 'auto' : 'autos'} '
+            '${filtro.estado == EstadoLista.todos ? 'en total' : filtro.estado.etiqueta.toLowerCase()}'
+            '${detalle.isEmpty ? '' : ' · $detalle'}',
+            style: TextStyle(fontSize: 15, color: p.tinta2),
+          ),
+        ),
+        if (filtro.hayFiltros)
+          TextButton.icon(
+            onPressed: onLimpiar,
+            icon: const Icon(Icons.close_rounded, size: 20),
+            label: const Text('Limpiar filtros'),
           ),
       ],
     );
@@ -292,11 +840,11 @@ class _PieLista extends StatelessWidget {
     final p = context.paleta;
     if (quedan <= 0 && !cargando) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Esp.xl),
+        padding: const EdgeInsets.symmetric(vertical: Esp.lg),
         child: Center(
           child: Text(
             'No hay más unidades',
-            style: TextStyle(fontSize: 13, color: p.tinta3),
+            style: TextStyle(fontSize: 14, color: p.tinta3),
           ),
         ),
       );
@@ -314,356 +862,8 @@ class _PieLista extends StatelessWidget {
   }
 }
 
-class _BarraFiltros extends ConsumerWidget {
-  const _BarraFiltros({
-    required this.buscador,
-    required this.filtro,
-    required this.marcas,
-    required this.margen,
-  });
-
-  final TextEditingController buscador;
-  final FiltroInventario filtro;
-  final List<String> marcas;
-  final double margen;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.paleta;
-    final notificador = ref.read(filtroProvider.notifier);
-    final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
-
-    final buscadorCampo = SizedBox(
-      height: 46,
-      child: TextField(
-        controller: buscador,
-        onChanged: (v) => notificador.poner(filtro.copiar(busqueda: v)),
-        decoration: InputDecoration(
-          hintText: 'Buscar marca, modelo o código',
-          filled: true,
-          fillColor: p.superficie,
-          prefixIcon: Icon(Icons.search_rounded, size: 20, color: p.tinta2),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: Esp.sm),
-          border: _pildora(p.borde),
-          enabledBorder: _pildora(p.borde),
-          focusedBorder: _pildora(p.acentoTexto, ancho: 1.6),
-          suffixIcon: filtro.busqueda.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                  onPressed: () {
-                    buscador.clear();
-                    notificador.poner(filtro.copiar(busqueda: ''));
-                  },
-                ),
-        ),
-      ),
-    );
-
-    final chips = <Widget>[
-      ChipSeleccion(
-        etiqueta: 'Solo en stock',
-        icono: Icons.inventory_2_outlined,
-        activo: filtro.soloEnStock,
-        onTap: () =>
-            notificador.poner(filtro.copiar(soloEnStock: !filtro.soloEnStock)),
-      ),
-      for (final a in [
-        AlertaRotacion.critico,
-        AlertaRotacion.atencion,
-        AlertaRotacion.observar,
-        AlertaRotacion.normal,
-      ])
-        ChipSeleccion(
-          etiqueta: a.etiqueta,
-          activo: filtro.alerta == a,
-          color: a.color(p),
-          onTap: () => notificador.poner(
-            filtro.alerta == a
-                ? filtro.copiar(limpiarAlerta: true)
-                : filtro.copiar(alerta: a),
-          ),
-        ),
-      if (marcas.isNotEmpty)
-        Container(
-          height: 40,
-          padding: const EdgeInsets.only(left: Esp.lg - 2, right: Esp.sm),
-          decoration: ShapeDecoration(
-            color: filtro.marca != null ? p.acento : p.superficie,
-            shape: StadiumBorder(
-              side: BorderSide(
-                color: filtro.marca != null ? p.acento : p.borde,
-              ),
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: filtro.marca,
-              hint: Text(
-                'Marca',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: p.tinta2,
-                ),
-              ),
-              icon: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
-                color: filtro.marca != null ? p.acentoTinta : p.tinta3,
-              ),
-              isDense: true,
-              borderRadius: BorderRadius.circular(Curva.md),
-              dropdownColor: p.superficieElevada,
-              selectedItemBuilder: (_) => [
-                const SizedBox.shrink(),
-                for (final m in marcas)
-                  Center(
-                    child: Text(
-                      m,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: p.acentoTinta,
-                      ),
-                    ),
-                  ),
-              ],
-              style: TextStyle(fontSize: 14, color: p.tinta),
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text(
-                    'Todas las marcas',
-                    style: TextStyle(fontSize: 14, color: p.tinta2),
-                  ),
-                ),
-                for (final m in marcas)
-                  DropdownMenuItem(value: m, child: Text(m)),
-              ],
-              onChanged: (v) => notificador.poner(
-                v == null
-                    ? filtro.copiar(limpiarMarca: true)
-                    : filtro.copiar(marca: v),
-              ),
-            ),
-          ),
-        ),
-      if (filtro.hayFiltros)
-        TextButton.icon(
-          onPressed: () {
-            buscador.clear();
-            notificador.poner(const FiltroInventario());
-          },
-          icon: const Icon(Icons.close_rounded, size: 16),
-          label: const Text('Limpiar'),
-        ),
-    ];
-
-    // En movil los chips van en una sola fila deslizable: apilados en varias
-    // lineas se comian media pantalla antes del primer vehiculo.
-    if (angosto) {
-      return Padding(
-        padding: const EdgeInsets.only(top: Esp.xs, bottom: Esp.md),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: margen),
-              child: buscadorCampo,
-            ),
-            const SizedBox(height: Esp.md),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: margen),
-                itemCount: chips.length,
-                separatorBuilder: (_, _) => const SizedBox(width: Esp.sm),
-                itemBuilder: (_, i) => chips[i],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(margen, Esp.xs, margen, Esp.lg),
-      child: Wrap(
-        spacing: Esp.sm,
-        runSpacing: Esp.sm,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(width: 300, child: buscadorCampo),
-          ...chips,
-        ],
-      ),
-    );
-  }
-
-  static OutlineInputBorder _pildora(Color color, {double ancho = 1}) =>
-      OutlineInputBorder(
-        borderRadius: BorderRadius.circular(Curva.completo),
-        borderSide: BorderSide(color: color, width: ancho),
-      );
-}
-
-/// Mosaico con el icono del auto teñido por el semaforo de rotacion: el
-/// estado se lee antes que cualquier texto.
-class _IconoUnidad extends StatelessWidget {
-  const _IconoUnidad({required this.vehiculo, this.tamano = 48});
-
-  final VehiculoInventario vehiculo;
-  final double tamano;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    final color = vehiculo.alerta.color(p);
-    return Container(
-      width: tamano,
-      height: tamano,
-      decoration: BoxDecoration(
-        color: vehiculo.alerta.lavado(p),
-        borderRadius: BorderRadius.circular(Curva.md),
-      ),
-      child: Icon(
-        Icons.directions_car_filled_rounded,
-        size: tamano * 0.48,
-        color: color,
-      ),
-    );
-  }
-}
-
-/// Fila para escritorio: densa, pensada para escanear muchas unidades.
-class _FilaVehiculo extends StatelessWidget {
-  const _FilaVehiculo({required this.vehiculo});
-
-  final VehiculoInventario vehiculo;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    final v = vehiculo;
-    final margenColor = v.margenActual < 0
-        ? p.critico
-        : v.margenActual < 0.10
-        ? p.observar
-        : p.bien;
-
-    return Tarjeta(
-      padding: const EdgeInsets.fromLTRB(Esp.md, Esp.md, Esp.lg, Esp.md),
-      onTap: () => context.go('/inventario/${v.id}'),
-      child: Row(
-        children: [
-          _IconoUnidad(vehiculo: v),
-          const SizedBox(width: Esp.md + 2),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  v.titulo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: p.tinta,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${v.codigo} · ${v.subtitulo}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: p.tinta3),
-                ),
-              ],
-            ),
-          ),
-          _Columna(
-            etiqueta: 'Días',
-            valor: '${v.diasEnStock}',
-            color: v.alerta.color(p),
-          ),
-          _Columna(etiqueta: 'Costo', valor: Fmt.pesosCompacto(v.costoTotal)),
-          _Columna(
-            etiqueta: 'Precio',
-            valor: Fmt.pesosCompacto(v.precioActual),
-          ),
-          _Columna(
-            etiqueta: 'Margen',
-            valor: Fmt.porcentaje(v.margenActual),
-            color: margenColor,
-          ),
-          _Columna(
-            etiqueta: 'Ganancia real (USD)',
-            valor: Fmt.pesosCompacto(v.gananciaRealIpc),
-            color: v.gananciaRealIpc < 0 ? p.critico : p.tinta,
-          ),
-          const SizedBox(width: Esp.lg),
-          SizedBox(
-            width: 132,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Pastilla(
-                texto: v.alerta.etiqueta,
-                color: v.alerta.color(p),
-                lavado: v.alerta.lavado(p),
-              ),
-            ),
-          ),
-          const SizedBox(width: Esp.md),
-          IconoEnCirculo(
-            icono: Icons.arrow_forward_rounded,
-            tamano: 34,
-            color: p.tinta,
-            fondo: p.superficieHundida,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Columna extends StatelessWidget {
-  const _Columna({required this.etiqueta, required this.valor, this.color});
-
-  final String etiqueta, valor;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return Expanded(
-      flex: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(etiqueta, style: TextStyle(fontSize: 13, color: p.tinta3)),
-          const SizedBox(height: 2),
-          Text(
-            valor,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: TemaApp.mono,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: color ?? p.tinta,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Tarjeta para movil: la fila densa no entra en 375 px.
+/// La tarjeta del diseño: foto, datos, patente y una línea que cuenta lo
+/// último que le pasó a la unidad.
 class _TarjetaVehiculo extends StatelessWidget {
   const _TarjetaVehiculo({required this.vehiculo});
 
@@ -673,142 +873,240 @@ class _TarjetaVehiculo extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final v = vehiculo;
+    final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
+
+    final datos = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          v.titulo,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: Esp.xs),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: Esp.sm,
+          runSpacing: Esp.xs,
+          children: [
+            Text(
+              '${v.anio}${v.km == null ? '' : '  ·  ${Fmt.km(v.km)}'}',
+              style: TextStyle(fontSize: 15, color: p.tinta2),
+            ),
+            if (v.patente != null && v.patente!.isNotEmpty)
+              _Patente(v.patente!),
+          ],
+        ),
+        const SizedBox(height: Esp.sm),
+        _UltimoMovimiento(vehiculo: v),
+      ],
+    );
+
+    final precioYEstado = Column(
+      crossAxisAlignment: angosto
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          Fmt.pesos(v.precioActual),
+          style: TextStyle(
+            fontFamily: TemaApp.titulo,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            color: v.vendido ? p.tinta2 : p.tinta,
+          ),
+        ),
+        const SizedBox(height: Esp.sm),
+        Pastilla(
+          texto: _estado(v),
+          color: _colorEstado(v, p),
+          lavado: _lavadoEstado(v, p),
+        ),
+        const SizedBox(height: Esp.sm),
+        OutlinedButton.icon(
+          onPressed: () => context.go('/inventario/${v.id}'),
+          icon: const Text('Ver ficha'),
+          label: const Icon(Icons.arrow_forward_rounded, size: 20),
+        ),
+      ],
+    );
 
     return Tarjeta(
-      padding: const EdgeInsets.all(Esp.md + 2),
+      padding: const EdgeInsets.all(Esp.md),
       onTap: () => context.go('/inventario/${v.id}'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _IconoUnidad(vehiculo: v, tamano: 46),
-              const SizedBox(width: Esp.md),
-              Expanded(
-                child: Column(
+      child: angosto
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      v.titulo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                        color: p.tinta,
-                      ),
-                    ),
-                    Text(
-                      '${v.codigo} · ${v.subtitulo}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: p.tinta3),
-                    ),
+                    _Foto(vehiculo: v, ancho: 108, alto: 92),
+                    const SizedBox(width: Esp.md),
+                    Expanded(child: datos),
                   ],
                 ),
-              ),
-              const SizedBox(width: Esp.sm),
-              Pastilla(
-                texto: v.alerta.etiqueta,
-                color: v.alerta.color(p),
-                lavado: v.alerta.lavado(p),
-              ),
-            ],
+                const SizedBox(height: Esp.md),
+                Divider(color: p.borde, height: 1.5, thickness: 1.5),
+                const SizedBox(height: Esp.md),
+                precioYEstado,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _Foto(vehiculo: v, ancho: 168, alto: 120),
+                const SizedBox(width: Esp.lg),
+                Expanded(child: datos),
+                const SizedBox(width: Esp.lg),
+                precioYEstado,
+              ],
+            ),
+    );
+  }
+
+  static String _estado(VehiculoInventario v) => switch (v.estado) {
+    EstadoVehiculo.vendido => 'Vendido',
+    EstadoVehiculo.reservado => 'Reservado',
+    EstadoVehiculo.enPreparacion => 'En preparación',
+    EstadoVehiculo.dadoDeBaja => 'Dado de baja',
+    EstadoVehiculo.enStock => 'Disponible',
+  };
+
+  static Color _colorEstado(VehiculoInventario v, Paleta p) =>
+      switch (v.estado) {
+        EstadoVehiculo.vendido || EstadoVehiculo.dadoDeBaja => p.neutro,
+        EstadoVehiculo.reservado => p.observar,
+        EstadoVehiculo.enPreparacion => p.tinta2,
+        EstadoVehiculo.enStock => p.bien,
+      };
+
+  static Color _lavadoEstado(VehiculoInventario v, Paleta p) =>
+      switch (v.estado) {
+        EstadoVehiculo.vendido || EstadoVehiculo.dadoDeBaja => p.neutroLavado,
+        EstadoVehiculo.reservado => p.observarLavado,
+        EstadoVehiculo.enPreparacion => p.superficieHundida,
+        EstadoVehiculo.enStock => p.bienLavado,
+      };
+}
+
+/// El hueco de la foto. Las fotos todavía no se cargan (quedaron para la
+/// tanda siguiente): mientras tanto el lugar existe, con el color del
+/// semáforo de rotación, para que la tarjeta no se vea a medio hacer.
+class _Foto extends StatelessWidget {
+  const _Foto({
+    required this.vehiculo,
+    required this.ancho,
+    required this.alto,
+  });
+
+  final VehiculoInventario vehiculo;
+  final double ancho, alto;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      width: ancho,
+      height: alto,
+      decoration: BoxDecoration(
+        color: vehiculo.alerta.lavado(p),
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: p.borde),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.directions_car_filled_rounded,
+            size: alto * 0.34,
+            color: vehiculo.alerta.color(p),
           ),
-          const SizedBox(height: Esp.md),
-          Row(
-            children: [
-              Expanded(
-                child: _MiniDato(
-                  icono: Icons.schedule_rounded,
-                  etiqueta: 'En stock',
-                  valor: Fmt.dias(v.diasEnStock),
-                  color: v.alerta.color(p),
-                ),
-              ),
-              const SizedBox(width: Esp.sm),
-              Expanded(
-                child: _MiniDato(
-                  icono: Icons.sell_outlined,
-                  etiqueta: 'Precio',
-                  valor: Fmt.pesosCompacto(v.precioActual),
-                ),
-              ),
-              const SizedBox(width: Esp.sm),
-              Expanded(
-                child: _MiniDato(
-                  icono: Icons.percent_rounded,
-                  etiqueta: 'Margen',
-                  valor: Fmt.porcentaje(v.margenActual),
-                  color: v.margenActual < 0.10 ? p.observar : p.bien,
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 2),
+          Text('Sin fotos', style: TextStyle(fontSize: 13, color: p.tinta3)),
         ],
       ),
     );
   }
 }
 
-class _MiniDato extends StatelessWidget {
-  const _MiniDato({
-    required this.icono,
-    required this.etiqueta,
-    required this.valor,
-    this.color,
-  });
+/// La patente, en su placa.
+class _Patente extends StatelessWidget {
+  const _Patente(this.patente);
 
-  final IconData icono;
-  final String etiqueta, valor;
-  final Color? color;
+  final String patente;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Esp.sm + 2,
-        vertical: Esp.sm,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: Esp.sm, vertical: 3),
       decoration: BoxDecoration(
-        color: p.superficieHundida,
-        borderRadius: BorderRadius.circular(Curva.sm + 4),
+        color: p.superficie,
+        borderRadius: BorderRadius.circular(Curva.sm),
+        border: Border.all(color: p.bordeFuerte, width: 1.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icono, size: 12, color: p.tinta3),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  etiqueta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: p.tinta3),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              valor,
-              style: TextStyle(
-                fontFamily: TemaApp.mono,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color ?? p.tinta,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        patente.toUpperCase(),
+        style: TextStyle(
+          fontFamily: TemaApp.titulo,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.4,
+          color: p.tinta,
+        ),
       ),
+    );
+  }
+}
+
+/// Una sola línea con lo último que pasó: cuándo entró, hasta cuándo está
+/// reservada o cuándo se vendió.
+class _UltimoMovimiento extends StatelessWidget {
+  const _UltimoMovimiento({required this.vehiculo});
+
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final v = vehiculo;
+
+    final (IconData icono, String texto, Color color) = switch (v.estado) {
+      EstadoVehiculo.vendido => (
+        Icons.verified_outlined,
+        'Vendido el ${Fmt.fecha(v.fechaVenta)}',
+        p.tinta3,
+      ),
+      EstadoVehiculo.reservado => (
+        Icons.event_available_rounded,
+        'Reservado · ingresó el ${Fmt.fecha(v.fechaIngreso)}',
+        p.observar,
+      ),
+      _ => (
+        Icons.history_rounded,
+        'Ingresó el ${Fmt.fecha(v.fechaIngreso)} (hace ${Fmt.dias(v.diasEnStock)})',
+        v.alerta == AlertaRotacion.normal ? p.tinta3 : v.alerta.color(p),
+      ),
+    };
+
+    return Row(
+      children: [
+        Icon(icono, size: 18, color: color),
+        const SizedBox(width: Esp.sm - 2),
+        Flexible(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 14, color: color),
+          ),
+        ),
+      ],
     );
   }
 }
