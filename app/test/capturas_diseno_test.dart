@@ -21,6 +21,7 @@ import 'package:mi_agencia/funciones/inventario/pantalla_inventario.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 import 'package:mi_agencia/funciones/panel/pantalla_panel.dart';
 import 'package:mi_agencia/funciones/estadisticas/pantalla_estadisticas.dart';
+import 'package:mi_agencia/main.dart';
 import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
 
 /// Capturas para revisar el diseno a ojo. No es una prueba: se corre a mano
@@ -82,6 +83,44 @@ void main() {
       matchesGoldenFile('capturas/$nombre.png'),
     );
   }
+
+  /// La app entera (con su shell), para las capturas que necesitan la barra
+  /// de abajo o las hojas que suben desde ella.
+  Future<void> capturarApp(
+    WidgetTester tester,
+    String nombre,
+    Size tamano,
+    Future<void> Function(WidgetTester) accion,
+  ) async {
+    tester.view.physicalSize = tamano;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const ProviderScope(child: MiAgencia()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'a@b.com');
+    await tester.enterText(find.byType(TextFormField).last, 'x');
+    await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await accion(tester);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('capturas/$nombre.png'),
+    );
+  }
+
+  testWidgets('mas opciones', (t) async {
+    await capturarApp(t, 'mas-opciones', const Size(430, 1400), (t) async {
+      await t.tap(find.byIcon(Icons.more_horiz_rounded).first);
+      await t.pumpAndSettle();
+    });
+  });
+
+  testWidgets('hoja cargar', (t) async {
+    await capturarApp(t, 'hoja-cargar', const Size(430, 900), (t) async {
+      await t.tap(find.byIcon(Icons.add_circle_outline_rounded).first);
+      await t.pumpAndSettle();
+    });
+  });
 
   testWidgets('clientes escritorio', (t) async {
     await capturar(t, 'clientes-escritorio', const PantallaInteresados());

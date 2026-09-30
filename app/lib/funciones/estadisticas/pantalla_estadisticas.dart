@@ -592,6 +592,31 @@ class _LosQueMasTardan extends StatelessWidget {
                   ],
                 ),
               ),
+          if (top.isNotEmpty) ...[
+            const SizedBox(height: Esp.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.lightbulb_outline_rounded,
+                  size: 20,
+                  color: p.tinta3,
+                ),
+                const SizedBox(width: Esp.sm),
+                Expanded(
+                  child: Text(
+                    'Bajar el precio o volver a publicar destaca la unidad: '
+                    'es lo que suele destrabar las que pasan los dos meses.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: p.tinta2,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -631,6 +656,10 @@ class _GananciaPorMes extends StatelessWidget {
               painter: _LineaPintor(
                 valores: valores,
                 etiquetas: [for (final x in serie) _nombreMes[x.mes.month - 1]],
+                etiquetasValor: [
+                  for (final x in serie)
+                    x.ganancia == 0 ? '' : Fmt.pesosCompacto(x.ganancia),
+                ],
                 linea: p.acentoTexto,
                 relleno: p.acento.withValues(alpha: 0.18),
                 grilla: p.borde,
@@ -649,6 +678,7 @@ class _LineaPintor extends CustomPainter {
   _LineaPintor({
     required this.valores,
     required this.etiquetas,
+    required this.etiquetasValor,
     required this.linea,
     required this.relleno,
     required this.grilla,
@@ -658,6 +688,10 @@ class _LineaPintor extends CustomPainter {
 
   final List<double> valores;
   final List<String> etiquetas;
+
+  /// El monto de cada mes, ya formateado: el diseño los muestra sobre cada
+  /// punto, y sin eso hay que adivinar cuánto vale la curva.
+  final List<String> etiquetasValor;
   final Color linea, relleno, grilla, texto, punto;
 
   @override
@@ -710,6 +744,28 @@ class _LineaPintor extends CustomPainter {
         i == valores.length - 1 ? 6 : 4,
         Paint()..color = i == valores.length - 1 ? punto : linea,
       );
+
+      if (etiquetasValor.length == valores.length &&
+          etiquetasValor[i].isNotEmpty) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: etiquetasValor[i],
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: texto,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(
+          canvas,
+          Offset(
+            (x(i) - tp.width / 2).clamp(0, size.width - tp.width),
+            (y(valores[i]) - tp.height - 8).clamp(0, alto - tp.height),
+          ),
+        );
+      }
     }
 
     for (var i = 0; i < etiquetas.length; i++) {

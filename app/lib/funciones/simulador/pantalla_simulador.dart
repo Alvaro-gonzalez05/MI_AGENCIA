@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:printing/printing.dart';
 
 import '../../core/formato.dart';
 import '../../core/tema/colores.dart';
@@ -9,6 +10,7 @@ import '../../datos/repositorio.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import 'plan_pdf.dart';
 
 /// Simulador de financiamiento (pantalla propia, como en el diseño nuevo).
 ///
@@ -51,6 +53,29 @@ class _PantallaSimuladorState extends ConsumerState<PantallaSimulador> {
     _montoCtrl.dispose();
     _tnaCtrl.dispose();
     super.dispose();
+  }
+
+  /// Arma el plan en PDF y lo manda a imprimir o compartir, que es como se
+  /// le pasa al cliente.
+  Future<void> _descargarPdf() async {
+    try {
+      final bytes = await PlanPdf.generar(
+        sistema: _sistema,
+        monto: _monto,
+        cuotas: _cuotas,
+        tna: _tna,
+        agencia: ref.read(miAgenciaProvider).value?.nombre,
+      );
+      await Printing.sharePdf(
+        bytes: Uint8List.fromList(bytes),
+        filename: 'plan-de-cuotas.pdf',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo generar el PDF: $e')));
+    }
   }
 
   @override
@@ -251,6 +276,16 @@ class _PantallaSimuladorState extends ConsumerState<PantallaSimulador> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: Esp.md),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _monto > 0 ? _descargarPdf : null,
+                      icon: const Icon(Icons.download_rounded, size: 22),
+                      label: const Text('Descargar PDF'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: Esp.md),
                 Text(

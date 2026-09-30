@@ -252,12 +252,15 @@ void main() {
     await tester.tapAt(const Offset(200, 60)); // fuera de la hoja
     await tester.pumpAndSettle();
 
-    // "Más" abre las secciones y las preferencias.
+    // "Más" abre las opciones, con los bloques del diseño.
     await tester.tap(find.byIcon(Icons.more_horiz_rounded).first);
     await tester.pumpAndSettle();
-    expect(find.text('Más secciones'), findsOneWidget);
-    expect(find.text('Modo oscuro'), findsOneWidget);
+    expect(find.text('Más opciones'), findsOneWidget);
+    expect(find.text('MI NEGOCIO'), findsOneWidget);
+    expect(find.text('Estadísticas'), findsWidgets);
     expect(find.text('Tamaño de la letra'), findsOneWidget);
+    expect(find.text('Modo oscuro'), findsOneWidget);
+    expect(find.text('Ocultar montos'), findsOneWidget);
 
     // El tema y el tamaño de letra se pueden cambiar sin romper nada.
     await tocar(tester, find.byType(Switch).first);

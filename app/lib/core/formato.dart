@@ -31,13 +31,32 @@ abstract final class Fmt {
   /// Se usa en vez de "0" o vacio: cero es un valor, ausencia no.
   static const sinDato = '—';
 
-  static String pesos(num? n) => n == null ? sinDato : _conSimbolo(r'$', n);
+  /// Con esto prendido, la plata se muestra como asteriscos.
+  ///
+  /// Es la preferencia "Ocultar montos al abrir" del diseno: la agencia
+  /// muchas veces tiene la pantalla a la vista del cliente del otro lado del
+  /// escritorio, y lo que no se quiere mostrar es cuanto se gano. Lo
+  /// enciende la pantalla de "Mas"; ver [ocultarMontosProvider].
+  static bool ocultarMontos = false;
 
-  static String dolares(num? n) => n == null ? sinDato : _conSimbolo('US\$', n);
+  static const _asteriscos = r'$ ***';
+
+  static String pesos(num? n) => n == null
+      ? sinDato
+      : ocultarMontos
+      ? _asteriscos
+      : _conSimbolo(r'$', n);
+
+  static String dolares(num? n) => n == null
+      ? sinDato
+      : ocultarMontos
+      ? 'US\$ ***'
+      : _conSimbolo('US\$', n);
 
   /// Version compacta para tarjetas y ejes de grafico: $264,7 M.
   static String pesosCompacto(num? n) {
     if (n == null) return sinDato;
+    if (ocultarMontos) return _asteriscos;
     final abs = n.abs();
     if (abs >= 1000000000) return '\$${_unDecimal(n / 1000000000)} MM';
     if (abs >= 1000000) return '\$${_unDecimal(n / 1000000)} M';

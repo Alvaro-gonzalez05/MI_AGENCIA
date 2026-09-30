@@ -171,8 +171,7 @@ class PantallaInteresados extends ConsumerWidget {
                     titulo: 'Clientes',
                     subtitulo:
                         '${todos.length} '
-                        '${todos.length == 1 ? 'persona cargada' : 'personas cargadas'}'
-                        '${todos.where(_compro).isEmpty ? '' : ' · ${todos.where(_compro).length} ya compraron'}',
+                        '${todos.length == 1 ? 'cliente en total' : 'clientes en total'}',
                     accion: FilledButton.icon(
                       onPressed: nuevo,
                       icon: const Icon(
@@ -187,15 +186,31 @@ class PantallaInteresados extends ConsumerWidget {
 
                 Aparecer(
                   indice: 1,
-                  child: _BuscadorYOrden(total: deLaPestana.length),
+                  child: _BuscadorYOrden(
+                    total: deLaPestana.length,
+                    interesados: deLaPestana,
+                  ),
                 ),
                 const SizedBox(height: Esp.md),
 
-                Aparecer(indice: 2, child: _Pestanas(interesados: todos)),
+                Aparecer(
+                  indice: 2,
+                  child: Row(
+                    children: [
+                      Expanded(child: _Pestanas(interesados: todos)),
+                      const SizedBox(width: Esp.sm),
+                      // El criterio del semaforo decide si se financia o no:
+                      // no puede quedar solo en la cabeza del que programo.
+                      TextButton(
+                        onPressed: () => _ExplicacionSemaforo.mostrar(context),
+                        child: const Text('¿Qué significa cada color?'),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: Esp.md),
 
-                Aparecer(indice: 3, child: _Filtros(interesados: deLaPestana)),
-                const SizedBox(height: Esp.lg),
+                const SizedBox(height: Esp.xs),
 
                 if (lista.isEmpty)
                   Tarjeta(
@@ -269,9 +284,6 @@ class PantallaInteresados extends ConsumerWidget {
                     ),
                   ),
                 ],
-
-                const SizedBox(height: Esp.lg),
-                const _ExplicacionSemaforo(),
               ],
             ),
           );
@@ -305,9 +317,13 @@ bool _coincide(Interesado i, String busqueda) {
 }
 
 class _BuscadorYOrden extends ConsumerStatefulWidget {
-  const _BuscadorYOrden({required this.total});
+  const _BuscadorYOrden({required this.total, required this.interesados});
 
   final int total;
+
+  /// La lista de la pestaña actual: el selector de situación muestra
+  /// cuántos hay de cada color.
+  final List<Interesado> interesados;
 
   @override
   ConsumerState<_BuscadorYOrden> createState() => _BuscadorYOrdenState();
@@ -336,7 +352,7 @@ class _BuscadorYOrdenState extends ConsumerState<_BuscadorYOrden> {
     final buscador = Buscador(
       texto: busqueda,
       controlador: _controlador,
-      pista: 'Buscar nombre, teléfono, CUIT o localidad...',
+      pista: 'Buscar por nombre, apellido, teléfono o patente...',
       onCambio: (v) => ref.read(_busquedaProvider.notifier).poner(v),
     );
 
@@ -365,7 +381,7 @@ class _BuscadorYOrdenState extends ConsumerState<_BuscadorYOrden> {
               Icon(Icons.sort_rounded, size: 22, color: p.tinta2),
               const SizedBox(width: Esp.sm),
               Text(
-                orden.etiqueta,
+                'Ordenar: ${orden.etiqueta}',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -379,13 +395,19 @@ class _BuscadorYOrdenState extends ConsumerState<_BuscadorYOrden> {
       ),
     );
 
+    final situacion = _SelectorSituacion(interesados: widget.interesados);
+
     return angosto
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               buscador,
               const SizedBox(height: Esp.sm),
-              Align(alignment: Alignment.centerLeft, child: selector),
+              Wrap(
+                spacing: Esp.sm,
+                runSpacing: Esp.sm,
+                children: [selector, situacion],
+              ),
             ],
           )
         : Row(
@@ -393,6 +415,8 @@ class _BuscadorYOrdenState extends ConsumerState<_BuscadorYOrden> {
               Expanded(child: buscador),
               const SizedBox(width: Esp.md),
               selector,
+              const SizedBox(width: Esp.sm),
+              situacion,
             ],
           );
   }
@@ -433,13 +457,14 @@ class _Pestanas extends ConsumerWidget {
   }
 }
 
-/// Filtros por color del semáforo, con el conteo de cada uno.
+/// El filtro por situación crediticia, como desplegable.
 ///
-/// El número al lado del filtro es la respuesta a la pregunta que la agencia
-/// se hace de verdad: "¿a cuántos de los que tengo anotados les puedo
-/// financiar?". Sin el conteo habría que tocar cada filtro para saberlo.
-class _Filtros extends ConsumerWidget {
-  const _Filtros({required this.interesados});
+/// En el diseño, la fila de filtros de esta pantalla son el buscador, el
+/// orden y las pestañas. La situación del BCRA es el dato que decide si se
+/// financia o no, así que sigue estando, pero como un desplegable más y no
+/// como una fila aparte de pastillas.
+class _SelectorSituacion extends ConsumerWidget {
+  const _SelectorSituacion({required this.interesados});
 
   final List<Interesado> interesados;
 
@@ -451,24 +476,59 @@ class _Filtros extends ConsumerWidget {
     int contar(SemaforoCrediticio s) =>
         interesados.where((i) => i.semaforo == s).length;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final s in SemaforoCrediticio.values) ...[
-            ChipSeleccion(
-              etiqueta: s.etiqueta,
-              contador: contar(s),
-              activo: actual == s,
-              color: s == SemaforoCrediticio.sinDatos ? null : s.color(p),
-              onTap: () => ref
-                  .read(_filtroProvider.notifier)
-                  .poner(actual == s ? null : s),
+    return Container(
+      decoration: BoxDecoration(
+        color: actual == null ? p.superficie : p.acentoLavado,
+        borderRadius: BorderRadius.circular(Curva.lg),
+        border: Border.all(
+          color: actual == null ? p.borde : p.acento,
+          width: 1.5,
+        ),
+      ),
+      child: PopupMenuButton<SemaforoCrediticio?>(
+        tooltip: 'Filtrar por situación en el BCRA',
+        initialValue: actual,
+        onSelected: (v) => ref.read(_filtroProvider.notifier).poner(v),
+        itemBuilder: (_) => [
+          const PopupMenuItem(
+            value: null,
+            child: Text('Todas las situaciones'),
+          ),
+          for (final s in SemaforoCrediticio.values)
+            PopupMenuItem(
+              value: s,
+              child: Text('${s.etiqueta}  (${contar(s)})'),
             ),
-            if (s != SemaforoCrediticio.values.last)
-              const SizedBox(width: Esp.sm),
-          ],
         ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Esp.lg,
+            vertical: Esp.lg,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: actual == null ? p.tinta3 : actual.color(p),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: Esp.sm),
+              Text(
+                actual == null ? 'Situación: todas' : actual.etiqueta,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: p.tinta,
+                ),
+              ),
+              Icon(Icons.expand_more_rounded, size: 22, color: p.tinta2),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -479,6 +539,18 @@ class _Filtros extends ConsumerWidget {
 /// a la vista y no escondido en la cabeza del que lo programó.
 class _ExplicacionSemaforo extends StatelessWidget {
   const _ExplicacionSemaforo();
+
+  /// Lo abre el enlace "¿Qué significa cada color?".
+  static void mostrar(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      insetPadding: const EdgeInsets.all(Esp.lg),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: const SingleChildScrollView(child: _ExplicacionSemaforo()),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {

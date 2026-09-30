@@ -285,7 +285,6 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.paleta;
     final asincrono = ref.watch(inventarioProvider);
     final filtro = ref.watch(filtroProvider);
     final lista = ref.watch(inventarioFiltradoProvider);
@@ -349,6 +348,7 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                 indice: 4,
                 child: _Resumen(
                   cuantos: lista.length,
+                  capital: capital,
                   filtro: filtro,
                   onLimpiar: () {
                     _buscador.clear();
@@ -405,55 +405,6 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
             ],
           ),
         ),
-        if (mostrados.isNotEmpty)
-          SafeArea(
-            top: false,
-            bottom: false,
-            child: Container(
-              margin: EdgeInsets.fromLTRB(margen, 0, margen, Esp.md),
-              padding: const EdgeInsets.fromLTRB(
-                Esp.lg + 2,
-                Esp.sm + 2,
-                Esp.sm + 2,
-                Esp.sm + 2,
-              ),
-              decoration: ShapeDecoration(
-                color: p.negro,
-                shape: const StadiumBorder(),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Mostrando ${mostrados.length} de ${lista.length}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 14, color: p.sobreNegro2),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Esp.md + 2,
-                      vertical: 6,
-                    ),
-                    decoration: ShapeDecoration(
-                      color: p.acento,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Capital ${Fmt.pesosCompacto(capital)}',
-                      style: TextStyle(
-                        fontFamily: TemaApp.mono,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: p.acentoTinta,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -777,11 +728,13 @@ class _Selector<T> extends StatelessWidget {
 class _Resumen extends StatelessWidget {
   const _Resumen({
     required this.cuantos,
+    required this.capital,
     required this.filtro,
     required this.onLimpiar,
   });
 
   final int cuantos;
+  final double capital;
   final FiltroInventario filtro;
   final VoidCallback onLimpiar;
 
@@ -814,7 +767,8 @@ class _Resumen extends StatelessWidget {
             'Mostrando $cuantos '
             '${cuantos == 1 ? 'auto' : 'autos'} '
             '${filtro.estado == EstadoLista.todos ? 'en total' : filtro.estado.etiqueta.toLowerCase()}'
-            '${detalle.isEmpty ? '' : ' · $detalle'}',
+            '${detalle.isEmpty ? '' : ' · $detalle'}'
+            '${capital <= 0 ? '' : ' · capital ${Fmt.pesosCompacto(capital)}'}',
             style: TextStyle(fontSize: 15, color: p.tinta2),
           ),
         ),
@@ -904,35 +858,56 @@ class _TarjetaVehiculo extends StatelessWidget {
       ],
     );
 
-    final precioYEstado = Column(
-      crossAxisAlignment: angosto
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          Fmt.pesos(v.precioActual),
-          style: TextStyle(
-            fontFamily: TemaApp.titulo,
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.3,
-            color: v.vendido ? p.tinta2 : p.tinta,
+    final precioYEstado = Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.md),
+      ),
+      child: Column(
+        crossAxisAlignment: angosto
+            ? CrossAxisAlignment.stretch
+            : CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MenuUnidad(vehiculo: v),
+              const SizedBox(width: Esp.sm - 2),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    Fmt.pesos(v.precioActual),
+                    style: TextStyle(
+                      fontFamily: TemaApp.titulo,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                      color: v.vendido ? p.tinta2 : p.tinta,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: Esp.sm),
-        Pastilla(
-          texto: _estado(v),
-          color: _colorEstado(v, p),
-          lavado: _lavadoEstado(v, p),
-        ),
-        const SizedBox(height: Esp.sm),
-        OutlinedButton.icon(
-          onPressed: () => context.go('/inventario/${v.id}'),
-          icon: const Text('Ver ficha'),
-          label: const Icon(Icons.arrow_forward_rounded, size: 20),
-        ),
-      ],
+          const SizedBox(height: Esp.sm),
+          Pastilla(
+            texto: _estado(v),
+            color: _colorEstado(v, p),
+            lavado: _lavadoEstado(v, p),
+          ),
+          const SizedBox(height: Esp.sm),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(backgroundColor: p.superficie),
+            onPressed: () => context.go('/inventario/${v.id}'),
+            icon: const Text('Ver ficha'),
+            label: const Icon(Icons.arrow_forward_rounded, size: 20),
+          ),
+        ],
+      ),
     );
 
     return Tarjeta(
@@ -1106,6 +1081,37 @@ class _UltimoMovimiento extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: color),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// El menú de tres puntos de cada unidad: lo que se puede hacer con ella sin
+/// entrar a la ficha.
+class _MenuUnidad extends StatelessWidget {
+  const _MenuUnidad({required this.vehiculo});
+
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return PopupMenuButton<String>(
+      tooltip: 'Acciones de ${vehiculo.codigo}',
+      icon: Icon(Icons.more_vert_rounded, size: 22, color: p.tinta2),
+      onSelected: (opcion) => switch (opcion) {
+        'ficha' => context.go('/inventario/${vehiculo.id}'),
+        'precio' => context.go('/precios'),
+        'gasto' => context.go('/gastos'),
+        'venta' => context.go('/ventas'),
+        _ => null,
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: 'ficha', child: Text('Ver la ficha')),
+        const PopupMenuItem(value: 'precio', child: Text('Cambiar el precio')),
+        const PopupMenuItem(value: 'gasto', child: Text('Cargar un gasto')),
+        if (!vehiculo.vendido)
+          const PopupMenuItem(value: 'venta', child: Text('Marcar vendida')),
       ],
     );
   }

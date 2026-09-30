@@ -28,3 +28,20 @@ class ControlTamano extends Notifier<TamanoLetra> {
 final tamanoLetraProvider = NotifierProvider<ControlTamano, TamanoLetra>(
   ControlTamano.new,
 );
+
+/// "Ocultar montos al abrir": la plata se ve como `$ ***` hasta que se
+/// apaga la preferencia.
+///
+/// El valor vive en [Fmt.ocultarMontos] porque los montos se formatean en
+/// cientos de lugares con una funcion estatica; la pantalla de "Mas" cambia
+/// la preferencia y `main` la copia ahi y repinta la app.
+class ControlOcultarMontos extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void alternar() => state = !state;
+}
+
+final ocultarMontosProvider = NotifierProvider<ControlOcultarMontos, bool>(
+  ControlOcultarMontos.new,
+);

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config.dart';
 import '../../core/formato.dart';
 import '../../core/sesion.dart';
+import '../../datos/repositorio.dart';
 import '../../core/tema/colores.dart';
 import '../../core/tema/control_tema.dart';
 import '../../core/tema/preferencias.dart';
@@ -762,234 +764,26 @@ class _ShellMovil extends ConsumerWidget {
   /// Lo que no entra en la barra inferior vive aca. Se usa una hoja y no un
   /// drawer lateral porque en un telefono grande la esquina superior izquierda
   /// no se alcanza con una mano.
+  /// "Más opciones", como en el diseño.
+  ///
+  /// El cliente pidió que siga siendo la hoja que sube desde la barra —no una
+  /// pantalla aparte—, así que la hoja tiene el mismo contenido que la
+  /// pantalla del diseño: el perfil, los accesos de "Mi negocio", las
+  /// preferencias de visualización, las herramientas y el cierre de sesión.
   void _abrirMenu(BuildContext context, WidgetRef ref) {
-    final resto = Secciones.visibles(
-      esDesarrollador: ref.read(usuarioProvider)?.esDesarrollador ?? false,
-    ).where((s) => !s.enBarraInferior).toList();
-
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // isScrollControlled + el envoltorio scrolleable: con la cuenta de
-      // desarrollador el menu tiene mas entradas de las que entran en media
-      // pantalla, y sin esto la hoja desborda en vez de dejar scrollear.
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 720),
       // La paleta se lee del contexto de la hoja, no del shell: si se cambia
       // el tema con la hoja abierta, tiene que repintarse con el nuevo.
-      builder: (ctx) {
-        final p = ctx.paleta;
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Más secciones',
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
-                const SizedBox(height: Esp.lg),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: Esp.md,
-                  crossAxisSpacing: Esp.md,
-                  childAspectRatio: 0.98,
-                  children: [
-                    for (var i = 0; i < resto.length; i++)
-                      Aparecer(
-                        indice: i,
-                        child: _MosaicoSeccion(
-                          seccion: resto[i],
-                          activa: resto[i].id == seccion.id,
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            context.go(resto[i].ruta);
-                          },
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: Esp.xl),
-
-                // Preferencias de visualización, como en el diseño: lo que
-                // cambia cómo se ve la app, junto y a mano.
-                Text('CÓMO SE VE', style: Theme.of(ctx).textTheme.labelSmall),
-                const SizedBox(height: Esp.sm),
-                Tarjeta(
-                  padding: const EdgeInsets.all(Esp.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          IconoEnCirculo(
-                            icono: Icons.dark_mode_outlined,
-                            tamano: 40,
-                            color: p.tinta,
-                            fondo: p.superficieHundida,
-                          ),
-                          const SizedBox(width: Esp.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Modo oscuro',
-                                  style: Theme.of(ctx).textTheme.titleMedium,
-                                ),
-                                Text(
-                                  'Fondo oscuro para descansar la vista',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: p.tinta2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: ref.watch(temaProvider) == ThemeMode.dark,
-                            onChanged: (_) =>
-                                ref.read(temaProvider.notifier).alternar(),
-                          ),
-                        ],
-                      ),
-                      Divider(color: p.borde, height: Esp.xl),
-                      Row(
-                        children: [
-                          IconoEnCirculo(
-                            icono: Icons.format_size_rounded,
-                            tamano: 40,
-                            color: p.tinta,
-                            fondo: p.superficieHundida,
-                          ),
-                          const SizedBox(width: Esp.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tamaño de la letra',
-                                  style: Theme.of(ctx).textTheme.titleMedium,
-                                ),
-                                Text(
-                                  'Qué tan grande se lee todo',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: p.tinta2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: Esp.sm),
-                      Row(
-                        children: [
-                          for (final t in TamanoLetra.values) ...[
-                            Expanded(
-                              child: _BotonTamano(
-                                tamano: t,
-                                activo: ref.watch(tamanoLetraProvider) == t,
-                                onTap: () => ref
-                                    .read(tamanoLetraProvider.notifier)
-                                    .poner(t),
-                              ),
-                            ),
-                            if (t != TamanoLetra.values.last)
-                              const SizedBox(width: Esp.sm),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: Esp.lg),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: p.critico,
-                    side: BorderSide(color: p.critico, width: 1.6),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    ref.read(sesionProvider.notifier).salir();
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 22),
-                  label: const Text('Cerrar sesión en este equipo'),
-                ),
-                const SizedBox(height: Esp.md),
-                Center(
-                  child: Text(
-                    'Mi Agencia · versión ${Config.version}',
-                    style: TextStyle(fontSize: 14, color: p.tinta3),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (ctx) => _HojaMasOpciones(shell: context),
     );
   }
 }
 
-class _MosaicoSeccion extends StatelessWidget {
-  const _MosaicoSeccion({
-    required this.seccion,
-    required this.activa,
-    required this.onTap,
-  });
-
-  final Seccion seccion;
-  final bool activa;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return Material(
-      color: activa ? p.acento : p.superficieHundida,
-      borderRadius: BorderRadius.circular(Curva.lg),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Curva.lg),
-        child: Padding(
-          padding: const EdgeInsets.all(Esp.sm),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconoEnCirculo(
-                icono: seccion.icono,
-                tamano: 44,
-                color: activa ? p.acento : p.tinta,
-                fondo: activa ? p.acentoTinta : p.superficie,
-              ),
-              const SizedBox(height: Esp.sm),
-              Text(
-                seccion.etiqueta,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: activa ? p.acentoTinta : p.tinta,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Barra inferior flotante: una pildora negra donde el destino activo se
-/// expande en amarillo y muestra su nombre.
 class _BarraInferior extends StatelessWidget {
   const _BarraInferior({
     required this.indiceActivo,
@@ -1209,6 +1003,521 @@ class _BotonTamano extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// El contenido de "Más opciones": lo mismo que la pantalla del diseño, en
+/// una hoja que sube desde la barra inferior.
+class _HojaMasOpciones extends ConsumerWidget {
+  const _HojaMasOpciones({required this.shell});
+
+  /// El contexto del shell: la hoja se cierra antes de navegar, así que la
+  /// navegación tiene que salir del contexto de abajo y no del de la hoja.
+  final BuildContext shell;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final usuario = ref.watch(usuarioProvider);
+    final agencia = ref.watch(miAgenciaProvider).value;
+    final esDesarrollador = usuario?.esDesarrollador ?? false;
+
+    void irA(String ruta) {
+      Navigator.pop(context);
+      shell.go(ruta);
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Más opciones',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Configuración general de tu agencia y preferencias del '
+                      'sistema',
+                      style: TextStyle(fontSize: 15, color: p.tinta2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Esp.sm),
+              Pastilla(
+                texto: Config.modoDemo ? 'Modo demo' : 'Conectado',
+                color: Config.modoDemo ? p.observar : p.bien,
+                lavado: Config.modoDemo ? p.observarLavado : p.bienLavado,
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.lg),
+
+          // --- Perfil ---------------------------------------------------
+          Tarjeta(
+            padding: const EdgeInsets.all(Esp.lg),
+            child: Row(
+              children: [
+                _Avatar(iniciales: usuario?.iniciales ?? '?', tamano: 56),
+                const SizedBox(width: Esp.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: Esp.sm,
+                        runSpacing: Esp.xs,
+                        children: [
+                          Text(
+                            usuario?.nombre ?? 'Usuario',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Pastilla(
+                            texto: _rol(usuario?.rol, esDesarrollador),
+                            color: p.tinta2,
+                            lavado: p.superficieHundida,
+                            conPunto: false,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          _rol(usuario?.rol, esDesarrollador),
+                          if (agencia?.nombre != null) agencia!.nombre,
+                        ].join(' · '),
+                        style: TextStyle(fontSize: 15, color: p.tinta2),
+                      ),
+                      if ((usuario?.email ?? '').isNotEmpty) ...[
+                        const SizedBox(height: Esp.xs),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.mail_outline_rounded,
+                              size: 18,
+                              color: p.tinta3,
+                            ),
+                            const SizedBox(width: Esp.sm - 2),
+                            Flexible(
+                              child: Text(
+                                usuario!.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 14, color: p.tinta3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Esp.sm),
+                OutlinedButton.icon(
+                  onPressed: () => irA(Secciones.configuracion.ruta),
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  label: const Text('Editar'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          // --- Mi negocio -----------------------------------------------
+          _TituloGrupo(titulo: 'MI NEGOCIO', nota: 'Gestión administrativa'),
+          const SizedBox(height: Esp.sm),
+          Tarjeta(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _FilaOpcion(
+                  icono: Icons.insights_outlined,
+                  titulo: 'Estadísticas',
+                  descripcion:
+                      'Cómo vienen las ventas, los tiempos y las ganancias',
+                  onTap: () => irA(Secciones.estadisticas.ruta),
+                ),
+                _FilaOpcion(
+                  icono: Icons.calculate_outlined,
+                  titulo: 'Simulador de financiamiento',
+                  descripcion: 'Calculá las cuotas para mostrarle al cliente',
+                  onTap: () => irA(Secciones.simulador.ruta),
+                ),
+                _FilaOpcion(
+                  icono: Icons.storefront_outlined,
+                  titulo: 'Datos de la agencia',
+                  descripcion:
+                      'Umbrales, márgenes, redondeo y tipo de cambio de la '
+                      'agencia',
+                  onTap: () => irA(Secciones.configuracion.ruta),
+                ),
+                _FilaOpcion(
+                  icono: Icons.manage_accounts_outlined,
+                  titulo: 'Usuarios y permisos',
+                  descripcion:
+                      'Quién usa el sistema y qué puede ver de cada unidad',
+                  pastilla: esDesarrollador ? null : 'Próximamente',
+                  onTap: esDesarrollador
+                      ? () => irA(Secciones.agencias.ruta)
+                      : null,
+                  ultima: true,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          // --- Carga de datos -------------------------------------------
+          _TituloGrupo(titulo: 'CARGA DE DATOS', nota: 'Altas a mano'),
+          const SizedBox(height: Esp.sm),
+          Tarjeta(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final s in [
+                  Secciones.vehiculos,
+                  Secciones.gastos,
+                  Secciones.precios,
+                  Secciones.ventas,
+                ])
+                  _FilaOpcion(
+                    icono: s.icono,
+                    titulo: s.titulo,
+                    descripcion: s.subtitulo,
+                    onTap: () => irA(s.ruta),
+                    ultima: s.id == Secciones.ventas.id,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          // --- Preferencias de visualización ----------------------------
+          _TituloGrupo(
+            titulo: 'PREFERENCIAS DE VISUALIZACIÓN',
+            nota: 'Comodidad visual',
+          ),
+          const SizedBox(height: Esp.sm),
+          Tarjeta(
+            padding: const EdgeInsets.all(Esp.lg),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    IconoEnCirculo(
+                      icono: Icons.format_size_rounded,
+                      tamano: 42,
+                      color: p.tinta,
+                      fondo: p.superficieHundida,
+                    ),
+                    const SizedBox(width: Esp.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tamaño de la letra',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            'Ajustá qué tan grande se lee todo',
+                            style: TextStyle(fontSize: 14, color: p.tinta2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Esp.md),
+                Row(
+                  children: [
+                    for (final t in TamanoLetra.values) ...[
+                      Expanded(
+                        child: _BotonTamano(
+                          tamano: t,
+                          activo: ref.watch(tamanoLetraProvider) == t,
+                          onTap: () =>
+                              ref.read(tamanoLetraProvider.notifier).poner(t),
+                        ),
+                      ),
+                      if (t != TamanoLetra.values.last)
+                        const SizedBox(width: Esp.sm),
+                    ],
+                  ],
+                ),
+                Divider(color: p.borde, height: Esp.xl),
+                _FilaInterruptor(
+                  icono: Icons.dark_mode_outlined,
+                  titulo: 'Modo oscuro',
+                  descripcion:
+                      'Fondo oscuro para descansar la vista de noche o en '
+                      'oficinas cerradas',
+                  valor: ref.watch(temaProvider) == ThemeMode.dark,
+                  onCambio: (_) => ref.read(temaProvider.notifier).alternar(),
+                ),
+                Divider(color: p.borde, height: Esp.xl),
+                _FilaInterruptor(
+                  icono: Icons.visibility_off_outlined,
+                  titulo: 'Ocultar montos',
+                  descripcion:
+                      'Muestra la plata con asteriscos, para cuando el cliente '
+                      've la pantalla',
+                  valor: ref.watch(ocultarMontosProvider),
+                  onCambio: (_) =>
+                      ref.read(ocultarMontosProvider.notifier).alternar(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          // --- Otros y asistencia ---------------------------------------
+          _TituloGrupo(titulo: 'OTROS Y ASISTENCIA', nota: 'Herramientas'),
+          const SizedBox(height: Esp.sm),
+          Tarjeta(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _FilaOpcion(
+                  icono: Icons.campaign_outlined,
+                  titulo: 'Campañas comerciales',
+                  descripcion:
+                      'Mensajes a los clientes con promociones y nuevos '
+                      'ingresos',
+                  onTap: () => irA(Secciones.campanas.ruta),
+                ),
+                _FilaOpcion(
+                  icono: Icons.support_agent_outlined,
+                  titulo: 'Ayuda y soporte técnico',
+                  descripcion:
+                      'Escribinos por WhatsApp ante cualquier duda con el '
+                      'sistema',
+                  pastilla: 'Atención rápida',
+                  onTap: () => launchUrl(
+                    Uri.parse('https://wa.me/5492613000000'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  ultima: true,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: p.critico,
+              side: BorderSide(color: p.critico, width: 1.6),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(sesionProvider.notifier).salir();
+            },
+            icon: const Icon(Icons.logout_rounded, size: 22),
+            label: const Text('Cerrar sesión en este equipo'),
+          ),
+          const SizedBox(height: Esp.md),
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  '${agencia?.nombre ?? 'Mi Agencia'} · Sistema de gestión'
+                  '${Config.version.isEmpty ? '' : ' v${Config.version}'}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: p.tinta3),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_outline_rounded, size: 16, color: p.tinta3),
+                    const SizedBox(width: Esp.sm - 2),
+                    Flexible(
+                      child: Text(
+                        Config.modoDemo
+                            ? 'Datos de ejemplo, sin conexión a la base'
+                            : 'Conexión cifrada de extremo a extremo',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: p.tinta3),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _rol(String? rol, bool esDesarrollador) {
+    if (esDesarrollador) return 'Desarrollador';
+    return switch (rol) {
+      'owner' => 'Titular',
+      'admin' => 'Administrador',
+      'vendedor' => 'Vendedor',
+      _ => 'Equipo',
+    };
+  }
+}
+
+/// El encabezado de cada grupo: el rótulo a la izquierda y la aclaración
+/// a la derecha, como en el diseño.
+class _TituloGrupo extends StatelessWidget {
+  const _TituloGrupo({required this.titulo, required this.nota});
+
+  final String titulo, nota;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    // En un telefono el rotulo y la aclaracion no entran en la misma linea.
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: Esp.md,
+      runSpacing: 2,
+      children: [
+        Text(titulo, style: Theme.of(context).textTheme.labelSmall),
+        Text(nota, style: TextStyle(fontSize: 14, color: p.tinta3)),
+      ],
+    );
+  }
+}
+
+/// Una fila de "Más opciones": icono, título, descripción y la flecha.
+class _FilaOpcion extends StatelessWidget {
+  const _FilaOpcion({
+    required this.icono,
+    required this.titulo,
+    required this.descripcion,
+    this.onTap,
+    this.pastilla,
+    this.ultima = false,
+  });
+
+  final IconData icono;
+  final String titulo, descripcion;
+  final VoidCallback? onTap;
+  final String? pastilla;
+  final bool ultima;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(Esp.lg),
+            child: Row(
+              children: [
+                IconoEnCirculo(
+                  icono: icono,
+                  tamano: 42,
+                  color: onTap == null ? p.tinta3 : p.acentoTexto,
+                  fondo: onTap == null ? p.superficieHundida : p.acentoLavado,
+                ),
+                const SizedBox(width: Esp.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titulo,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        descripcion,
+                        style: TextStyle(fontSize: 14, color: p.tinta2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Esp.sm),
+                if (pastilla != null)
+                  Flexible(
+                    child: Pastilla(
+                      texto: pastilla!,
+                      color: p.tinta2,
+                      lavado: p.superficieHundida,
+                      conPunto: false,
+                    ),
+                  )
+                else
+                  Icon(Icons.chevron_right_rounded, size: 24, color: p.tinta3),
+              ],
+            ),
+          ),
+        ),
+        if (!ultima)
+          Divider(
+            color: p.borde,
+            height: 1,
+            indent: Esp.lg + 42 + Esp.md,
+            endIndent: Esp.lg,
+          ),
+      ],
+    );
+  }
+}
+
+/// Una preferencia con interruptor.
+class _FilaInterruptor extends StatelessWidget {
+  const _FilaInterruptor({
+    required this.icono,
+    required this.titulo,
+    required this.descripcion,
+    required this.valor,
+    required this.onCambio,
+  });
+
+  final IconData icono;
+  final String titulo, descripcion;
+  final bool valor;
+  final ValueChanged<bool> onCambio;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Row(
+      children: [
+        IconoEnCirculo(
+          icono: icono,
+          tamano: 42,
+          color: p.tinta,
+          fondo: p.superficieHundida,
+        ),
+        const SizedBox(width: Esp.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(titulo, style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                descripcion,
+                style: TextStyle(fontSize: 14, color: p.tinta2),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: Esp.sm),
+        Switch(value: valor, onChanged: onCambio),
+      ],
     );
   }
 }

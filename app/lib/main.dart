@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config.dart';
+import 'core/formato.dart';
 import 'core/router.dart';
 import 'core/tema/control_tema.dart';
 import 'core/tema/preferencias.dart';
@@ -41,10 +42,19 @@ class MiAgencia extends ConsumerWidget {
       // Windows o en Android, se respeta y se suma.
       builder: (context, child) {
         final escala = ref.watch(tamanoLetraProvider).escala;
+        // Los montos se formatean con una funcion estatica (Fmt.pesos), asi
+        // que la preferencia se copia ahi y se repinta todo con una clave
+        // distinta: es la unica forma de que cambien las cifras ya dibujadas
+        // sin pasar la preferencia por las cien pantallas que las muestran.
+        final ocultar = ref.watch(ocultarMontosProvider);
+        Fmt.ocultarMontos = ocultar;
         return MediaQuery.withClampedTextScaling(
           minScaleFactor: escala,
           maxScaleFactor: escala * 1.3,
-          child: CapaActualizacion(child: child ?? const SizedBox.shrink()),
+          child: KeyedSubtree(
+            key: ValueKey(ocultar),
+            child: CapaActualizacion(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
       theme: TemaApp.claro(),
