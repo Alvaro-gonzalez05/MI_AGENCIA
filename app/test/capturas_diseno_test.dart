@@ -21,6 +21,7 @@ import 'package:mi_agencia/funciones/inventario/pantalla_inventario.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 import 'package:mi_agencia/funciones/panel/pantalla_panel.dart';
 import 'package:mi_agencia/funciones/estadisticas/pantalla_estadisticas.dart';
+import 'package:mi_agencia/funciones/vehiculos/formulario_vehiculo.dart';
 import 'package:mi_agencia/main.dart';
 import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
 
@@ -120,6 +121,15 @@ void main() {
       await t.tap(find.byIcon(Icons.add_circle_outline_rounded).first);
       await t.pumpAndSettle();
     });
+  });
+
+  testWidgets('cargar auto paso 1', (t) async {
+    await capturar(
+      t,
+      'cargar-auto',
+      const FormularioVehiculo(),
+      tamano: const Size(900, 1300),
+    );
   });
 
   testWidgets('clientes escritorio', (t) async {

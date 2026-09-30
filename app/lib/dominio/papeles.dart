@@ -130,3 +130,109 @@ class FotoVehiculo {
   final int orden;
   final bool esPortada;
 }
+
+/// La reserva de una unidad: alguien dejó una seña y el auto se guarda.
+///
+/// Tiene fecha de vencimiento porque una reserva sin plazo es una unidad
+/// parada por tiempo indefinido, que es justo lo que hace perder plata.
+class Reserva {
+  const Reserva({
+    required this.id,
+    required this.vehiculoId,
+    required this.clienteNombre,
+    required this.senia,
+    required this.fechaReserva,
+    required this.venceEl,
+    this.clienteTelefono,
+    this.oportunidadId,
+    this.estado = EstadoReserva.activa,
+    this.notas = '',
+    this.vehiculoTitulo,
+    this.vehiculoPatente,
+  });
+
+  final String id;
+  final String vehiculoId;
+  final String clienteNombre;
+  final String? clienteTelefono;
+  final String? oportunidadId;
+  final double senia;
+  final DateTime fechaReserva;
+  final DateTime venceEl;
+  final EstadoReserva estado;
+  final String notas;
+
+  /// Para mostrarla fuera de la ficha (el Inicio la nombra).
+  final String? vehiculoTitulo;
+  final String? vehiculoPatente;
+
+  /// Días que faltan. Negativo = ya venció.
+  int get diasParaVencer {
+    final hoy = DateTime.now();
+    return DateTime(
+      venceEl.year,
+      venceEl.month,
+      venceEl.day,
+    ).difference(DateTime(hoy.year, hoy.month, hoy.day)).inDays;
+  }
+
+  bool get activa => estado == EstadoReserva.activa;
+  bool get vencida => activa && diasParaVencer < 0;
+
+  /// "Vence mañana", "Vence en 3 días", "Venció ayer".
+  String get cuandoVence {
+    final d = diasParaVencer;
+    if (d == 0) return 'Vence hoy';
+    if (d == 1) return 'Vence mañana';
+    if (d == -1) return 'Venció ayer';
+    if (d > 1) return 'Vence en $d días';
+    return 'Venció hace ${-d} días';
+  }
+}
+
+enum EstadoReserva {
+  activa('Activa', 'activa'),
+  cancelada('Cancelada', 'cancelada'),
+  concretada('Se concretó', 'concretada'),
+  vencida('Vencida', 'vencida');
+
+  const EstadoReserva(this.etiqueta, this.valorBd);
+  final String etiqueta;
+  final String valorBd;
+
+  static EstadoReserva desde(String? v) =>
+      EstadoReserva.values.where((e) => e.valorBd == v).firstOrNull ??
+      EstadoReserva.activa;
+}
+
+/// Lo que se carga al reservar.
+class AltaReserva {
+  const AltaReserva({
+    required this.vehiculoId,
+    required this.clienteNombre,
+    required this.venceEl,
+    this.clienteTelefono,
+    this.oportunidadId,
+    this.senia = 0,
+    this.notas = '',
+  });
+
+  final String vehiculoId;
+  final String clienteNombre;
+  final String? clienteTelefono;
+  final String? oportunidadId;
+  final double senia;
+  final DateTime venceEl;
+  final String notas;
+
+  Map<String, String> validar() {
+    final e = <String, String>{};
+    if (clienteNombre.trim().isEmpty) e['cliente'] = 'Poné a nombre de quién.';
+    final hoy = DateTime.now();
+    if (venceEl.isBefore(DateTime(hoy.year, hoy.month, hoy.day))) {
+      e['vence'] = 'La reserva no puede vencer antes de hoy.';
+    }
+    if (senia < 0) e['senia'] = 'La seña no puede ser negativa.';
+    return e;
+  }
+}

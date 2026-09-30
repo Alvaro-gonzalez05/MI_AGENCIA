@@ -382,6 +382,70 @@ class RepositorioSupabase implements Repositorio {
   }
 
   // -------------------------------------------------------------------
+  // Reservas
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<Reserva>> reservas({
+    String? vehiculoId,
+    bool soloActivas = true,
+  }) async {
+    // Antes de leer, se vencen las que correspondan: una reserva que vencio
+    // ayer tiene que aparecer vencida hoy aunque nadie haya abierto la app.
+    try {
+      await _db.rpc('vencer_reservas');
+    } catch (_) {
+      // Si falla (permisos, red), se sigue: la lista igual marca cual vencio
+      // por fecha.
+    }
+
+    var consulta = _db
+        .from('v_reservas')
+        .select()
+        .eq('agencia_id', await _miAgencia());
+    if (vehiculoId != null) consulta = consulta.eq('vehiculo_id', vehiculoId);
+    if (soloActivas) consulta = consulta.eq('estado', 'activa');
+
+    final filas = await consulta.order('vence_el');
+    return filas.map(_aReserva).toList();
+  }
+
+  @override
+  Future<void> crearReserva(AltaReserva r) async {
+    await _db.from('reservas').insert({
+      'agencia_id': await _miAgencia(),
+      'vehiculo_id': r.vehiculoId,
+      'oportunidad_id': r.oportunidadId,
+      'cliente_nombre': r.clienteNombre.trim(),
+      'cliente_telefono': _oNulo(r.clienteTelefono ?? ''),
+      'senia': r.senia,
+      'vence_el': _soloFecha(r.venceEl),
+      'notas': _oNulo(r.notas),
+      'created_by': _db.auth.currentUser?.id,
+    });
+  }
+
+  @override
+  Future<void> cerrarReserva(String id, EstadoReserva estado) async {
+    await _db.from('reservas').update({'estado': estado.valorBd}).eq('id', id);
+  }
+
+  static Reserva _aReserva(Map<String, dynamic> f) => Reserva(
+    id: f['id'] as String,
+    vehiculoId: f['vehiculo_id'] as String,
+    clienteNombre: f['cliente_nombre'] as String? ?? '',
+    clienteTelefono: f['cliente_telefono'] as String?,
+    oportunidadId: f['oportunidad_id'] as String?,
+    senia: _decimal(f['senia']) ?? 0,
+    fechaReserva: _fecha(f['fecha_reserva']) ?? DateTime.now(),
+    venceEl: _fecha(f['vence_el']) ?? DateTime.now(),
+    estado: EstadoReserva.desde(f['estado'] as String?),
+    notas: f['notas'] as String? ?? '',
+    vehiculoTitulo: f['vehiculo_titulo'] as String?,
+    vehiculoPatente: f['vehiculo_patente'] as String?,
+  );
+
+  // -------------------------------------------------------------------
   // Papeles y fotos de la unidad
   // -------------------------------------------------------------------
 

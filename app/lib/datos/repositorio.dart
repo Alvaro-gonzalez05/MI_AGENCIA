@@ -80,6 +80,15 @@ abstract interface class Repositorio {
   /// Marca cual es la portada: la que se ve en el inventario y en el Inicio.
   Future<void> marcarPortada(FotoVehiculo foto);
 
+  /// Las reservas de una unidad (o todas las activas de la agencia).
+  Future<List<Reserva>> reservas({String? vehiculoId, bool soloActivas = true});
+
+  Future<void> crearReserva(AltaReserva r);
+
+  /// Cancelar o dar por concretada una reserva. Al dejar de estar activa, la
+  /// unidad vuelve sola a disponible.
+  Future<void> cerrarReserva(String id, EstadoReserva estado);
+
   Future<List<Gasto>> gastos({String? vehiculoId});
 
   Future<void> crearGasto(AltaGasto g);
@@ -284,9 +293,60 @@ class RepositorioDemo implements Repositorio {
     _agregados.removeWhere((x) => x.codigo == id);
   }
 
-  /// Los papeles y las fotos que se cargaron en esta sesion de demo.
+  /// Los papeles, las fotos y las reservas de esta sesion de demo.
   final Map<String, PapelesVehiculo> _papeles = {};
   final Map<String, List<FotoVehiculo>> _fotos = {};
+  final List<Reserva> _reservas = [];
+
+  @override
+  Future<List<Reserva>> reservas({
+    String? vehiculoId,
+    bool soloActivas = true,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _reservas
+        .where((r) => vehiculoId == null || r.vehiculoId == vehiculoId)
+        .where((r) => !soloActivas || r.activa)
+        .toList();
+  }
+
+  @override
+  Future<void> crearReserva(AltaReserva r) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _reservas.add(
+      Reserva(
+        id: 'demo-${_reservas.length}',
+        vehiculoId: r.vehiculoId,
+        clienteNombre: r.clienteNombre,
+        clienteTelefono: r.clienteTelefono,
+        oportunidadId: r.oportunidadId,
+        senia: r.senia,
+        fechaReserva: DateTime.now(),
+        venceEl: r.venceEl,
+        notas: r.notas,
+      ),
+    );
+  }
+
+  @override
+  Future<void> cerrarReserva(String id, EstadoReserva estado) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final i = _reservas.indexWhere((r) => r.id == id);
+    if (i < 0) return;
+    final r = _reservas[i];
+    _reservas[i] = Reserva(
+      id: r.id,
+      vehiculoId: r.vehiculoId,
+      clienteNombre: r.clienteNombre,
+      clienteTelefono: r.clienteTelefono,
+      oportunidadId: r.oportunidadId,
+      senia: r.senia,
+      fechaReserva: r.fechaReserva,
+      venceEl: r.venceEl,
+      estado: estado,
+      notas: r.notas,
+    );
+  }
 
   @override
   Future<PapelesVehiculo> papeles(String vehiculoId) async {
@@ -914,6 +974,20 @@ final miAgenciaProvider = FutureProvider<Agencia?>(
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
 /// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
 /// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+/// Las reservas activas de la agencia. El Inicio avisa las que vencen.
+final reservasProvider = FutureProvider<List<Reserva>>(
+  (ref) => ref.watch(repositorioProvider).reservas(),
+);
+
+/// La reserva activa de una unidad, si tiene.
+final reservaDeProvider = FutureProvider.family<Reserva?, String>((
+  ref,
+  id,
+) async {
+  final lista = await ref.watch(repositorioProvider).reservas(vehiculoId: id);
+  return lista.where((r) => r.activa).firstOrNull;
+});
+
 /// Los papeles de una unidad. Se pide por id: cada ficha trae los suyos.
 final papelesProvider = FutureProvider.family<PapelesVehiculo, String>(
   (ref, id) => ref.watch(repositorioProvider).papeles(id),
