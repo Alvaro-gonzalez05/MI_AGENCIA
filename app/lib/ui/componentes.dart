@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/formato.dart';
 import '../core/tema/colores.dart';
 import '../core/tema/tema.dart';
+import '../datos/repositorio.dart';
 
 /// Pastilla de estado. Es el componente mas repetido de la app: aparece en
 /// cada fila del inventario, en cada ficha y en cada interesado.
@@ -1041,4 +1043,82 @@ class _PintorPunteado extends CustomPainter {
 
   @override
   bool shouldRepaint(_PintorPunteado otro) => otro.color != color;
+}
+
+/// La foto de portada de una unidad.
+///
+/// Vive en componentes y no en cada pantalla porque la muestran tres: el
+/// inventario, el Inicio y la ficha. Mientras no haya foto cargada, el hueco
+/// se pinta con el color del semáforo de rotación, que ya es información:
+/// de un vistazo se ve cuál lleva demasiado tiempo parada.
+class FotoPortada extends ConsumerWidget {
+  const FotoPortada({
+    super.key,
+    required this.vehiculoId,
+    required this.colorVacio,
+    required this.fondoVacio,
+    this.alto = 100,
+    this.ancho,
+    this.radio = Curva.md,
+    this.iconoVacio = Icons.directions_car_filled_rounded,
+    this.textoVacio,
+  });
+
+  final String vehiculoId;
+  final Color colorVacio, fondoVacio;
+  final double alto;
+  final double? ancho;
+  final double radio;
+  final IconData iconoVacio;
+  final String? textoVacio;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final fotos = ref.watch(fotosProvider(vehiculoId)).value ?? const [];
+    final portada = fotos.isEmpty
+        ? null
+        : fotos.firstWhere((f) => f.esPortada, orElse: () => fotos.first);
+
+    if (portada == null) {
+      return Container(
+        width: ancho,
+        height: alto,
+        decoration: BoxDecoration(
+          color: fondoVacio,
+          borderRadius: BorderRadius.circular(radio),
+          border: Border.all(color: p.borde),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(iconoVacio, size: alto * 0.30, color: colorVacio),
+            if (textoVacio != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                textoVacio!,
+                style: TextStyle(fontSize: 13, color: p.tinta3),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radio),
+      child: Image.network(
+        portada.url,
+        width: ancho,
+        height: alto,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          width: ancho,
+          height: alto,
+          color: fondoVacio,
+          child: Icon(Icons.broken_image_outlined, color: p.tinta3),
+        ),
+      ),
+    );
+  }
 }

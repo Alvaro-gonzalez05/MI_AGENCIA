@@ -9,7 +9,6 @@ import 'package:mi_agencia/dominio/alta_interesado.dart';
 import 'package:mi_agencia/dominio/modelos.dart';
 import 'package:mi_agencia/funciones/interesados/ficha_interesado.dart';
 import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
-import 'package:mi_agencia/ui/componentes.dart';
 
 /// Las pantallas de interesados, dibujadas de verdad.
 ///
@@ -68,20 +67,14 @@ void main() {
 
         // El encabezado del diseno: titulo, cuantos hay y la accion.
         expect(find.text('Clientes'), findsWidgets);
-        expect(find.textContaining('personas cargadas'), findsOneWidget);
+        expect(find.textContaining('clientes en total'), findsOneWidget);
         // Las pestanas y los filtros por color, cada uno con su contador.
         expect(find.text('Todos'), findsOneWidget);
         expect(find.text('Compraron'), findsOneWidget);
-        // Los nombres del semaforo aparecen en el filtro y en la pastilla
-        // de cada persona: alcanza con que esten.
-        expect(
-          find.widgetWithText(ChipSeleccion, 'Situación normal'),
-          findsOneWidget,
-        );
-        expect(
-          find.widgetWithText(ChipSeleccion, 'Riesgo alto'),
-          findsOneWidget,
-        );
+        // La situacion crediticia se filtra desde el desplegable del diseno,
+        // y el color de cada persona se ve en su pastilla.
+        expect(find.textContaining('Situación: todas'), findsOneWidget);
+        expect(find.text('Riesgo alto'), findsWidgets);
       });
     }
 
@@ -93,7 +86,10 @@ void main() {
       expect(find.text('Beto Rojo'), findsOneWidget);
       expect(find.text('Caro SinCuit'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ChipSeleccion, 'Riesgo alto'));
+      // El filtro por situación ahora es el desplegable del diseño.
+      await tester.tap(find.textContaining('Situación: todas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Riesgo alto').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Beto Rojo'), findsOneWidget);

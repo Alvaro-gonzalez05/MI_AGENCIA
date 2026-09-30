@@ -12,6 +12,7 @@ import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
+import '../dominio/papeles.dart';
 import 'repositorio.dart';
 
 /// Lectura contra la base real.
@@ -379,6 +380,176 @@ class RepositorioSupabase implements Repositorio {
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
   }
+
+  // -------------------------------------------------------------------
+  // Papeles y fotos de la unidad
+  // -------------------------------------------------------------------
+
+  @override
+  Future<PapelesVehiculo> papeles(String vehiculoId) async {
+    final fila = await _db
+        .from('vehiculo_papeles')
+        .select()
+        .eq('vehiculo_id', vehiculoId)
+        .maybeSingle();
+
+    if (fila == null) return PapelesVehiculo(vehiculoId: vehiculoId);
+
+    return PapelesVehiculo(
+      vehiculoId: vehiculoId,
+      titulo: fila['titulo'] as bool? ?? false,
+      cedula: fila['cedula'] as bool? ?? false,
+      informeDominio: fila['informe_dominio'] as bool? ?? false,
+      vtv: fila['vtv'] as bool? ?? false,
+      vtvVence: _fecha(fila['vtv_vence']),
+      patentesDeuda: _decimal(fila['patentes_deuda']),
+      multasCantidad: _entero(fila['multas_cantidad']) ?? 0,
+      multasMonto: _decimal(fila['multas_monto']),
+      notas: fila['notas'] as String? ?? '',
+      actualizadoEl: _fecha(fila['updated_at']),
+    );
+  }
+
+  @override
+  Future<void> guardarPapeles(PapelesVehiculo p) async {
+    await _db.from('vehiculo_papeles').upsert({
+      'vehiculo_id': p.vehiculoId,
+      'agencia_id': await _miAgencia(),
+      'titulo': p.titulo,
+      'cedula': p.cedula,
+      'informe_dominio': p.informeDominio,
+      'vtv': p.vtv,
+      'vtv_vence': p.vtvVence == null ? null : _soloFecha(p.vtvVence!),
+      'patentes_deuda': p.patentesDeuda,
+      'multas_cantidad': p.multasCantidad,
+      'multas_monto': p.multasMonto,
+      'notas': _oNulo(p.notas),
+      'actualizado_por': _db.auth.currentUser?.id,
+    }, onConflict: 'vehiculo_id');
+  }
+
+  /// Cuánto vale una URL firmada. Una hora alcanza de sobra para mirar una
+  /// ficha, y no deja links eternos dando vueltas si alguien copia uno.
+  static const _minutosDeUrl = 60 * 60;
+
+  @override
+  Future<List<FotoVehiculo>> fotos(String vehiculoId) async {
+    final filas = await _db
+        .from('vehiculo_fotos')
+        .select()
+        .eq('vehiculo_id', vehiculoId)
+        .order('es_principal', ascending: false)
+        .order('orden');
+
+    if (filas.isEmpty) return const [];
+
+    // Una sola llamada para todas: firmar de a una es un viaje por foto.
+    // La variante "Result" avisa cuál ruta no existe en vez de romper la
+    // lista entera: una foto borrada a mano en el bucket no puede dejar la
+    // ficha sin ninguna imagen.
+    final urls = await _db.storage.from('vehiculos').createSignedUrlsResult([
+      for (final f in filas) f['storage_path'] as String,
+    ], _minutosDeUrl);
+    final porRuta = {
+      for (final u in urls)
+        if (u is SignedUrlSuccess) u.path: u.signedUrl,
+    };
+
+    return [
+      for (final f in filas)
+        FotoVehiculo(
+          id: f['id'] as String,
+          vehiculoId: vehiculoId,
+          ruta: f['storage_path'] as String,
+          url: porRuta[f['storage_path']] ?? '',
+          orden: _entero(f['orden']) ?? 0,
+          esPortada: f['es_principal'] as bool? ?? false,
+        ),
+    ];
+  }
+
+  @override
+  Future<FotoVehiculo> subirFoto({
+    required String vehiculoId,
+    required String nombreArchivo,
+    required Uint8List bytes,
+  }) async {
+    final agencia = await _miAgencia();
+    // La ruta empieza con la agencia: es lo que mira el RLS del bucket.
+    final extension = nombreArchivo.contains('.')
+        ? nombreArchivo.split('.').last.toLowerCase()
+        : 'jpg';
+    final ruta =
+        '$agencia/$vehiculoId/'
+        '${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+    await _db.storage
+        .from('vehiculos')
+        .uploadBinary(
+          ruta,
+          bytes,
+          fileOptions: FileOptions(contentType: _tipoDe(extension)),
+        );
+
+    final cuantas =
+        (await _db
+                .from('vehiculo_fotos')
+                .select('id')
+                .eq('vehiculo_id', vehiculoId))
+            .length;
+
+    final fila = await _db
+        .from('vehiculo_fotos')
+        .insert({
+          'agencia_id': agencia,
+          'vehiculo_id': vehiculoId,
+          'storage_path': ruta,
+          'orden': cuantas,
+          // La primera que se sube es la portada, hasta que se elija otra.
+          'es_principal': cuantas == 0,
+          'subida_por': _db.auth.currentUser?.id,
+        })
+        .select()
+        .single();
+
+    final url = await _db.storage
+        .from('vehiculos')
+        .createSignedUrl(ruta, _minutosDeUrl);
+
+    return FotoVehiculo(
+      id: fila['id'] as String,
+      vehiculoId: vehiculoId,
+      ruta: ruta,
+      url: url,
+      orden: cuantas,
+      esPortada: cuantas == 0,
+    );
+  }
+
+  @override
+  Future<void> eliminarFoto(FotoVehiculo foto) async {
+    await _db.from('vehiculo_fotos').delete().eq('id', foto.id);
+    await _db.storage.from('vehiculos').remove([foto.ruta]);
+  }
+
+  @override
+  Future<void> marcarPortada(FotoVehiculo foto) async {
+    await _db
+        .from('vehiculo_fotos')
+        .update({'es_principal': false})
+        .eq('vehiculo_id', foto.vehiculoId);
+    await _db
+        .from('vehiculo_fotos')
+        .update({'es_principal': true})
+        .eq('id', foto.id);
+  }
+
+  static String _tipoDe(String extension) => switch (extension) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'heic' => 'image/heic',
+    _ => 'image/jpeg',
+  };
 
   @override
   Future<List<Gasto>> gastos({String? vehiculoId}) async {
@@ -875,6 +1046,11 @@ class RepositorioSupabase implements Repositorio {
     'precio_objetivo': v.precioObjetivo,
     'estado': _deEstado(v.estado),
     'observaciones': _oNulo(v.observaciones),
+    'color': _oNulo(v.color),
+    'combustible': v.combustible?.etiqueta,
+    'transmision': v.transmision?.etiqueta,
+    'puertas': v.puertas,
+    'origen': v.origen?.valorBd,
   };
 
   static String? _oNulo(String s) => s.trim().isEmpty ? null : s.trim();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/formato.dart';
 import '../core/tema/colores.dart';
@@ -366,4 +367,299 @@ class ValorAntesDespues extends StatelessWidget {
       ],
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Campos listos para usar
+//
+// Antes cada formulario se armaba sus propios helpers privados (_texto,
+// _numero, _fecha...). Con el diseño nuevo son cuatro pantallas las que
+// cargan datos, así que los campos viven acá: mismo alto, misma etiqueta
+// arriba, mismo lugar para el error.
+// ---------------------------------------------------------------------------
+
+/// Un bloque de campos con su título, como los del alta.
+class BloqueFormulario extends StatelessWidget {
+  const BloqueFormulario({
+    super.key,
+    required this.titulo,
+    required this.hijos,
+    this.descripcion,
+  });
+
+  final String titulo;
+  final String? descripcion;
+  final List<Widget> hijos;
+
+  @override
+  Widget build(BuildContext context) => Tarjeta(
+    padding: const EdgeInsets.all(Esp.xl),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CabeceraBloque(titulo: titulo, descripcion: descripcion ?? ''),
+        const SizedBox(height: Esp.lg),
+        for (var i = 0; i < hijos.length; i++) ...[
+          if (i > 0) const SizedBox(height: Esp.md),
+          hijos[i],
+        ],
+      ],
+    ),
+  );
+}
+
+/// Dos campos al lado del otro en escritorio, uno abajo del otro en teléfono.
+class FilaCampos extends StatelessWidget {
+  const FilaCampos({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, r) {
+      if (r.maxWidth < 520) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: Esp.md),
+              children[i],
+            ],
+          ],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: Esp.md),
+            Expanded(child: children[i]),
+          ],
+        ],
+      );
+    },
+  );
+}
+
+/// Campo de texto.
+class CampoTexto extends StatefulWidget {
+  const CampoTexto({
+    super.key,
+    required this.etiqueta,
+    required this.valor,
+    required this.onCambio,
+    this.ayuda,
+    this.error,
+    this.obligatorio = false,
+    this.mayusculas = false,
+    this.capitalizar = false,
+    this.lineas = 1,
+  });
+
+  final String etiqueta, valor;
+  final ValueChanged<String> onCambio;
+  final String? ayuda, error;
+  final bool obligatorio, mayusculas, capitalizar;
+  final int lineas;
+
+  @override
+  State<CampoTexto> createState() => _CampoTextoState();
+}
+
+class _CampoTextoState extends State<CampoTexto> {
+  late final _c = TextEditingController(text: widget.valor);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CampoTexto anterior) {
+    super.didUpdateWidget(anterior);
+    // Solo si cambió desde afuera: pisar el texto mientras se escribe mueve
+    // el cursor al principio.
+    if (widget.valor != _c.text && widget.valor != anterior.valor) {
+      _c.text = widget.valor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => CampoFormulario(
+    etiqueta: widget.obligatorio ? '${widget.etiqueta} *' : widget.etiqueta,
+    ayuda: widget.ayuda,
+    error: widget.error,
+    hijo: TextFormField(
+      controller: _c,
+      onChanged: widget.onCambio,
+      maxLines: widget.lineas,
+      textCapitalization: widget.capitalizar
+          ? TextCapitalization.words
+          : TextCapitalization.sentences,
+      inputFormatters: widget.mayusculas
+          ? [_AMayusculas()]
+          : const <TextInputFormatter>[],
+    ),
+  );
+}
+
+class _AMayusculas extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue anterior,
+    TextEditingValue nuevo,
+  ) => nuevo.copyWith(text: nuevo.text.toUpperCase());
+}
+
+/// Campo de números enteros (año, kilómetros, cantidad).
+class CampoNumero extends StatefulWidget {
+  const CampoNumero({
+    super.key,
+    required this.etiqueta,
+    required this.valor,
+    required this.onCambio,
+    this.ayuda,
+    this.error,
+    this.sufijo,
+    this.obligatorio = false,
+  });
+
+  final String etiqueta, valor;
+  final ValueChanged<String> onCambio;
+  final String? ayuda, error, sufijo;
+  final bool obligatorio;
+
+  @override
+  State<CampoNumero> createState() => _CampoNumeroState();
+}
+
+class _CampoNumeroState extends State<CampoNumero> {
+  late final _c = TextEditingController(text: widget.valor);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CampoNumero anterior) {
+    super.didUpdateWidget(anterior);
+    if (widget.valor != _c.text && widget.valor != anterior.valor) {
+      _c.text = widget.valor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => CampoFormulario(
+    etiqueta: widget.obligatorio ? '${widget.etiqueta} *' : widget.etiqueta,
+    ayuda: widget.ayuda,
+    error: widget.error,
+    hijo: TextFormField(
+      controller: _c,
+      onChanged: widget.onCambio,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 16),
+      decoration: InputDecoration(suffixText: widget.sufijo),
+    ),
+  );
+}
+
+/// Campo de plata, con el signo adelante y sin centavos.
+class CampoMonto extends StatefulWidget {
+  const CampoMonto({
+    super.key,
+    required this.etiqueta,
+    required this.valor,
+    required this.onCambio,
+    this.ayuda,
+    this.error,
+    this.obligatorio = false,
+  });
+
+  final String etiqueta;
+  final double? valor;
+  final ValueChanged<double?> onCambio;
+  final String? ayuda, error;
+  final bool obligatorio;
+
+  @override
+  State<CampoMonto> createState() => _CampoMontoState();
+}
+
+class _CampoMontoState extends State<CampoMonto> {
+  late final _c = TextEditingController(
+    text: widget.valor == null ? '' : widget.valor!.round().toString(),
+  );
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CampoMonto anterior) {
+    super.didUpdateWidget(anterior);
+    if (widget.valor != anterior.valor) {
+      final texto = widget.valor == null
+          ? ''
+          : widget.valor!.round().toString();
+      if (texto != _c.text) _c.text = texto;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return CampoFormulario(
+      etiqueta: widget.obligatorio ? '${widget.etiqueta} *' : widget.etiqueta,
+      ayuda: widget.ayuda,
+      error: widget.error,
+      hijo: TextFormField(
+        controller: _c,
+        onChanged: (t) => widget.onCambio(double.tryParse(t)),
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(fontFamily: TemaApp.mono, fontSize: 18),
+        decoration: InputDecoration(
+          prefixText: r'$ ',
+          prefixStyle: TextStyle(
+            fontFamily: TemaApp.mono,
+            fontSize: 18,
+            color: p.tinta3,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Campo de fecha, con el calendario nativo.
+class CampoFecha extends StatelessWidget {
+  const CampoFecha({
+    super.key,
+    required this.etiqueta,
+    required this.valor,
+    required this.onCambio,
+    this.ayuda,
+    this.error,
+    this.obligatorio = false,
+  });
+
+  final String etiqueta;
+  final DateTime? valor;
+  final ValueChanged<DateTime> onCambio;
+  final String? ayuda, error;
+  final bool obligatorio;
+
+  @override
+  Widget build(BuildContext context) => CampoFormulario(
+    etiqueta: obligatorio ? '$etiqueta *' : etiqueta,
+    ayuda: ayuda,
+    error: error,
+    hijo: SelectorFecha(valor: valor, onCambio: onCambio),
+  );
 }

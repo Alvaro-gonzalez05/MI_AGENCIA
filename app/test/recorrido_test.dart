@@ -162,9 +162,12 @@ void main() {
     // 1. Se abre el alta y se cancela: no tiene que quedar nada.
     await ir(tester, 'Vehículos');
     await tocar(tester, find.text('Nueva unidad').first);
-    expect(find.text('EL VEHÍCULO'), findsWidgets);
-    expect(find.text('Marca'), findsWidgets);
-    expect(find.text('Modelo'), findsWidgets);
+    // El asistente del diseño: cuatro pasos, y arranca en "El auto".
+    expect(find.text('El auto'), findsWidgets);
+    expect(find.text('Precio'), findsWidgets);
+    expect(find.text('Papeles'), findsWidgets);
+    expect(find.text('Fotos'), findsWidgets);
+    expect(find.text('Marca *'), findsWidgets);
     await tocar(tester, find.text('Cancelar').first);
 
     await ir(tester, 'Inventario');
@@ -186,11 +189,11 @@ void main() {
     expect(find.text('Clientes'), findsWidgets);
     expect(find.widgetWithText(ChipSeleccion, 'Todos'), findsOneWidget);
 
-    // Las pestañas y los filtros por semáforo responden.
+    // Las pestañas y el filtro por situación responden.
     await tocar(tester, find.widgetWithText(ChipSeleccion, 'Interesados'));
-    await tocar(tester, find.widgetWithText(ChipSeleccion, 'Situación normal'));
+    await tocar(tester, find.textContaining('Situación: todas'));
+    await tocar(tester, find.textContaining('Situación normal').last);
     expect(tester.takeException(), isNull);
-    await tocar(tester, find.widgetWithText(ChipSeleccion, 'Situación normal'));
 
     // El alta se abre y se puede cerrar sin guardar.
     await tocar(tester, find.text('Nuevo cliente').first);

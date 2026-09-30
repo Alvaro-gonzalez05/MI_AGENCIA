@@ -1,5 +1,50 @@
 import 'modelos.dart';
 
+/// Con que anda. Son las cuatro opciones del alta en el diseno.
+enum Combustible {
+  nafta('Nafta'),
+  diesel('Diésel'),
+  gnc('GNC'),
+  electrico('Eléctrico');
+
+  const Combustible(this.etiqueta);
+  final String etiqueta;
+
+  static Combustible? desde(String? v) => v == null
+      ? null
+      : Combustible.values.where((c) => c.etiqueta == v).firstOrNull;
+}
+
+/// Caja manual o automatica.
+enum Transmision {
+  manual('Manual'),
+  automatica('Automática');
+
+  const Transmision(this.etiqueta);
+  final String etiqueta;
+
+  static Transmision? desde(String? v) => v == null
+      ? null
+      : Transmision.values.where((t) => t.etiqueta == v).firstOrNull;
+}
+
+/// De donde salio la unidad. Cambia como se lee la ganancia: una
+/// consignacion no inmoviliza capital propio, y un auto tomado en parte de
+/// pago entra con el precio que se acordo en la otra venta.
+enum OrigenVehiculo {
+  compraDirecta('Compra directa al titular', 'compra_directa'),
+  parteDePago('Tomado en parte de pago', 'parte_de_pago'),
+  consignacion('En consignación', 'consignacion');
+
+  const OrigenVehiculo(this.etiqueta, this.valorBd);
+  final String etiqueta;
+  final String valorBd;
+
+  static OrigenVehiculo? desde(String? v) => v == null
+      ? null
+      : OrigenVehiculo.values.where((o) => o.valorBd == v).firstOrNull;
+}
+
 /// Los datos que se cargan al dar de alta o editar un vehiculo.
 ///
 /// Existe separado de [VehiculoInventario] a proposito: aquel tiene 25 campos
@@ -22,6 +67,11 @@ class AltaVehiculo {
     this.precioObjetivo,
     this.estado = EstadoVehiculo.enStock,
     this.observaciones = '',
+    this.color = '',
+    this.combustible,
+    this.transmision,
+    this.puertas,
+    this.origen,
   });
 
   /// null en un alta; con valor al editar.
@@ -41,6 +91,15 @@ class AltaVehiculo {
   final EstadoVehiculo estado;
   final String observaciones;
 
+  /// La ficha tecnica del paso 1 del alta. Son opcionales: en una agencia
+  /// muchas veces el auto entra un sabado a la tarde y los datos finos se
+  /// completan el lunes.
+  final String color;
+  final Combustible? combustible;
+  final Transmision? transmision;
+  final int? puertas;
+  final OrigenVehiculo? origen;
+
   bool get esEdicion => id != null;
 
   AltaVehiculo copiar({
@@ -56,6 +115,11 @@ class AltaVehiculo {
     double? precioObjetivo,
     EstadoVehiculo? estado,
     String? observaciones,
+    String? color,
+    Combustible? combustible,
+    Transmision? transmision,
+    int? puertas,
+    OrigenVehiculo? origen,
   }) => AltaVehiculo(
     id: id,
     codigo: codigo,
@@ -71,6 +135,11 @@ class AltaVehiculo {
     precioObjetivo: precioObjetivo ?? this.precioObjetivo,
     estado: estado ?? this.estado,
     observaciones: observaciones ?? this.observaciones,
+    color: color ?? this.color,
+    combustible: combustible ?? this.combustible,
+    transmision: transmision ?? this.transmision,
+    puertas: puertas ?? this.puertas,
+    origen: origen ?? this.origen,
   );
 
   /// Margen que dejaria la unidad si se vendiera al precio objetivo, ANTES de

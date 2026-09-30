@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config.dart';
@@ -12,6 +14,7 @@ import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
+import '../dominio/papeles.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
 import 'repositorio_supabase.dart';
@@ -55,6 +58,28 @@ abstract interface class Repositorio {
   Future<void> eliminarVehiculo(String id);
 
   /// Gastos de una unidad, o de toda la agencia si no se pasa ninguna.
+  /// Los papeles de una unidad. Devuelve el estado vacio si nunca se
+  /// cargaron: la pantalla no tiene que distinguir "no hay fila" de "no hay
+  /// nada marcado".
+  Future<PapelesVehiculo> papeles(String vehiculoId);
+
+  Future<void> guardarPapeles(PapelesVehiculo p);
+
+  /// Las fotos de una unidad, ordenadas, con su URL firmada lista para usar.
+  Future<List<FotoVehiculo>> fotos(String vehiculoId);
+
+  /// Sube una foto y la deja al final del orden. Devuelve la foto ya subida.
+  Future<FotoVehiculo> subirFoto({
+    required String vehiculoId,
+    required String nombreArchivo,
+    required Uint8List bytes,
+  });
+
+  Future<void> eliminarFoto(FotoVehiculo foto);
+
+  /// Marca cual es la portada: la que se ve en el inventario y en el Inicio.
+  Future<void> marcarPortada(FotoVehiculo foto);
+
   Future<List<Gasto>> gastos({String? vehiculoId});
 
   Future<void> crearGasto(AltaGasto g);
@@ -257,6 +282,73 @@ class RepositorioDemo implements Repositorio {
   @override
   Future<void> eliminarVehiculo(String id) async {
     _agregados.removeWhere((x) => x.codigo == id);
+  }
+
+  /// Los papeles y las fotos que se cargaron en esta sesion de demo.
+  final Map<String, PapelesVehiculo> _papeles = {};
+  final Map<String, List<FotoVehiculo>> _fotos = {};
+
+  @override
+  Future<PapelesVehiculo> papeles(String vehiculoId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _papeles[vehiculoId] ?? PapelesVehiculo(vehiculoId: vehiculoId);
+  }
+
+  @override
+  Future<void> guardarPapeles(PapelesVehiculo p) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    _papeles[p.vehiculoId] = p;
+  }
+
+  @override
+  Future<List<FotoVehiculo>> fotos(String vehiculoId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return List.unmodifiable(_fotos[vehiculoId] ?? const <FotoVehiculo>[]);
+  }
+
+  @override
+  Future<FotoVehiculo> subirFoto({
+    required String vehiculoId,
+    required String nombreArchivo,
+    required Uint8List bytes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final lista = _fotos.putIfAbsent(vehiculoId, () => []);
+    // En demo no hay storage: la foto se muestra desde memoria.
+    final foto = FotoVehiculo(
+      id: 'demo-${lista.length}-${DateTime.now().microsecondsSinceEpoch}',
+      vehiculoId: vehiculoId,
+      ruta: 'demo/$vehiculoId/$nombreArchivo',
+      url: Uri.dataFromBytes(bytes, mimeType: 'image/jpeg').toString(),
+      orden: lista.length,
+      esPortada: lista.isEmpty,
+    );
+    lista.add(foto);
+    return foto;
+  }
+
+  @override
+  Future<void> eliminarFoto(FotoVehiculo foto) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    _fotos[foto.vehiculoId]?.removeWhere((f) => f.id == foto.id);
+  }
+
+  @override
+  Future<void> marcarPortada(FotoVehiculo foto) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final lista = _fotos[foto.vehiculoId];
+    if (lista == null) return;
+    for (var i = 0; i < lista.length; i++) {
+      final f = lista[i];
+      lista[i] = FotoVehiculo(
+        id: f.id,
+        vehiculoId: f.vehiculoId,
+        ruta: f.ruta,
+        url: f.url,
+        orden: f.orden,
+        esPortada: f.id == foto.id,
+      );
+    }
   }
 
   @override
@@ -822,6 +914,16 @@ final miAgenciaProvider = FutureProvider<Agencia?>(
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
 /// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
 /// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+/// Los papeles de una unidad. Se pide por id: cada ficha trae los suyos.
+final papelesProvider = FutureProvider.family<PapelesVehiculo, String>(
+  (ref, id) => ref.watch(repositorioProvider).papeles(id),
+);
+
+/// Las fotos de una unidad, con su URL firmada lista para mostrar.
+final fotosProvider = FutureProvider.family<List<FotoVehiculo>, String>(
+  (ref, id) => ref.watch(repositorioProvider).fotos(id),
+);
+
 final configProvider = Provider<ConfigAgencia>(
   (ref) => ref.watch(configAsyncProvider).value ?? const ConfigAgencia(),
 );

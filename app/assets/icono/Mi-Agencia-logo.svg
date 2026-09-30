@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Mi Agencia: auto dentro de una agencia">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131315"/>
+      <stop offset="1" stop-color="#0a0a0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#fondo)"/>
+  <g transform="translate(60.5 60.5) scale(0.881836)">
+    <path d="M130 390 512 135 894 390" fill="none" stroke="#ffc83d" stroke-width="65" stroke-linejoin="round"/>
+    <rect x="162" y="365" width="61" height="473" rx="22" fill="#ffc83d"/>
+    <rect x="801" y="365" width="61" height="473" rx="22" fill="#ffc83d"/>
+    <rect x="303" y="366" width="418" height="42" rx="20" fill="#ffc83d"/>
+    <path d="M306 607 367 466H657L718 607Z" fill="#ffc83d"/>
+    <path d="M366 595 401 516H623L658 595Z" fill="#131315"/>
+    <rect x="278" y="582" width="468" height="178" rx="49" fill="#ffc83d"/>
+    <rect x="301" y="722" width="62" height="102" rx="20" fill="#ffc83d"/>
+    <rect x="661" y="722" width="62" height="102" rx="20" fill="#ffc83d"/>
+    <rect x="318" y="630" width="82" height="39" rx="17" fill="#131315"/>
+    <rect x="624" y="630" width="82" height="39" rx="17" fill="#131315"/>
+    <rect x="453" y="695" width="118" height="20" rx="10" fill="#131315"/>
+  </g>
+</svg>

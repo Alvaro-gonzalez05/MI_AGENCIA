@@ -920,7 +920,14 @@ class _TarjetaVehiculo extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Foto(vehiculo: v, ancho: 108, alto: 92),
+                    FotoPortada(
+                      vehiculoId: v.id,
+                      ancho: 108,
+                      alto: 92,
+                      colorVacio: v.alerta.color(p),
+                      fondoVacio: v.alerta.lavado(p),
+                      textoVacio: 'Sin fotos',
+                    ),
                     const SizedBox(width: Esp.md),
                     Expanded(child: datos),
                   ],
@@ -934,7 +941,14 @@ class _TarjetaVehiculo extends StatelessWidget {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _Foto(vehiculo: v, ancho: 168, alto: 120),
+                FotoPortada(
+                  vehiculoId: v.id,
+                  ancho: 168,
+                  alto: 120,
+                  colorVacio: v.alerta.color(p),
+                  fondoVacio: v.alerta.lavado(p),
+                  textoVacio: 'Sin fotos',
+                ),
                 const SizedBox(width: Esp.lg),
                 Expanded(child: datos),
                 const SizedBox(width: Esp.lg),
@@ -967,46 +981,6 @@ class _TarjetaVehiculo extends StatelessWidget {
         EstadoVehiculo.enPreparacion => p.superficieHundida,
         EstadoVehiculo.enStock => p.bienLavado,
       };
-}
-
-/// El hueco de la foto. Las fotos todavía no se cargan (quedaron para la
-/// tanda siguiente): mientras tanto el lugar existe, con el color del
-/// semáforo de rotación, para que la tarjeta no se vea a medio hacer.
-class _Foto extends StatelessWidget {
-  const _Foto({
-    required this.vehiculo,
-    required this.ancho,
-    required this.alto,
-  });
-
-  final VehiculoInventario vehiculo;
-  final double ancho, alto;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return Container(
-      width: ancho,
-      height: alto,
-      decoration: BoxDecoration(
-        color: vehiculo.alerta.lavado(p),
-        borderRadius: BorderRadius.circular(Curva.md),
-        border: Border.all(color: p.borde),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.directions_car_filled_rounded,
-            size: alto * 0.34,
-            color: vehiculo.alerta.color(p),
-          ),
-          const SizedBox(height: 2),
-          Text('Sin fotos', style: TextStyle(fontSize: 13, color: p.tinta3)),
-        ],
-      ),
-    );
-  }
 }
 
 /// La patente, en su placa.

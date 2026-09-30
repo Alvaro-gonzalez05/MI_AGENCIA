@@ -1378,19 +1378,15 @@ class _TarjetaAuto extends StatelessWidget {
           // la derecha, como en el diseño.
           Stack(
             children: [
-              Container(
+              SizedBox(
                 height: 132,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  color: v.alerta.lavado(p),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(Curva.lg),
-                  ),
-                ),
-                child: Icon(
-                  Icons.directions_car_filled_rounded,
-                  size: 38,
-                  color: v.alerta.color(p),
+                child: FotoPortada(
+                  vehiculoId: v.id,
+                  alto: 132,
+                  radio: Curva.lg,
+                  colorVacio: v.alerta.color(p),
+                  fondoVacio: v.alerta.lavado(p),
                 ),
               ),
               Positioned(

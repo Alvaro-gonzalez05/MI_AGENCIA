@@ -7,6 +7,7 @@ import '../../core/tema/colores.dart';
 import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/modelos.dart';
+import '../../dominio/papeles.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
 
@@ -88,7 +89,10 @@ class _Ficha extends StatelessWidget {
         child: _DatosTecnicos(vehiculo: v),
       ),
       hueco,
-      Aparecer(indice: dosColumnas ? 3 : 7, child: const _Papeles()),
+      Aparecer(
+        indice: dosColumnas ? 3 : 7,
+        child: _Papeles(vehiculoId: v.id),
+      ),
     ];
 
     return ListView(
@@ -280,9 +284,12 @@ class _Cabecera extends StatelessWidget {
   }
 }
 
-/// El lugar de la foto. Las fotos llegan en la tanda siguiente; mientras
-/// tanto el hueco existe y dice qué falta, en vez de fingir que no va nada.
-class _FotoGrande extends StatelessWidget {
+/// La galería de la unidad: la portada grande y las demás abajo.
+///
+/// Mientras no haya fotos, el hueco dice qué falta y ofrece cargarlas: en
+/// una agencia el auto entra antes que las fotos, y la ficha tiene que
+/// servir igual.
+class _FotoGrande extends ConsumerWidget {
   const _FotoGrande({required this.vehiculo, required this.alto, this.ancho});
 
   final VehiculoInventario vehiculo;
@@ -290,34 +297,137 @@ class _FotoGrande extends StatelessWidget {
   final double? ancho;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
-    return Container(
-      width: ancho ?? double.infinity,
-      height: alto,
-      decoration: BoxDecoration(
-        color: vehiculo.alerta.lavado(p),
-        borderRadius: BorderRadius.circular(Curva.lg),
-        border: Border.all(color: p.borde, width: 1.5),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.photo_camera_outlined,
-            size: 34,
-            color: vehiculo.alerta.color(p),
+    final fotos = ref.watch(fotosProvider(vehiculo.id)).value ?? const [];
+
+    if (fotos.isEmpty) {
+      return SizedBox(
+        width: ancho ?? double.infinity,
+        height: alto,
+        child: BordePunteado(
+          radio: Curva.lg,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.photo_camera_outlined,
+                size: 32,
+                color: vehiculo.alerta.color(p),
+              ),
+              const SizedBox(height: Esp.sm),
+              Text(
+                'Sin fotos cargadas',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: p.tinta2,
+                ),
+              ),
+              const SizedBox(height: Esp.xs),
+              TextButton.icon(
+                onPressed: () => context.go('/vehiculos'),
+                icon: const Icon(Icons.add_a_photo_outlined, size: 20),
+                label: const Text('Cargar fotos'),
+              ),
+            ],
           ),
-          const SizedBox(height: Esp.sm),
-          Text(
-            'Sin fotos cargadas',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: p.tinta2,
+        ),
+      );
+    }
+
+    final portada = fotos.firstWhere(
+      (f) => f.esPortada,
+      orElse: () => fotos.first,
+    );
+
+    return SizedBox(
+      width: ancho ?? double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => _verGrande(context, fotos, portada),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(Curva.lg),
+              child: Image.network(
+                portada.url,
+                width: ancho ?? double.infinity,
+                height: alto,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  width: ancho ?? double.infinity,
+                  height: alto,
+                  color: p.superficieHundida,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: p.tinta3,
+                    size: 32,
+                  ),
+                ),
+              ),
             ),
           ),
+          if (fotos.length > 1) ...[
+            const SizedBox(height: Esp.sm),
+            SizedBox(
+              height: 56,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: fotos.length,
+                separatorBuilder: (_, _) => const SizedBox(width: Esp.sm - 2),
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () => _verGrande(context, fotos, fotos[i]),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(Curva.sm),
+                    child: Image.network(
+                      fotos[i].url,
+                      width: 76,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Container(width: 76, color: p.superficieHundida),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  /// La foto a pantalla completa, que es como se le muestra al cliente.
+  void _verGrande(
+    BuildContext context,
+    List<FotoVehiculo> fotos,
+    FotoVehiculo inicial,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(Esp.lg),
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Curva.lg),
+                child: Image.network(inicial.url, fit: BoxFit.contain),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black54,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -599,62 +709,174 @@ class _DatosTecnicos extends StatelessWidget {
   }
 }
 
-/// Papeles y documentación. Todavía no se cargan: la tarjeta existe para
-/// que se vea el lugar y para no prometer algo que la app no hace.
-class _Papeles extends StatelessWidget {
-  const _Papeles();
+/// Papeles y documentación: el estado legal de la unidad.
+///
+/// Es lo que traba una entrega. Si falta algo se ve en rojo, porque el que
+/// mira la ficha antes de cerrar una venta necesita enterarse ahí y no el
+/// día de la transferencia.
+class _Papeles extends ConsumerWidget {
+  const _Papeles({required this.vehiculoId});
+
+  final String vehiculoId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
-    const items = [
-      'Título del automotor',
-      'Cédula de identificación',
-      'Verificación técnica (VTV)',
-      'Informe de dominio',
-      'Deuda de patentes',
-      'Multas e infracciones',
-    ];
+    final asincrono = ref.watch(papelesProvider(vehiculoId));
+    final papeles = asincrono.value;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CabeceraBloque(
-            titulo: 'Papeles y documentación',
-            descripcion: 'Estado legal y libre deuda',
+          Row(
+            children: [
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Papeles y documentación',
+                  descripcion: papeles == null
+                      ? 'Estado legal y libre deuda'
+                      : '${papeles.completos} de ${PapelesVehiculo.total} '
+                            'puntos resueltos',
+                ),
+              ),
+              if (papeles != null)
+                Pastilla(
+                  texto: papeles.completo ? 'Completos' : 'Falta cargar',
+                  color: papeles.completo ? p.bien : p.observar,
+                  lavado: papeles.completo ? p.bienLavado : p.observarLavado,
+                ),
+            ],
           ),
           const SizedBox(height: Esp.md),
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Esp.sm),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.radio_button_unchecked_rounded,
-                    size: 20,
-                    color: p.tinta3,
-                  ),
-                  const SizedBox(width: Esp.sm),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(fontSize: 15, color: p.tinta2),
-                    ),
-                  ),
-                  Text(
-                    'Sin cargar',
-                    style: TextStyle(fontSize: 14, color: p.tinta3),
-                  ),
-                ],
+          if (asincrono.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: Esp.lg),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (papeles != null) ...[
+            _Punto(
+              titulo: 'Título del automotor',
+              listo: papeles.titulo,
+              detalle: papeles.titulo ? 'Presentado' : 'Sin cargar',
+            ),
+            _Punto(
+              titulo: 'Cédula de identificación',
+              listo: papeles.cedula,
+              detalle: papeles.cedula ? 'Presentada' : 'Sin cargar',
+            ),
+            _Punto(
+              titulo: 'Verificación técnica (VTV)',
+              listo: papeles.vtv && !papeles.vtvVencida,
+              alerta: papeles.vtvVencida,
+              detalle: !papeles.vtv
+                  ? 'Sin cargar'
+                  : papeles.vtvVence == null
+                  ? 'Sin vencimiento anotado'
+                  : papeles.vtvVencida
+                  ? 'Vencida el ${Fmt.fecha(papeles.vtvVence)}'
+                  : 'Vigente hasta ${Fmt.fecha(papeles.vtvVence)}',
+            ),
+            _Punto(
+              titulo: 'Informe de dominio',
+              listo: papeles.informeDominio,
+              detalle: papeles.informeDominio ? 'Verificado' : 'Sin cargar',
+            ),
+            _Punto(
+              titulo: 'Deuda de patentes',
+              listo: papeles.patentesDeuda == 0,
+              alerta: (papeles.patentesDeuda ?? 0) > 0,
+              detalle: papeles.patentesDeuda == null
+                  ? 'Sin revisar'
+                  : papeles.patentesDeuda == 0
+                  ? 'Libre de deuda'
+                  : Fmt.pesos(papeles.patentesDeuda),
+            ),
+            _Punto(
+              titulo: 'Multas e infracciones',
+              listo: papeles.multasMonto == 0 && papeles.multasCantidad == 0,
+              alerta: papeles.multasCantidad > 0,
+              detalle: papeles.multasMonto == null
+                  ? 'Sin revisar'
+                  : papeles.multasCantidad == 0
+                  ? 'Sin multas'
+                  : '${papeles.multasCantidad} · '
+                        '${Fmt.pesos(papeles.multasMonto)}',
+            ),
+            if (papeles.pendientes.isNotEmpty) ...[
+              const SizedBox(height: Esp.sm),
+              _Aviso(
+                texto:
+                    'Antes de entregar: ${papeles.pendientes.join(', ').toLowerCase()}.',
+              ),
+            ],
+          ],
+          const SizedBox(height: Esp.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => context.go('/vehiculos'),
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              label: const Text('Actualizar papeles'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Un punto de la lista de papeles.
+class _Punto extends StatelessWidget {
+  const _Punto({
+    required this.titulo,
+    required this.listo,
+    required this.detalle,
+    this.alerta = false,
+  });
+
+  final String titulo, detalle;
+  final bool listo, alerta;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final color = alerta
+        ? p.critico
+        : listo
+        ? p.bien
+        : p.tinta3;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Esp.sm),
+      child: Row(
+        children: [
+          Icon(
+            alerta
+                ? Icons.error_outline_rounded
+                : listo
+                ? Icons.check_circle_outline_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 20,
+            color: color,
+          ),
+          const SizedBox(width: Esp.sm),
+          Expanded(
+            child: Text(titulo, style: TextStyle(fontSize: 15, color: p.tinta)),
+          ),
+          const SizedBox(width: Esp.sm),
+          Flexible(
+            child: Text(
+              detalle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: alerta ? FontWeight.w700 : FontWeight.w400,
+                color: color,
               ),
             ),
-          const SizedBox(height: Esp.sm),
-          const _Aviso(
-            texto:
-                'El seguimiento de papeles y vencimientos es lo próximo que '
-                'entra. Por ahora la app no los guarda.',
           ),
         ],
       ),

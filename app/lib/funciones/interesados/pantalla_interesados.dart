@@ -193,12 +193,17 @@ class PantallaInteresados extends ConsumerWidget {
                 ),
                 const SizedBox(height: Esp.md),
 
+                // En un telefono, el enlace del semaforo baja de linea: las
+                // pestanas ya ocupan todo el ancho.
                 Aparecer(
                   indice: 2,
-                  child: Row(
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: Esp.sm,
+                    runSpacing: Esp.xs,
                     children: [
-                      Expanded(child: _Pestanas(interesados: todos)),
-                      const SizedBox(width: Esp.sm),
+                      _Pestanas(interesados: todos),
                       // El criterio del semaforo decide si se financia o no:
                       // no puede quedar solo en la cabeza del que programo.
                       TextButton(
@@ -209,8 +214,6 @@ class PantallaInteresados extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: Esp.md),
-
-                const SizedBox(height: Esp.xs),
 
                 if (lista.isEmpty)
                   Tarjeta(
@@ -380,12 +383,18 @@ class _BuscadorYOrdenState extends ConsumerState<_BuscadorYOrden> {
             children: [
               Icon(Icons.sort_rounded, size: 22, color: p.tinta2),
               const SizedBox(width: Esp.sm),
-              Text(
-                'Ordenar: ${orden.etiqueta}',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: p.tinta,
+              // En un telefono angosto, "Ordenar: Situacion crediticia" no
+              // entra: el texto se recorta en vez de empujar la pastilla.
+              Flexible(
+                child: Text(
+                  'Ordenar: ${orden.etiqueta}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: p.tinta,
+                  ),
                 ),
               ),
               Icon(Icons.expand_more_rounded, size: 22, color: p.tinta2),
@@ -517,12 +526,16 @@ class _SelectorSituacion extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: Esp.sm),
-              Text(
-                actual == null ? 'Situación: todas' : actual.etiqueta,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: p.tinta,
+              Flexible(
+                child: Text(
+                  actual == null ? 'Situación: todas' : actual.etiqueta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: p.tinta,
+                  ),
                 ),
               ),
               Icon(Icons.expand_more_rounded, size: 22, color: p.tinta2),
