@@ -683,10 +683,13 @@ class _ShellMovil extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      // Con la letra grande (A++) las cuatro opciones no entran en la mitad
+      // de una pantalla de telefono: la hoja crece y, si hace falta, scrollea.
+      isScrollControlled: true,
       builder: (ctx) {
         final p = ctx.paleta;
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
             child: Column(
               mainAxisSize: MainAxisSize.min,

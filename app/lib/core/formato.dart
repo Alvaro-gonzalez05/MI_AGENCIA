@@ -24,6 +24,9 @@ abstract final class Fmt {
   /// "martes 29 de septiembre": el encabezado del Inicio.
   static final _fechaLarga = DateFormat("EEEE d 'de' MMMM", 'es_AR');
 
+  /// "Sep": el nombre corto del mes, para graficos y comparaciones.
+  static final _mes = DateFormat('MMM', 'es_AR');
+
   /// El guion largo es el marcador de "no hay dato", igual que en el original.
   /// Se usa en vez de "0" o vacio: cero es un valor, ausencia no.
   static const sinDato = '—';
@@ -60,6 +63,13 @@ abstract final class Fmt {
 
   static String fechaLarga(DateTime? f) =>
       f == null ? sinDato : _fechaLarga.format(f);
+
+  /// Con mayuscula inicial: "Sep", no "sep".
+  static String mes(DateTime? f) {
+    if (f == null) return sinDato;
+    final m = _mes.format(f).replaceAll('.', '');
+    return m[0].toUpperCase() + m.substring(1);
+  }
 
   static String fechaCorta(DateTime? f) =>
       f == null ? sinDato : _fechaCorta.format(f);

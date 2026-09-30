@@ -13,12 +13,17 @@ class Pastilla extends StatelessWidget {
     required this.color,
     required this.lavado,
     this.conPunto = true,
+    this.icono,
   });
 
   final String texto;
   final Color color;
   final Color lavado;
   final bool conPunto;
+
+  /// Reemplaza al punto cuando la pastilla dice una tendencia ("viene mejor
+  /// que agosto" con su flechita, como en el diseno).
+  final IconData? icono;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +39,10 @@ class Pastilla extends StatelessWidget {
           // El punto solido es la tercera senal del diseno, despues del
           // color de fondo y del texto: quien no distingue verde de rojo
           // igual lee la etiqueta, y quien mira de lejos ve el punto.
-          if (conPunto) ...[
+          if (icono != null) ...[
+            Icon(icono, size: 18, color: color),
+            const SizedBox(width: Esp.sm - 2),
+          ] else if (conPunto) ...[
             Container(
               width: 8,
               height: 8,
@@ -970,4 +978,67 @@ class MontoDual extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Caja con el borde punteado, como la de "Agendar una tarea" en el diseño.
+///
+/// Flutter no trae bordes punteados, así que se dibuja a mano: un trazo,
+/// un hueco, y vuelta a empezar, sobre un rectángulo redondeado.
+class BordePunteado extends StatelessWidget {
+  const BordePunteado({
+    super.key,
+    required this.child,
+    this.color,
+    this.radio = Curva.md,
+  });
+
+  final Widget child;
+  final Color? color;
+  final double radio;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _PintorPunteado(
+      color: color ?? context.paleta.bordeFuerte,
+      radio: radio,
+    ),
+    child: child,
+  );
+}
+
+class _PintorPunteado extends CustomPainter {
+  _PintorPunteado({required this.color, required this.radio});
+
+  final Color color;
+  final double radio;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final lapiz = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+
+    final camino = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0.8, 0.8, size.width - 1.6, size.height - 1.6),
+          Radius.circular(radio),
+        ),
+      );
+
+    for (final tramo in camino.computeMetrics()) {
+      var d = 0.0;
+      while (d < tramo.length) {
+        canvas.drawPath(
+          tramo.extractPath(d, (d + 6).clamp(0, tramo.length)),
+          lapiz,
+        );
+        d += 11;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorPunteado otro) => otro.color != color;
 }

@@ -157,12 +157,14 @@ class _Cabecera extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
+        // Wrap y no Row: la patente mas el estado ("Disponible para venta")
+        // no entran juntos en una columna angosta.
+        Wrap(
+          spacing: Esp.md,
+          runSpacing: Esp.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            if (v.patente != null && v.patente!.isNotEmpty) ...[
-              _Placa(v.patente!),
-              const SizedBox(width: Esp.md),
-            ],
+            if (v.patente != null && v.patente!.isNotEmpty) _Placa(v.patente!),
             Pastilla(texto: estado.$1, color: estado.$2, lavado: estado.$3),
           ],
         ),
