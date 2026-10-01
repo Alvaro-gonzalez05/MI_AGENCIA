@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../dominio/alta_vehiculo.dart';
@@ -13,6 +14,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/tareas.dart';
 import 'repositorio.dart';
 
 /// Lectura contra la base real.
@@ -379,6 +381,87 @@ class RepositorioSupabase implements Repositorio {
         .from('vehiculos')
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
+  }
+
+  // -------------------------------------------------------------------
+  // Agenda de tareas
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<Tarea>> tareas({bool soloPendientes = true}) async {
+    var consulta = _db
+        .from('v_tareas')
+        .select()
+        .eq('agencia_id', await _miAgencia());
+    if (soloPendientes) consulta = consulta.eq('estado', 'pendiente');
+
+    final filas = await consulta.order('vence_el').order('hora');
+    return filas.map(_aTarea).toList();
+  }
+
+  @override
+  Future<void> guardarTarea(AltaTarea t) async {
+    final datos = {
+      'tipo': t.tipo.valorBd,
+      'titulo': t.titulo.trim(),
+      'detalle': _oNulo(t.detalle),
+      'oportunidad_id': t.oportunidadId,
+      'vehiculo_id': t.vehiculoId,
+      'vence_el': _soloFecha(t.venceEl),
+      'hora': t.hora == null
+          ? null
+          : '${t.hora!.hour.toString().padLeft(2, '0')}:'
+                '${t.hora!.minute.toString().padLeft(2, '0')}',
+      'repeticion': t.repeticion.valorBd,
+    };
+
+    if (t.esEdicion) {
+      await _db.from('tareas').update(datos).eq('id', t.id!);
+    } else {
+      await _db.from('tareas').insert({
+        ...datos,
+        'agencia_id': await _miAgencia(),
+        'created_by': _db.auth.currentUser?.id,
+      });
+    }
+  }
+
+  @override
+  Future<void> cambiarEstadoTarea(String id, EstadoTarea estado) async {
+    await _db
+        .from('tareas')
+        .update({
+          'estado': estado.valorBd,
+          'hecha_el': estado == EstadoTarea.hecha
+              ? DateTime.now().toIso8601String()
+              : null,
+        })
+        .eq('id', id);
+  }
+
+  static Tarea _aTarea(Map<String, dynamic> f) {
+    final hora = f['hora'] as String?;
+    return Tarea(
+      id: f['id'] as String,
+      titulo: f['titulo'] as String? ?? '',
+      detalle: f['detalle'] as String? ?? '',
+      tipo: TipoTarea.desde(f['tipo'] as String?),
+      venceEl: _fecha(f['vence_el']) ?? DateTime.now(),
+      hora: hora == null
+          ? null
+          : TimeOfDay(
+              hour: int.tryParse(hora.split(':').first) ?? 0,
+              minute: int.tryParse(hora.split(':')[1]) ?? 0,
+            ),
+      repeticion: RepeticionTarea.desde(f['repeticion'] as String?),
+      estado: EstadoTarea.desde(f['estado'] as String?),
+      oportunidadId: f['oportunidad_id'] as String?,
+      vehiculoId: f['vehiculo_id'] as String?,
+      clienteNombre: (f['cliente_nombre'] as String?)?.trim(),
+      clienteTelefono: f['cliente_telefono'] as String?,
+      vehiculoTitulo: f['vehiculo_titulo'] as String?,
+      vehiculoPatente: f['vehiculo_patente'] as String?,
+    );
   }
 
   // -------------------------------------------------------------------

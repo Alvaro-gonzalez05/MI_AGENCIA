@@ -11,8 +11,10 @@ import '../../datos/repositorio.dart';
 import '../../dominio/gastos.dart';
 import '../../dominio/modelos.dart';
 import '../../dominio/papeles.dart';
+import '../../dominio/tareas.dart';
 import '../../dominio/ventas.dart';
 import '../../ui/componentes.dart';
+import 'nueva_tarea.dart';
 
 /// Inicio, calcado de la pantalla "Inicio · búsqueda rápida de revista" del
 /// diseño: arriba el saludo con el buscador de revista y el resumen del mes;
@@ -55,7 +57,15 @@ class _Contenido extends ConsumerWidget {
         ref.watch(interesadosProvider).value ?? const <Interesado>[];
 
     final reservas = ref.watch(reservasProvider).value ?? const <Reserva>[];
-    final pendientes = _pendientes(context, inventario, interesados, reservas);
+    final tareas = ref.watch(tareasProvider).value ?? const <Tarea>[];
+    final pendientes = _pendientes(
+      context,
+      ref,
+      inventario,
+      interesados,
+      reservas,
+      tareas,
+    );
     final atender = _ParaAtenderHoy(pendientes: pendientes);
     final ventasMes = _ComoVienenLasVentas(ventas: ventas);
 
@@ -108,14 +118,44 @@ class _Contenido extends ConsumerWidget {
   /// pasadas de plazo y consultas al BCRA vencidas.
   static List<_Pendiente> _pendientes(
     BuildContext context,
+    WidgetRef ref,
     List<VehiculoInventario> inventario,
     List<Interesado> interesados,
     List<Reserva> reservas,
+    List<Tarea> tareas,
   ) {
     final p = context.paleta;
     final hoy = DateTime.now();
     final dia = DateTime(hoy.year, hoy.month, hoy.day);
     final lista = <_Pendiente>[];
+
+    // Lo que alguien anoto en la agenda va primero: es un compromiso con una
+    // persona, no una deduccion del sistema.
+    for (final t in tareas.where((t) => t.diasParaVencer <= 0)) {
+      lista.add(
+        _Pendiente(
+          icono: t.tipo.icono,
+          color: t.vencida ? p.critico : p.observar,
+          titulo: t.titulo,
+          plazo: t.cuando,
+          detalle: [
+            if (t.clienteNombre?.isNotEmpty ?? false) t.clienteNombre!,
+            if (t.vehiculoTitulo != null) t.vehiculoTitulo!,
+            if (t.detalle.isNotEmpty) t.detalle,
+          ].join(' · '),
+          accion: 'Marcar hecha',
+          iconoAccion: Icons.check_rounded,
+          verde: true,
+          onAccion: () async {
+            await ref
+                .read(repositorioProvider)
+                .cambiarEstadoTarea(t.id, EstadoTarea.hecha);
+            ref.invalidate(tareasProvider);
+          },
+          urgencia: 400 - t.diasParaVencer,
+        ),
+      );
+    }
 
     // Las reservas que están por vencer: si nadie llama, el auto vuelve a
     // la venta y la seña queda en el aire.
@@ -994,8 +1034,7 @@ class _FilaPendiente extends StatelessWidget {
   }
 }
 
-/// La caja punteada del diseño. La agenda llega en la tanda siguiente: el
-/// lugar está, y al tocarlo dice con todas las letras que todavía no guarda.
+/// La caja punteada del diseño: abre "Nueva tarea".
 class _AgendarTarea extends StatelessWidget {
   const _AgendarTarea();
 
@@ -1004,14 +1043,7 @@ class _AgendarTarea extends StatelessWidget {
     final p = context.paleta;
     return InkWell(
       borderRadius: BorderRadius.circular(Curva.md),
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'La agenda de tareas es lo próximo que entra. Por ahora acá '
-            'aparece solo lo que el sistema puede deducir solo.',
-          ),
-        ),
-      ),
+      onTap: () => HojaNuevaTarea.abrir(context),
       child: BordePunteado(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: Esp.lg),

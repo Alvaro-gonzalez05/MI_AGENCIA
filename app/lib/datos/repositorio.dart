@@ -15,6 +15,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/tareas.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
 import 'repositorio_supabase.dart';
@@ -98,6 +99,13 @@ abstract interface class Repositorio {
 
   /// Como esta el auto a ojo del que lo recibio.
   Future<void> guardarEstadoGeneral(String vehiculoId, EstadoGeneral? estado);
+
+  /// La agenda: lo que hay anotado para hacer.
+  Future<List<Tarea>> tareas({bool soloPendientes = true});
+
+  Future<void> guardarTarea(AltaTarea t);
+
+  Future<void> cambiarEstadoTarea(String id, EstadoTarea estado);
 
   Future<List<Gasto>> gastos({String? vehiculoId});
 
@@ -308,6 +316,58 @@ class RepositorioDemo implements Repositorio {
   final Map<String, List<FotoVehiculo>> _fotos = {};
   final List<Reserva> _reservas = [];
   final Map<String, List<DetalleVehiculo>> _detalles = {};
+  final List<Tarea> _tareas = [];
+
+  @override
+  Future<List<Tarea>> tareas({bool soloPendientes = true}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    final lista = _tareas.where((t) => !soloPendientes || t.pendiente).toList()
+      ..sort((a, b) => a.venceEl.compareTo(b.venceEl));
+    return lista;
+  }
+
+  @override
+  Future<void> guardarTarea(AltaTarea t) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final nueva = Tarea(
+      id: t.id ?? 'demo-${_tareas.length}',
+      titulo: t.titulo,
+      detalle: t.detalle,
+      tipo: t.tipo,
+      venceEl: t.venceEl,
+      hora: t.hora,
+      repeticion: t.repeticion,
+      oportunidadId: t.oportunidadId,
+      vehiculoId: t.vehiculoId,
+    );
+    final i = _tareas.indexWhere((x) => x.id == nueva.id);
+    if (i >= 0) {
+      _tareas[i] = nueva;
+    } else {
+      _tareas.add(nueva);
+    }
+  }
+
+  @override
+  Future<void> cambiarEstadoTarea(String id, EstadoTarea estado) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    final i = _tareas.indexWhere((t) => t.id == id);
+    if (i < 0) return;
+    final t = _tareas[i];
+    _tareas[i] = Tarea(
+      id: t.id,
+      titulo: t.titulo,
+      detalle: t.detalle,
+      tipo: t.tipo,
+      venceEl: t.venceEl,
+      hora: t.hora,
+      repeticion: t.repeticion,
+      estado: estado,
+      oportunidadId: t.oportunidadId,
+      vehiculoId: t.vehiculoId,
+    );
+  }
+
   final Map<String, EstadoGeneral?> _estadoGeneral = {};
 
   @override
@@ -1034,6 +1094,11 @@ final miAgenciaProvider = FutureProvider<Agencia?>(
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
 /// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
 /// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+/// La agenda de la agencia: lo que hay para hacer.
+final tareasProvider = FutureProvider<List<Tarea>>(
+  (ref) => ref.watch(repositorioProvider).tareas(),
+);
+
 /// Los detalles anotados de una unidad.
 final detallesProvider = FutureProvider.family<List<DetalleVehiculo>, String>(
   (ref, id) => ref.watch(repositorioProvider).detalles(id),
