@@ -11,6 +11,7 @@ import '../../datos/repositorio.dart';
 import '../../dominio/importacion.dart';
 import '../../dominio/lector_archivos.dart';
 import '../../ui/componentes.dart';
+import '../../ui/formulario.dart';
 import 'formulario_vehiculo.dart';
 
 /// Carga masiva de unidades leyendo los archivos que ya tiene la agencia.
@@ -276,156 +277,427 @@ class _Seleccion extends StatelessWidget {
       padding: const EdgeInsets.all(Esp.xl),
       children: [
         Aparecer(
-          child: Tarjeta(
-            destacada: true,
-            padding: const EdgeInsets.all(Esp.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconoEnCirculo(
-                      icono: Icons.auto_awesome_rounded,
-                      tamano: 42,
-                      color: p.acentoTinta,
-                      fondo: p.acento,
-                    ),
-                    const SizedBox(width: Esp.md),
-                    const Expanded(
-                      child: CabeceraBloque(
-                        titulo: 'Cargá todo el stock de una vez',
-                        descripcion: 'Lo lee un modelo y vos lo revisás',
-                        sobreNegro: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: Esp.lg),
-                Text(
-                  'Sirve el Excel que ya usabas, un PDF, un Word, o una foto '
-                  'de la hoja donde anotás el stock. Se leen los datos, los '
-                  'revisás en pantalla y después se cargan.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: p.sobreNegro2,
-                  ),
-                ),
-              ],
-            ),
+          child: CabeceraPantalla(
+            titulo: 'Cargar varios autos de una vez',
+            subtitulo:
+                'Subí tus listas o fotos y el sistema lee los vehículos solo.',
           ),
         ),
         const SizedBox(height: Esp.lg),
 
-        Aparecer(
-          indice: 1,
-          child: Wrap(
-            spacing: Esp.md,
-            runSpacing: Esp.md,
-            children: [
-              FilledButton.icon(
-                onPressed: leyendo ? null : onElegir,
-                icon: const Icon(Icons.folder_open_rounded, size: 20),
-                label: const Text('Elegir archivos'),
-              ),
-              if (hayCamara)
-                OutlinedButton.icon(
-                  onPressed: leyendo ? null : onFoto,
-                  icon: const Icon(Icons.photo_camera_rounded, size: 20),
-                  label: const Text('Sacar una foto'),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: Esp.sm),
-        Text(
-          'Excel (.xlsx), CSV, PDF, Word (.docx) y fotos.',
-          style: TextStyle(fontSize: 13, color: p.tinta3),
-        ),
-
-        if (archivos.isNotEmpty) ...[
-          const SizedBox(height: Esp.lg),
-          for (var i = 0; i < archivos.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Esp.sm),
-              child: Aparecer(
-                indice: i,
-                child: _FilaArchivo(
-                  archivo: archivos[i],
-                  onQuitar: leyendo ? null : () => onQuitar(archivos[i]),
-                ),
-              ),
-            ),
-        ],
-
-        if (rechazados.isNotEmpty) ...[
-          const SizedBox(height: Esp.sm),
-          for (final r in rechazados)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Esp.xs),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.block_rounded, size: 15, color: p.observar),
-                  const SizedBox(width: Esp.sm),
-                  Expanded(
-                    child: Text(
-                      r,
-                      style: TextStyle(fontSize: 13, color: p.observar),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
+        Aparecer(indice: 1, child: const _PasosImportacion(actual: 0)),
+        const SizedBox(height: Esp.lg),
 
         if (error != null) ...[
+          Aparecer(indice: 2, child: AvisoError(mensaje: error!)),
           const SizedBox(height: Esp.lg),
-          Container(
-            padding: const EdgeInsets.all(Esp.md + 2),
-            decoration: BoxDecoration(
-              color: p.criticoLavado,
-              borderRadius: BorderRadius.circular(Curva.md),
-            ),
-            child: Row(
+        ],
+
+        // Panel dividido, como en el diseño: a la izquierda de dónde sacar
+        // los archivos, a la derecha los que ya se eligieron.
+        LayoutBuilder(
+          builder: (context, r) {
+            final izquierda = _ZonaArchivos(
+              leyendo: leyendo,
+              hayCamara: hayCamara,
+              onElegir: onElegir,
+              onFoto: onFoto,
+            );
+            final derecha = _Elegidos(
+              archivos: archivos,
+              rechazados: rechazados,
+              leyendo: leyendo,
+              tandas: tandas,
+              onQuitar: onQuitar,
+              onLeer: onLeer,
+            );
+            if (r.maxWidth < 760) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Aparecer(indice: 3, child: izquierda),
+                  const SizedBox(height: Esp.lg),
+                  Aparecer(indice: 4, child: derecha),
+                ],
+              );
+            }
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.error_outline_rounded, size: 18, color: p.critico),
-                const SizedBox(width: Esp.sm),
-                Expanded(
-                  child: Text(
-                    error!,
-                    style: TextStyle(fontSize: 14, color: p.critico),
+                Expanded(flex: 3, child: Aparecer(indice: 3, child: izquierda)),
+                const SizedBox(width: Esp.lg),
+                Expanded(flex: 2, child: Aparecer(indice: 4, child: derecha)),
+              ],
+            );
+          },
+        ),
+
+        const SizedBox(height: Esp.lg),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.shield_outlined, size: 20, color: p.bien),
+            const SizedBox(width: Esp.sm),
+            Expanded(
+              child: Text(
+                'Tus archivos solo se usan para leer los datos. No se guardan '
+                'ni se comparten.',
+                style: TextStyle(fontSize: 14, color: p.tinta2, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Los tres pasos de la importación, arriba de todo.
+class _PasosImportacion extends StatelessWidget {
+  const _PasosImportacion({required this.actual});
+
+  final int actual;
+
+  static const _pasos = [
+    ('Paso 1', 'Elegir archivo'),
+    ('Paso 2', 'Revisar'),
+    ('Paso 3', 'Listo'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.lg),
+        border: Border.all(color: p.borde, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < _pasos.length; i++) ...[
+            if (i > 0)
+              Expanded(
+                child: Container(
+                  height: 3,
+                  margin: const EdgeInsets.symmetric(horizontal: Esp.sm),
+                  decoration: BoxDecoration(
+                    color: i <= actual ? p.acento : p.borde,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: i <= actual ? p.acento : p.superficie,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: i <= actual ? p.acento : p.borde,
+                  width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  '${i + 1}',
+                  style: TextStyle(
+                    fontFamily: TemaApp.titulo,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: i <= actual ? p.acentoTinta : p.tinta3,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: Esp.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _pasos[i].$1,
+                  style: TextStyle(fontSize: 14, color: p.tinta3),
+                ),
+                Text(
+                  _pasos[i].$2,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: i == actual ? FontWeight.w700 : FontWeight.w400,
+                    color: i == actual ? p.tinta : p.tinta2,
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ],
+      ),
+    );
+  }
+}
 
-        const SizedBox(height: Esp.xl),
-        if (leyendo)
-          _Leyendo(tandas: tandas)
-        else
-          SizedBox(
-            height: 54,
-            child: FilledButton.icon(
-              onPressed: archivos.isEmpty ? null : onLeer,
-              icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-              label: Text(
-                archivos.isEmpty
-                    ? 'Elegí al menos un archivo'
-                    : 'Leer ${archivos.length} archivo'
-                          '${archivos.length == 1 ? '' : 's'}',
+/// La zona de arrastre con los formatos que entienden.
+class _ZonaArchivos extends StatelessWidget {
+  const _ZonaArchivos({
+    required this.leyendo,
+    required this.hayCamara,
+    required this.onElegir,
+    required this.onFoto,
+  });
+
+  final bool leyendo, hayCamara;
+  final VoidCallback onElegir, onFoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        children: [
+          BordePunteado(
+            radio: Curva.lg,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Esp.xxl),
+              child: Column(
+                children: [
+                  IconoEnCirculo(
+                    icono: Icons.cloud_upload_outlined,
+                    tamano: 64,
+                    color: p.acentoTexto,
+                    fondo: p.acentoLavado,
+                  ),
+                  const SizedBox(height: Esp.md),
+                  Text(
+                    'Traé tu archivo acá',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: Esp.xs),
+                  Text(
+                    'o si preferís:',
+                    style: TextStyle(fontSize: 15, color: p.tinta2),
+                  ),
+                  const SizedBox(height: Esp.md),
+                  Wrap(
+                    spacing: Esp.sm,
+                    runSpacing: Esp.sm,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: leyendo ? null : onElegir,
+                        icon: const Icon(Icons.folder_open_rounded, size: 22),
+                        label: const Text('Elegir archivo'),
+                      ),
+                      if (hayCamara)
+                        OutlinedButton.icon(
+                          onPressed: leyendo ? null : onFoto,
+                          icon: const Icon(
+                            Icons.photo_camera_rounded,
+                            size: 22,
+                          ),
+                          label: const Text('Sacar una foto'),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
+          const SizedBox(height: Esp.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'FORMATOS QUE ENTIENDE',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+          const SizedBox(height: Esp.sm),
+          Wrap(
+            spacing: Esp.sm,
+            runSpacing: Esp.sm,
+            children: const [
+              _Formato(
+                icono: Icons.table_chart_outlined,
+                titulo: 'Excel',
+                detalle: '.xlsx, .csv',
+              ),
+              _Formato(
+                icono: Icons.picture_as_pdf_outlined,
+                titulo: 'PDF',
+                detalle: 'Documento',
+              ),
+              _Formato(
+                icono: Icons.description_outlined,
+                titulo: 'Word',
+                detalle: '.docx',
+              ),
+              _Formato(
+                icono: Icons.photo_camera_outlined,
+                titulo: 'Foto',
+                detalle: 'Del cuaderno',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Formato extends StatelessWidget {
+  const _Formato({
+    required this.icono,
+    required this.titulo,
+    required this.detalle,
+  });
+
+  final IconData icono;
+  final String titulo, detalle;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Esp.md,
+        vertical: Esp.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: p.superficieHundida,
+        borderRadius: BorderRadius.circular(Curva.md),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 22, color: p.tinta2),
+          const SizedBox(width: Esp.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                titulo,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: p.tinta,
+                ),
+              ),
+              Text(detalle, style: TextStyle(fontSize: 14, color: p.tinta3)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Los archivos elegidos y el botón para leerlos.
+class _Elegidos extends StatelessWidget {
+  const _Elegidos({
+    required this.archivos,
+    required this.rechazados,
+    required this.leyendo,
+    required this.tandas,
+    required this.onQuitar,
+    required this.onLeer,
+  });
+
+  final List<ArchivoImportado> archivos;
+  final List<String> rechazados;
+  final bool leyendo;
+  final (int, int)? tandas;
+  final void Function(ArchivoImportado) onQuitar;
+  final VoidCallback onLeer;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Tarjeta(
+          padding: const EdgeInsets.all(Esp.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Archivos elegidos (${archivos.length})',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (archivos.isNotEmpty)
+                    Pastilla(
+                      texto: 'Listos',
+                      color: p.bien,
+                      lavado: p.bienLavado,
+                    ),
+                ],
+              ),
+              const SizedBox(height: Esp.md),
+              if (archivos.isEmpty)
+                Text(
+                  'Todavía no elegiste ninguno.',
+                  style: TextStyle(fontSize: 15, color: p.tinta2),
+                )
+              else
+                for (final a in archivos)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Esp.sm),
+                    child: _FilaArchivo(
+                      archivo: a,
+                      onQuitar: leyendo ? null : () => onQuitar(a),
+                    ),
+                  ),
+              if (rechazados.isNotEmpty) ...[
+                const SizedBox(height: Esp.sm),
+                for (final r in rechazados)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 18,
+                          color: p.critico,
+                        ),
+                        const SizedBox(width: Esp.sm - 2),
+                        Expanded(
+                          child: Text(
+                            r,
+                            style: TextStyle(fontSize: 14, color: p.critico),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
         const SizedBox(height: Esp.md),
-        Text(
-          'Los archivos se mandan al servidor de la app solo para leerlos. No '
-          'quedan guardados en ningún lado.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: p.tinta3, height: 1.4),
+        FilledButton.icon(
+          onPressed: archivos.isEmpty || leyendo ? null : onLeer,
+          icon: leyendo
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                )
+              : const Icon(Icons.document_scanner_outlined, size: 22),
+          label: Text(
+            leyendo
+                ? (tandas == null
+                      ? 'Leyendo...'
+                      : 'Leyendo ${tandas!.$1} de ${tandas!.$2}')
+                : 'Leer los archivos',
+          ),
         ),
       ],
     );
@@ -499,49 +771,6 @@ class _FilaArchivo extends StatelessWidget {
       ? '${(bytes / 1024).round()} KB'
       : '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
-
-class _Leyendo extends StatelessWidget {
-  const _Leyendo({required this.tandas});
-
-  final (int, int)? tandas;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    final t = tandas;
-    final varias = t != null && t.$2 > 1;
-
-    return Tarjeta(
-      padding: const EdgeInsets.all(Esp.xl),
-      child: Column(
-        children: [
-          BarraProgreso(valor: varias ? t.$1 / t.$2 : 0.35, color: p.acento),
-          const SizedBox(height: Esp.lg),
-          Text(
-            varias
-                ? 'Leyendo… tanda ${t.$1 + 1} de ${t.$2}'
-                : 'Leyendo los archivos…',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: p.tinta,
-            ),
-          ),
-          const SizedBox(height: Esp.xs),
-          Text(
-            'Puede tardar hasta un minuto si hay fotos o PDF largos.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: p.tinta3),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// PASO 2 — revisar
-// ---------------------------------------------------------------------------
 
 class _Revision extends StatelessWidget {
   const _Revision({
