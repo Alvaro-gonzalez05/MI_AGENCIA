@@ -12,6 +12,7 @@ import '../../core/tema/control_tema.dart';
 import '../../core/tema/preferencias.dart';
 import '../../core/tema/tema.dart';
 import '../componentes.dart';
+import '../../funciones/vehiculos/importar_vehiculos.dart';
 import 'secciones.dart';
 
 /// Cascara de la app.
@@ -1487,7 +1488,17 @@ class _HojaCargar extends ConsumerWidget {
             'Subí una planilla, un PDF o la foto del cuaderno de inventario.',
         accion: 'Subir lista',
         destacada: true,
-        onTap: () => irA('${Secciones.vehiculos.ruta}?importar=1'),
+        onTap: () {
+          // Abre la importación derecho, sin pasar por la lista de unidades:
+          // el que entra por acá ya sabe que viene con un archivo.
+          Navigator.pop(context);
+          Navigator.of(shell).push<bool>(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => const ImportarVehiculos(),
+            ),
+          );
+        },
       ),
     ];
 
