@@ -10,6 +10,8 @@ import '../../dominio/modelos.dart';
 import '../../dominio/papeles.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
+import 'ficha_pdf.dart';
+import 'reservar_unidad.dart';
 
 /// Ficha de una unidad: todo lo que se sabe de ella, mas los dos simuladores.
 class PantallaFicha extends ConsumerWidget {
@@ -135,12 +137,12 @@ class _Ficha extends StatelessWidget {
 
 /// Cabecera negra, como la ficha de un auto en una app de alquiler: el
 /// titulo grande, el estado y tres datos clave en mosaicos.
-class _Cabecera extends StatelessWidget {
+class _Cabecera extends ConsumerWidget {
   const _Cabecera({required this.vehiculo});
   final VehiculoInventario vehiculo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final v = vehiculo;
     final angosto = MediaQuery.sizeOf(context).width < Corte.tablet;
@@ -208,6 +210,8 @@ class _Cabecera extends StatelessWidget {
       ],
     );
 
+    final reserva = ref.watch(reservaDeProvider(v.id)).value;
+
     final acciones = Wrap(
       spacing: Esp.sm,
       runSpacing: Esp.sm,
@@ -218,6 +222,23 @@ class _Cabecera extends StatelessWidget {
             icon: const Icon(Icons.sell_rounded, size: 22),
             label: const Text('Marcar como vendido'),
           ),
+        if (!v.vendido)
+          OutlinedButton.icon(
+            onPressed: () =>
+                HojaReserva.abrir(context, vehiculo: v, reserva: reserva),
+            icon: Icon(
+              reserva == null
+                  ? Icons.bookmark_border_rounded
+                  : Icons.bookmark_rounded,
+              size: 22,
+            ),
+            label: Text(reserva == null ? 'Reservar unidad' : 'Ver reserva'),
+          ),
+        OutlinedButton.icon(
+          onPressed: () => FichaPdf.imprimir(context, ref, v),
+          icon: const Icon(Icons.print_outlined, size: 22),
+          label: const Text('Imprimir ficha'),
+        ),
         OutlinedButton.icon(
           onPressed: () => context.go('/gastos'),
           icon: const Icon(Icons.receipt_long_outlined, size: 22),
@@ -236,6 +257,39 @@ class _Cabecera extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (reserva != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(Esp.md),
+              decoration: BoxDecoration(
+                color: reserva.vencida ? p.criticoLavado : p.observarLavado,
+                borderRadius: BorderRadius.circular(Curva.md),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_rounded,
+                    size: 22,
+                    color: reserva.vencida ? p.critico : p.observar,
+                  ),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      'Reservada por ${reserva.clienteNombre} · '
+                      '${reserva.cuandoVence.toLowerCase()}'
+                      '${reserva.senia > 0 ? ' · seña ${Fmt.pesos(reserva.senia)}' : ''}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: reserva.vencida ? p.critico : p.tinta,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Esp.lg),
+          ],
           if (angosto) ...[
             _FotoGrande(vehiculo: v, alto: 180),
             const SizedBox(height: Esp.lg),

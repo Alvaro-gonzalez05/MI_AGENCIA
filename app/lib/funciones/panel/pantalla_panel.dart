@@ -10,6 +10,7 @@ import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/gastos.dart';
 import '../../dominio/modelos.dart';
+import '../../dominio/papeles.dart';
 import '../../dominio/ventas.dart';
 import '../../ui/componentes.dart';
 
@@ -53,7 +54,8 @@ class _Contenido extends ConsumerWidget {
     final interesados =
         ref.watch(interesadosProvider).value ?? const <Interesado>[];
 
-    final pendientes = _pendientes(context, inventario, interesados);
+    final reservas = ref.watch(reservasProvider).value ?? const <Reserva>[];
+    final pendientes = _pendientes(context, inventario, interesados, reservas);
     final atender = _ParaAtenderHoy(pendientes: pendientes);
     final ventasMes = _ComoVienenLasVentas(ventas: ventas);
 
@@ -108,11 +110,32 @@ class _Contenido extends ConsumerWidget {
     BuildContext context,
     List<VehiculoInventario> inventario,
     List<Interesado> interesados,
+    List<Reserva> reservas,
   ) {
     final p = context.paleta;
     final hoy = DateTime.now();
     final dia = DateTime(hoy.year, hoy.month, hoy.day);
     final lista = <_Pendiente>[];
+
+    // Las reservas que están por vencer: si nadie llama, el auto vuelve a
+    // la venta y la seña queda en el aire.
+    for (final r in reservas.where((r) => r.diasParaVencer <= 3)) {
+      lista.add(
+        _Pendiente(
+          icono: Icons.event_available_rounded,
+          color: r.vencida ? p.critico : p.observar,
+          titulo: 'Reserva de ${r.vehiculoTitulo ?? 'una unidad'}',
+          plazo: r.cuandoVence,
+          detalle:
+              'Cliente: ${r.clienteNombre}'
+              '${r.senia > 0 ? ' (seña de ${Fmt.pesos(r.senia)} depositada)' : ''}',
+          accion: 'Ver reserva',
+          iconoAccion: Icons.visibility_outlined,
+          onAccion: () => context.go('/inventario/${r.vehiculoId}'),
+          urgencia: 300 - r.diasParaVencer,
+        ),
+      );
+    }
 
     for (final i in interesados) {
       final cuando = i.proximaAccionFecha;

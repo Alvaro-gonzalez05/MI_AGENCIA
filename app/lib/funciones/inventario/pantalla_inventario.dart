@@ -1015,15 +1015,19 @@ class _Patente extends StatelessWidget {
 
 /// Una sola línea con lo último que pasó: cuándo entró, hasta cuándo está
 /// reservada o cuándo se vendió.
-class _UltimoMovimiento extends StatelessWidget {
+class _UltimoMovimiento extends ConsumerWidget {
   const _UltimoMovimiento({required this.vehiculo});
 
   final VehiculoInventario vehiculo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final v = vehiculo;
+    // Para una unidad reservada, lo que importa es hasta cuándo se guarda.
+    final reserva = v.estado == EstadoVehiculo.reservado
+        ? ref.watch(reservaDeProvider(v.id)).value
+        : null;
 
     final (IconData icono, String texto, Color color) = switch (v.estado) {
       EstadoVehiculo.vendido => (
@@ -1033,8 +1037,11 @@ class _UltimoMovimiento extends StatelessWidget {
       ),
       EstadoVehiculo.reservado => (
         Icons.event_available_rounded,
-        'Reservado · ingresó el ${Fmt.fecha(v.fechaIngreso)}',
-        p.observar,
+        reserva == null
+            ? 'Reservado · ingresó el ${Fmt.fecha(v.fechaIngreso)}'
+            : 'Reservado hasta el ${Fmt.fecha(reserva.venceEl)}'
+                  ' · ${reserva.clienteNombre}',
+        reserva != null && reserva.vencida ? p.critico : p.observar,
       ),
       _ => (
         Icons.history_rounded,
