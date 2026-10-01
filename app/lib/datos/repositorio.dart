@@ -89,6 +89,16 @@ abstract interface class Repositorio {
   /// unidad vuelve sola a disponible.
   Future<void> cerrarReserva(String id, EstadoReserva estado);
 
+  /// Los detalles anotados de una unidad (rayones, mecanica, tapizado).
+  Future<List<DetalleVehiculo>> detalles(String vehiculoId);
+
+  Future<void> guardarDetalle(AltaDetalle d);
+
+  Future<void> eliminarDetalle(String id);
+
+  /// Como esta el auto a ojo del que lo recibio.
+  Future<void> guardarEstadoGeneral(String vehiculoId, EstadoGeneral? estado);
+
   Future<List<Gasto>> gastos({String? vehiculoId});
 
   Future<void> crearGasto(AltaGasto g);
@@ -297,6 +307,56 @@ class RepositorioDemo implements Repositorio {
   final Map<String, PapelesVehiculo> _papeles = {};
   final Map<String, List<FotoVehiculo>> _fotos = {};
   final List<Reserva> _reservas = [];
+  final Map<String, List<DetalleVehiculo>> _detalles = {};
+  final Map<String, EstadoGeneral?> _estadoGeneral = {};
+
+  @override
+  Future<List<DetalleVehiculo>> detalles(String vehiculoId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return List.unmodifiable(
+      _detalles[vehiculoId] ?? const <DetalleVehiculo>[],
+    );
+  }
+
+  @override
+  Future<void> guardarDetalle(AltaDetalle d) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final lista = _detalles.putIfAbsent(d.vehiculoId, () => []);
+    final nuevo = DetalleVehiculo(
+      id:
+          d.id ??
+          'demo-${lista.length}-${DateTime.now().microsecondsSinceEpoch}',
+      vehiculoId: d.vehiculoId,
+      titulo: d.titulo,
+      descripcion: d.descripcion,
+      categoria: d.categoria,
+      estado: d.estado,
+      costoEstimado: d.costoEstimado,
+    );
+    final i = lista.indexWhere((x) => x.id == nuevo.id);
+    if (i >= 0) {
+      lista[i] = nuevo;
+    } else {
+      lista.add(nuevo);
+    }
+  }
+
+  @override
+  Future<void> eliminarDetalle(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    for (final lista in _detalles.values) {
+      lista.removeWhere((d) => d.id == id);
+    }
+  }
+
+  @override
+  Future<void> guardarEstadoGeneral(
+    String vehiculoId,
+    EstadoGeneral? estado,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    _estadoGeneral[vehiculoId] = estado;
+  }
 
   @override
   Future<List<Reserva>> reservas({
@@ -974,6 +1034,11 @@ final miAgenciaProvider = FutureProvider<Agencia?>(
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
 /// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
 /// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+/// Los detalles anotados de una unidad.
+final detallesProvider = FutureProvider.family<List<DetalleVehiculo>, String>(
+  (ref, id) => ref.watch(repositorioProvider).detalles(id),
+);
+
 /// Las reservas activas de la agencia. El Inicio avisa las que vencen.
 final reservasProvider = FutureProvider<List<Reserva>>(
   (ref) => ref.watch(repositorioProvider).reservas(),

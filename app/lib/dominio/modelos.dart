@@ -120,6 +120,7 @@ class VehiculoInventario {
     this.transmision,
     this.nroMotor,
     this.nroChasis,
+    this.estadoGeneral,
   });
 
   final String id;
@@ -169,6 +170,10 @@ class VehiculoInventario {
   final String? transmision;
   final String? nroMotor;
   final String? nroChasis;
+
+  /// Como esta el auto a ojo del que lo recibio (migracion 0025). Se guarda
+  /// como texto para no atar el modelo al enum de la base.
+  final String? estadoGeneral;
 
   final DateTime? fechaVenta;
   final double? precioFinal;

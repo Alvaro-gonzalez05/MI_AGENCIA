@@ -236,3 +236,128 @@ class AltaReserva {
     return e;
   }
 }
+
+/// Cómo está el auto, a ojo de quien lo recibió.
+enum EstadoGeneral {
+  excelente('Excelente', 'excelente'),
+  muyBueno('Muy bueno', 'muy_bueno'),
+  bueno('Bueno', 'bueno'),
+  regular('Regular', 'regular');
+
+  const EstadoGeneral(this.etiqueta, this.valorBd);
+  final String etiqueta;
+  final String valorBd;
+
+  static EstadoGeneral? desde(String? v) => v == null
+      ? null
+      : EstadoGeneral.values.where((e) => e.valorBd == v).firstOrNull;
+}
+
+/// Un detalle concreto de la unidad: un rayón, una abolladura, el aire que
+/// no enfría.
+///
+/// De esta lista salen dos cosas: antes de publicar, qué conviene arreglar;
+/// y al entregar, qué se le avisó al comprador, que es lo que evita el
+/// reclamo de la semana siguiente.
+class DetalleVehiculo {
+  const DetalleVehiculo({
+    required this.id,
+    required this.vehiculoId,
+    required this.titulo,
+    this.descripcion = '',
+    this.categoria = CategoriaDetalle.otro,
+    this.estado = EstadoDetalle.pendiente,
+    this.costoEstimado,
+    this.fotoUrl,
+  });
+
+  final String id;
+  final String vehiculoId;
+  final String titulo;
+  final String descripcion;
+  final CategoriaDetalle categoria;
+  final EstadoDetalle estado;
+  final double? costoEstimado;
+  final String? fotoUrl;
+
+  bool get pendiente => estado == EstadoDetalle.pendiente;
+}
+
+enum EstadoDetalle {
+  pendiente('Pendiente de arreglar', 'pendiente'),
+  arreglado('Arreglado', 'arreglado'),
+  seVendeAsi('Se vende así', 'se_vende_asi');
+
+  const EstadoDetalle(this.etiqueta, this.valorBd);
+  final String etiqueta;
+  final String valorBd;
+
+  static EstadoDetalle desde(String? v) =>
+      EstadoDetalle.values.where((e) => e.valorBd == v).firstOrNull ??
+      EstadoDetalle.pendiente;
+}
+
+enum CategoriaDetalle {
+  estetica('Estética', 'estetica'),
+  mecanica('Mecánica', 'mecanica'),
+  tapizado('Tapizado', 'tapizado'),
+  neumaticos('Neumáticos', 'neumaticos'),
+  papeles('Papeles', 'papeles'),
+  otro('Otro', 'otro');
+
+  const CategoriaDetalle(this.etiqueta, this.valorBd);
+  final String etiqueta;
+  final String valorBd;
+
+  static CategoriaDetalle desde(String? v) =>
+      CategoriaDetalle.values.where((c) => c.valorBd == v).firstOrNull ??
+      CategoriaDetalle.otro;
+}
+
+/// Lo que se carga al anotar un detalle.
+class AltaDetalle {
+  const AltaDetalle({
+    required this.vehiculoId,
+    required this.titulo,
+    this.id,
+    this.descripcion = '',
+    this.categoria = CategoriaDetalle.otro,
+    this.estado = EstadoDetalle.pendiente,
+    this.costoEstimado,
+  });
+
+  final String? id;
+  final String vehiculoId;
+  final String titulo;
+  final String descripcion;
+  final CategoriaDetalle categoria;
+  final EstadoDetalle estado;
+  final double? costoEstimado;
+
+  bool get esEdicion => id != null;
+
+  AltaDetalle copiar({
+    String? titulo,
+    String? descripcion,
+    CategoriaDetalle? categoria,
+    EstadoDetalle? estado,
+    double? costoEstimado,
+  }) => AltaDetalle(
+    id: id,
+    vehiculoId: vehiculoId,
+    titulo: titulo ?? this.titulo,
+    descripcion: descripcion ?? this.descripcion,
+    categoria: categoria ?? this.categoria,
+    estado: estado ?? this.estado,
+    costoEstimado: costoEstimado ?? this.costoEstimado,
+  );
+
+  Map<String, String> validar() {
+    final e = <String, String>{};
+    if (titulo.trim().isEmpty) e['titulo'] = 'Poné qué es lo que tiene.';
+    if ((costoEstimado ?? 0) < 0) {
+      e['costo'] = 'El costo no puede ser negativo.';
+    }
+    return e;
+  }
+}

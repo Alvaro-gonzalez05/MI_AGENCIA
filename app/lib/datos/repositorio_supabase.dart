@@ -382,6 +382,87 @@ class RepositorioSupabase implements Repositorio {
   }
 
   // -------------------------------------------------------------------
+  // Estado y detalles de la unidad
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<DetalleVehiculo>> detalles(String vehiculoId) async {
+    final filas = await _db
+        .from('vehiculo_detalles')
+        .select()
+        .eq('vehiculo_id', vehiculoId)
+        .order('created_at');
+
+    // Las fotos de los detalles viven en el mismo bucket que las de la
+    // unidad: se firman igual.
+    final rutas = [
+      for (final f in filas)
+        if (f['foto_path'] != null) f['foto_path'] as String,
+    ];
+    final urls = rutas.isEmpty
+        ? const <String, String>{}
+        : {
+            for (final u
+                in await _db.storage
+                    .from('vehiculos')
+                    .createSignedUrlsResult(rutas, _minutosDeUrl))
+              if (u is SignedUrlSuccess) u.path: u.signedUrl,
+          };
+
+    return [
+      for (final f in filas)
+        DetalleVehiculo(
+          id: f['id'] as String,
+          vehiculoId: vehiculoId,
+          titulo: f['titulo'] as String? ?? '',
+          descripcion: f['descripcion'] as String? ?? '',
+          categoria: CategoriaDetalle.desde(f['categoria'] as String?),
+          estado: EstadoDetalle.desde(f['estado'] as String?),
+          costoEstimado: _decimal(f['costo_estimado']),
+          fotoUrl: urls[f['foto_path']],
+        ),
+    ];
+  }
+
+  @override
+  Future<void> guardarDetalle(AltaDetalle d) async {
+    final datos = {
+      'vehiculo_id': d.vehiculoId,
+      'titulo': d.titulo.trim(),
+      'descripcion': _oNulo(d.descripcion),
+      'categoria': d.categoria.valorBd,
+      'estado': d.estado.valorBd,
+      'costo_estimado': d.costoEstimado,
+    };
+
+    if (d.esEdicion) {
+      await _db.from('vehiculo_detalles').update(datos).eq('id', d.id!);
+    } else {
+      await _db.from('vehiculo_detalles').insert({
+        ...datos,
+        'agencia_id': await _miAgencia(),
+        'created_by': _db.auth.currentUser?.id,
+      });
+    }
+  }
+
+  @override
+  Future<void> eliminarDetalle(String id) async {
+    await _db.from('vehiculo_detalles').delete().eq('id', id);
+  }
+
+  @override
+  Future<void> guardarEstadoGeneral(
+    String vehiculoId,
+    EstadoGeneral? estado,
+  ) async {
+    await _db
+        .from('vehiculos')
+        .update({'estado_general': estado?.valorBd})
+        .eq('id', vehiculoId);
+  }
+
+  // -------------------------------------------------------------------
   // Reservas
   // -------------------------------------------------------------------
 
@@ -1209,6 +1290,7 @@ class RepositorioSupabase implements Repositorio {
       transmision: f['transmision'] as String?,
       nroMotor: f['nro_motor'] as String?,
       nroChasis: f['nro_chasis'] as String?,
+      estadoGeneral: f['estado_general'] as String?,
     );
   }
 

@@ -10,6 +10,7 @@ import '../../dominio/modelos.dart';
 import '../../dominio/papeles.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
+import '../../ui/formulario.dart';
 import 'ficha_pdf.dart';
 import 'reservar_unidad.dart';
 
@@ -77,7 +78,9 @@ class _Ficha extends StatelessWidget {
         child: _GananciaReal(vehiculo: v, cfg: cfg),
       ),
       hueco,
-      Aparecer(indice: 4, child: _GastosUnidad(vehiculo: v)),
+      Aparecer(indice: 4, child: _EstadoYObservaciones(vehiculo: v)),
+      hueco,
+      Aparecer(indice: 5, child: _GastosUnidad(vehiculo: v)),
     ];
 
     final derecha = <Widget>[
@@ -1426,6 +1429,427 @@ class _SimuladorPrecioState extends State<_SimuladorPrecio> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Estado y observaciones
+// ---------------------------------------------------------------------------
+
+/// Cómo está el auto y qué detalles tiene.
+///
+/// Es el bloque "Estado y observaciones" del diseño. La lista no es
+/// decorativa: antes de publicar dice qué conviene arreglar, y al entregar
+/// es la prueba de qué se le avisó al comprador.
+class _EstadoYObservaciones extends ConsumerWidget {
+  const _EstadoYObservaciones({required this.vehiculo});
+
+  final VehiculoInventario vehiculo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final v = vehiculo;
+    final detalles = ref.watch(detallesProvider(v.id)).value ?? const [];
+    final pendientes = detalles.where((d) => d.pendiente).toList();
+    final costo = pendientes.fold<double>(
+      0,
+      (s, d) => s + (d.costoEstimado ?? 0),
+    );
+
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CabeceraBloque(
+                  titulo: 'Estado y observaciones',
+                  descripcion: detalles.isEmpty
+                      ? 'Revisión física: detalles estéticos y mecánicos'
+                      : '${detalles.length} '
+                            '${detalles.length == 1 ? 'detalle anotado' : 'detalles anotados'}',
+                ),
+              ),
+              const SizedBox(width: Esp.sm),
+              FilledButton.icon(
+                onPressed: () => _editar(context, ref, v.id, null),
+                icon: const Icon(Icons.add_rounded, size: 22),
+                label: const Text('Agregar detalle'),
+              ),
+            ],
+          ),
+          const SizedBox(height: Esp.lg),
+
+          Text('Estado general', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: Esp.sm),
+          Wrap(
+            spacing: Esp.sm,
+            runSpacing: Esp.sm,
+            children: [
+              for (final e in EstadoGeneral.values)
+                ChipSeleccion(
+                  etiqueta: e.etiqueta,
+                  activo: v.estadoGeneral == e.valorBd,
+                  color: switch (e) {
+                    EstadoGeneral.excelente || EstadoGeneral.muyBueno => p.bien,
+                    EstadoGeneral.bueno => p.observar,
+                    EstadoGeneral.regular => p.critico,
+                  },
+                  onTap: () async {
+                    await ref
+                        .read(repositorioProvider)
+                        .guardarEstadoGeneral(
+                          v.id,
+                          v.estadoGeneral == e.valorBd ? null : e,
+                        );
+                    ref.invalidate(inventarioProvider);
+                  },
+                ),
+            ],
+          ),
+
+          const SizedBox(height: Esp.lg),
+          if (detalles.isEmpty)
+            const _Aviso(
+              texto:
+                  'Anotá acá lo que el auto tenga: un rayón, una abolladura, '
+                  'el aire que no enfría. Es lo que después se le muestra al '
+                  'comprador.',
+            )
+          else
+            for (final d in detalles)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Esp.sm),
+                child: _FilaDetalle(
+                  detalle: d,
+                  onEditar: () => _editar(context, ref, v.id, d),
+                ),
+              ),
+
+          if (pendientes.isNotEmpty) ...[
+            const SizedBox(height: Esp.sm),
+            Container(
+              padding: const EdgeInsets.all(Esp.md),
+              decoration: BoxDecoration(
+                color: p.observarLavado,
+                borderRadius: BorderRadius.circular(Curva.md),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.build_outlined, size: 20, color: p.observar),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      '${pendientes.length} '
+                      '${pendientes.length == 1 ? 'detalle pendiente' : 'detalles pendientes'}'
+                      '${costo > 0 ? ' · arreglarlos saldría ${Fmt.pesos(costo)}' : ''}',
+                      style: TextStyle(fontSize: 15, color: p.tinta2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editar(
+    BuildContext context,
+    WidgetRef ref,
+    String vehiculoId,
+    DetalleVehiculo? detalle,
+  ) async {
+    final guardado = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (_) => _HojaDetalle(vehiculoId: vehiculoId, detalle: detalle),
+    );
+    if (guardado ?? false) ref.invalidate(detallesProvider(vehiculoId));
+  }
+}
+
+class _FilaDetalle extends StatelessWidget {
+  const _FilaDetalle({required this.detalle, required this.onEditar});
+
+  final DetalleVehiculo detalle;
+  final VoidCallback onEditar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final d = detalle;
+    final (color, lavado) = switch (d.estado) {
+      EstadoDetalle.pendiente => (p.observar, p.observarLavado),
+      EstadoDetalle.arreglado => (p.bien, p.bienLavado),
+      EstadoDetalle.seVendeAsi => (p.tinta2, p.superficieHundida),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(Esp.md),
+      decoration: BoxDecoration(
+        color: p.superficie,
+        borderRadius: BorderRadius.circular(Curva.md),
+        border: Border.all(color: p.borde, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          if (d.fotoUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Curva.sm),
+              child: Image.network(
+                d.fotoUrl!,
+                width: 52,
+                height: 52,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    _IconoCategoria(categoria: d.categoria),
+              ),
+            )
+          else
+            _IconoCategoria(categoria: d.categoria),
+          const SizedBox(width: Esp.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(d.titulo, style: Theme.of(context).textTheme.titleMedium),
+                if (d.descripcion.isNotEmpty)
+                  Text(
+                    d.descripcion,
+                    style: TextStyle(fontSize: 14, color: p.tinta2),
+                  ),
+                if (d.costoEstimado != null)
+                  Text(
+                    'Arreglarlo: ${Fmt.pesos(d.costoEstimado)}',
+                    style: TextStyle(fontSize: 14, color: p.tinta3),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Esp.sm),
+          Wrap(
+            spacing: Esp.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Pastilla(
+                texto: d.categoria.etiqueta,
+                color: p.tinta2,
+                lavado: p.superficieHundida,
+                conPunto: false,
+              ),
+              Pastilla(texto: d.estado.etiqueta, color: color, lavado: lavado),
+              IconButton(
+                tooltip: 'Editar este detalle',
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                onPressed: onEditar,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IconoCategoria extends StatelessWidget {
+  const _IconoCategoria({required this.categoria});
+
+  final CategoriaDetalle categoria;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return IconoEnCirculo(
+      icono: switch (categoria) {
+        CategoriaDetalle.estetica => Icons.brush_outlined,
+        CategoriaDetalle.mecanica => Icons.build_outlined,
+        CategoriaDetalle.tapizado => Icons.chair_outlined,
+        CategoriaDetalle.neumaticos => Icons.tire_repair_outlined,
+        CategoriaDetalle.papeles => Icons.description_outlined,
+        CategoriaDetalle.otro => Icons.more_horiz_rounded,
+      },
+      tamano: 52,
+      color: p.tinta2,
+      fondo: p.superficieHundida,
+    );
+  }
+}
+
+/// La hoja para anotar o editar un detalle.
+class _HojaDetalle extends ConsumerStatefulWidget {
+  const _HojaDetalle({required this.vehiculoId, this.detalle});
+
+  final String vehiculoId;
+  final DetalleVehiculo? detalle;
+
+  @override
+  ConsumerState<_HojaDetalle> createState() => _HojaDetalleState();
+}
+
+class _HojaDetalleState extends ConsumerState<_HojaDetalle> {
+  late AltaDetalle _d = AltaDetalle(
+    id: widget.detalle?.id,
+    vehiculoId: widget.vehiculoId,
+    titulo: widget.detalle?.titulo ?? '',
+    descripcion: widget.detalle?.descripcion ?? '',
+    categoria: widget.detalle?.categoria ?? CategoriaDetalle.estetica,
+    estado: widget.detalle?.estado ?? EstadoDetalle.pendiente,
+    costoEstimado: widget.detalle?.costoEstimado,
+  );
+
+  Map<String, String> _errores = {};
+  bool _guardando = false;
+
+  Future<void> _guardar() async {
+    final errores = _d.validar();
+    setState(() => _errores = errores);
+    if (errores.isNotEmpty) return;
+
+    setState(() => _guardando = true);
+    try {
+      await ref.read(repositorioProvider).guardarDetalle(_d);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo guardar: $e')));
+    }
+  }
+
+  Future<void> _borrar() async {
+    setState(() => _guardando = true);
+    try {
+      await ref.read(repositorioProvider).eliminarDetalle(widget.detalle!.id);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo borrar: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _d.esEdicion ? 'Editar el detalle' : 'Anotar un detalle',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Lo que el auto tenga, con todas las letras: después no hay '
+            'discusión en la entrega.',
+            style: TextStyle(fontSize: 15, color: p.tinta2),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          CampoTexto(
+            etiqueta: 'Qué tiene',
+            obligatorio: true,
+            ayuda: 'Ej: rayón en el paragolpe trasero',
+            valor: _d.titulo,
+            error: _errores['titulo'],
+            onCambio: (x) => _d = _d.copiar(titulo: x),
+          ),
+          const SizedBox(height: Esp.md),
+          CampoTexto(
+            etiqueta: 'Detalle',
+            ayuda: 'Dónde está, cuánto mide, qué tan visible es',
+            valor: _d.descripcion,
+            lineas: 2,
+            onCambio: (x) => _d = _d.copiar(descripcion: x),
+          ),
+          const SizedBox(height: Esp.md),
+
+          CampoFormulario(
+            etiqueta: 'Categoría',
+            hijo: Wrap(
+              spacing: Esp.sm,
+              runSpacing: Esp.sm,
+              children: [
+                for (final c in CategoriaDetalle.values)
+                  ChipSeleccion(
+                    etiqueta: c.etiqueta,
+                    activo: _d.categoria == c,
+                    onTap: () => setState(() => _d = _d.copiar(categoria: c)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.md),
+          CampoFormulario(
+            etiqueta: 'Cómo queda',
+            hijo: Wrap(
+              spacing: Esp.sm,
+              runSpacing: Esp.sm,
+              children: [
+                for (final e in EstadoDetalle.values)
+                  ChipSeleccion(
+                    etiqueta: e.etiqueta,
+                    activo: _d.estado == e,
+                    color: switch (e) {
+                      EstadoDetalle.pendiente => p.observar,
+                      EstadoDetalle.arreglado => p.bien,
+                      EstadoDetalle.seVendeAsi => null,
+                    },
+                    onTap: () => setState(() => _d = _d.copiar(estado: e)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Esp.md),
+          CampoMonto(
+            etiqueta: 'Cuánto saldría arreglarlo',
+            ayuda: 'Opcional, pero ayuda a decidir si conviene',
+            valor: _d.costoEstimado,
+            error: _errores['costo'],
+            onCambio: (x) => _d = _d.copiar(costoEstimado: x),
+          ),
+
+          const SizedBox(height: Esp.lg),
+          FilledButton.icon(
+            onPressed: _guardando ? null : _guardar,
+            icon: _guardando
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  )
+                : const Icon(Icons.check_rounded, size: 22),
+            label: const Text('Guardar el detalle'),
+          ),
+          if (_d.esEdicion) ...[
+            const SizedBox(height: Esp.sm),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: p.critico,
+                side: BorderSide(color: p.critico, width: 1.6),
+              ),
+              onPressed: _guardando ? null : _borrar,
+              icon: const Icon(Icons.delete_outline_rounded, size: 22),
+              label: const Text('Borrar este detalle'),
+            ),
+          ],
         ],
       ),
     );
