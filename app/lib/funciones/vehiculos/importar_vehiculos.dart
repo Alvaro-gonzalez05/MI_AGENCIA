@@ -220,6 +220,7 @@ class _ImportarVehiculosState extends ConsumerState<ImportarVehiculos> {
                         setState(() => _filas = [..._filas!]..[i] = f),
                     onCompletar: _completar,
                     onCargar: _cargar,
+                    onOtroArchivo: () => setState(() => _filas = null),
                   )
                 : _Seleccion(
                     archivos: _archivos,
@@ -781,6 +782,7 @@ class _Revision extends StatelessWidget {
     required this.onCambiar,
     required this.onCompletar,
     required this.onCargar,
+    required this.onOtroArchivo,
   });
 
   final List<FilaImportada> filas;
@@ -790,10 +792,10 @@ class _Revision extends StatelessWidget {
   final void Function(int indice, FilaImportada fila) onCambiar;
   final Future<void> Function(FilaImportada fila) onCompletar;
   final VoidCallback onCargar;
+  final VoidCallback onOtroArchivo;
 
   @override
   Widget build(BuildContext context) {
-    final p = context.paleta;
     final listas = filas.where((f) => f.incluir && f.completa).length;
     final incompletas = filas.where((f) => !f.completa).length;
 
@@ -804,102 +806,269 @@ class _Revision extends StatelessWidget {
         descripcion:
             'En esos archivos no había una lista de autos que pudiera leer. '
             'Probá con la planilla o con una foto más nítida.',
+        accion: OutlinedButton.icon(
+          onPressed: onOtroArchivo,
+          icon: const Icon(Icons.folder_open_rounded, size: 22),
+          label: const Text('Elegir otro archivo'),
+        ),
       );
     }
 
-    return Column(
+    final lista = ListView(
+      padding: EdgeInsets.zero,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(Esp.xl),
+        for (var i = 0; i < filas.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Esp.sm + 2),
+            child: Aparecer(
+              indice: i,
+              child: _TarjetaFila(
+                fila: filas[i],
+                angosto: angosto,
+                habilitada: !cargando,
+                onIncluir: (v) => onCambiar(i, filas[i].copiar(incluir: v)),
+                onCompletar: () => onCompletar(filas[i]),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    final panel = _PanelResumen(
+      total: filas.length,
+      listas: listas,
+      incompletas: incompletas,
+      cargando: cargando,
+      cargadas: cargadas,
+      onCargar: onCargar,
+      onOtroArchivo: onOtroArchivo,
+    );
+
+    return ListView(
+      padding: const EdgeInsets.all(Esp.xl),
+      children: [
+        Aparecer(
+          child: CabeceraPantalla(
+            titulo: 'Cargar varios autos de una vez',
+            subtitulo:
+                'Revisá que los datos leídos sean correctos antes de '
+                'guardarlos en tu inventario.',
+          ),
+        ),
+        const SizedBox(height: Esp.lg),
+        Aparecer(indice: 1, child: const _PasosImportacion(actual: 1)),
+        const SizedBox(height: Esp.lg),
+
+        LayoutBuilder(
+          builder: (context, r) {
+            if (r.maxWidth < 900) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  panel,
+                  const SizedBox(height: Esp.lg),
+                  lista,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: lista),
+                const SizedBox(width: Esp.lg),
+                SizedBox(width: 320, child: panel),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// El panel lateral del diseño: cuántos están bien, cuántos hay que mirar y
+/// el botón para cargarlos.
+class _PanelResumen extends StatelessWidget {
+  const _PanelResumen({
+    required this.total,
+    required this.listas,
+    required this.incompletas,
+    required this.cargando,
+    required this.cargadas,
+    required this.onCargar,
+    required this.onOtroArchivo,
+  });
+
+  final int total, listas, incompletas, cargadas;
+  final bool cargando;
+  final VoidCallback onCargar, onOtroArchivo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    final bien = total - incompletas;
+    final porcentaje = total == 0 ? 0.0 : bien / total;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Tarjeta(
+          padding: const EdgeInsets.all(Esp.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Aparecer(
+              Row(
+                children: [
+                  Icon(
+                    Icons.directions_car_filled_rounded,
+                    size: 24,
+                    color: p.tinta2,
+                  ),
+                  const SizedBox(width: Esp.sm),
+                  Expanded(
+                    child: Text(
+                      'Encontramos $total '
+                      '${total == 1 ? 'auto' : 'autos'}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Esp.md),
+              _Renglon(
+                texto: '$bien ${bien == 1 ? 'está bien' : 'están bien'}',
+                color: p.bien,
+                lavado: p.bienLavado,
+                icono: Icons.check_circle_outline_rounded,
+              ),
+              if (incompletas > 0) ...[
+                const SizedBox(height: Esp.sm),
+                _Renglon(
+                  texto:
+                      '$incompletas '
+                      '${incompletas == 1 ? 'necesita que lo mires' : 'necesitan que los mires'}',
+                  color: p.observar,
+                  lavado: p.observarLavado,
+                  icono: Icons.warning_amber_rounded,
+                ),
+              ],
+              const SizedBox(height: Esp.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${(porcentaje * 100).round()}% sin errores',
+                      style: TextStyle(fontSize: 14, color: p.tinta2),
+                    ),
+                  ),
+                  Text(
+                    '$bien / $total',
+                    style: TextStyle(
+                      fontFamily: TemaApp.mono,
+                      fontSize: 14,
+                      color: p.tinta2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Esp.sm - 2),
+              BarraProgreso(valor: porcentaje, color: p.bien),
+              const SizedBox(height: Esp.md),
+              Container(
+                padding: const EdgeInsets.all(Esp.md),
+                decoration: BoxDecoration(
+                  color: p.superficieHundida,
+                  borderRadius: BorderRadius.circular(Curva.md),
+                ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Icon(Icons.info_outline_rounded, size: 20, color: p.tinta3),
+                    const SizedBox(width: Esp.sm),
                     Expanded(
-                      child: CabeceraBloque(
-                        titulo:
-                            'Encontré ${filas.length} '
-                            'unidad${filas.length == 1 ? '' : 'es'}',
-                        descripcion: incompletas == 0
-                            ? 'Revisá los datos antes de cargarlas'
-                            : '$incompletas necesita${incompletas == 1 ? '' : 'n'} '
-                                  'que completes algo',
+                      child: Text(
+                        'Podés corregir o completar cualquier dato tocando la '
+                        'fila.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: p.tinta2,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: Esp.lg),
-              for (var i = 0; i < filas.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Esp.sm + 2),
-                  child: Aparecer(
-                    indice: i,
-                    child: _TarjetaFila(
-                      fila: filas[i],
-                      angosto: angosto,
-                      habilitada: !cargando,
-                      onIncluir: (v) =>
-                          onCambiar(i, filas[i].copiar(incluir: v)),
-                      onCompletar: () => onCompletar(filas[i]),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(Esp.lg),
-          decoration: BoxDecoration(
-            color: p.superficie,
-            border: Border(top: BorderSide(color: p.borde)),
+        const SizedBox(height: Esp.md),
+        FilledButton.icon(
+          onPressed: cargando || listas == 0 ? null : onCargar,
+          icon: cargando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                )
+              : const Icon(Icons.arrow_forward_rounded, size: 22),
+          label: Text(
+            cargando
+                ? 'Cargando $cargadas de $listas'
+                : 'Cargar ${listas == 1 ? 'el auto' : 'los $listas autos'}',
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: cargando
-                    ? Text(
-                        'Cargando… $cargadas de $listas',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: p.tinta,
-                        ),
-                      )
-                    : Text(
-                        '$listas lista${listas == 1 ? '' : 's'} para cargar',
-                        style: TextStyle(fontSize: 14, color: p.tinta2),
-                      ),
-              ),
-              const SizedBox(width: Esp.md),
-              SizedBox(
-                height: 50,
-                child: FilledButton.icon(
-                  onPressed: cargando || listas == 0 ? null : onCargar,
-                  icon: cargando
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: p.tinta2,
-                          ),
-                        )
-                      : const Icon(Icons.download_done_rounded, size: 20),
-                  label: Text(
-                    cargando
-                        ? 'Cargando'
-                        : angosto
-                        ? 'Cargar $listas'
-                        : 'Cargar $listas unidad${listas == 1 ? '' : 'es'}',
-                  ),
-                ),
-              ),
-            ],
-          ),
+        ),
+        const SizedBox(height: Esp.sm),
+        OutlinedButton.icon(
+          onPressed: cargando ? null : onOtroArchivo,
+          icon: const Icon(Icons.folder_open_rounded, size: 22),
+          label: const Text('Elegir otro archivo'),
         ),
       ],
+    );
+  }
+}
+
+class _Renglon extends StatelessWidget {
+  const _Renglon({
+    required this.texto,
+    required this.color,
+    required this.lavado,
+    required this.icono,
+  });
+
+  final String texto;
+  final Color color, lavado;
+  final IconData icono;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Esp.md,
+        vertical: Esp.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: lavado,
+        borderRadius: BorderRadius.circular(Curva.md),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: Esp.sm),
+          Expanded(
+            child: Text(texto, style: TextStyle(fontSize: 15, color: p.tinta)),
+          ),
+          Icon(icono, size: 20, color: color),
+        ],
+      ),
     );
   }
 }
