@@ -681,83 +681,16 @@ class _ShellMovil extends ConsumerWidget {
   /// La hoja del "+": todo lo que se carga a mano, en un solo lugar.
   ///
   /// Antes había que acordarse de en qué sección se daba de alta cada cosa.
+  /// "¿Qué querés cargar?", como la pantalla del diseño, en la hoja que
+  /// sube desde el "+" de la barra.
   void _abrirCargar(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // Con la letra grande (A++) las cuatro opciones no entran en la mitad
-      // de una pantalla de telefono: la hoja crece y, si hace falta, scrollea.
       isScrollControlled: true,
-      builder: (ctx) {
-        final p = ctx.paleta;
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Cargar', style: Theme.of(ctx).textTheme.titleLarge),
-                const SizedBox(height: Esp.xs),
-                Text(
-                  'Elegí qué querés dar de alta.',
-                  style: TextStyle(fontSize: 15, color: p.tinta2),
-                ),
-                const SizedBox(height: Esp.lg),
-                for (var i = 0; i < Secciones.cargar.length; i++)
-                  Aparecer(
-                    indice: i,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: Esp.sm),
-                      child: Tarjeta(
-                        padding: const EdgeInsets.all(Esp.lg),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          context.go(Secciones.cargar[i].ruta);
-                        },
-                        child: Row(
-                          children: [
-                            IconoEnCirculo(
-                              icono: Secciones.cargar[i].icono,
-                              tamano: 44,
-                              color: p.acentoTinta,
-                              fondo: p.acento,
-                            ),
-                            const SizedBox(width: Esp.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    Secciones.cargar[i].etiqueta,
-                                    style: Theme.of(ctx).textTheme.titleMedium,
-                                  ),
-                                  Text(
-                                    Secciones.cargar[i].subtitulo,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: p.tinta2,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              color: p.tinta3,
-                              size: 24,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 820),
+      builder: (_) => _HojaCargar(shell: context),
     );
   }
 
@@ -1517,6 +1450,309 @@ class _FilaInterruptor extends StatelessWidget {
         ),
         const SizedBox(width: Esp.sm),
         Switch(value: valor, onChanged: onCambio),
+      ],
+    );
+  }
+}
+
+/// Lo que se puede dar de alta, y lo último que se cargó.
+class _HojaCargar extends ConsumerWidget {
+  const _HojaCargar({required this.shell});
+
+  /// El contexto del shell: la hoja se cierra antes de navegar.
+  final BuildContext shell;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+
+    void irA(String ruta) {
+      Navigator.pop(context);
+      shell.go(ruta);
+    }
+
+    final grandes = [
+      _OpcionCarga(
+        icono: Icons.add_rounded,
+        titulo: 'Un auto solo',
+        descripcion: 'Completás los datos de a uno, paso a paso.',
+        accion: 'Comenzar ahora',
+        destacada: true,
+        onTap: () => irA(Secciones.vehiculos.ruta),
+      ),
+      _OpcionCarga(
+        icono: Icons.description_outlined,
+        titulo: 'Varios autos de una vez',
+        descripcion:
+            'Subí una planilla, un PDF o la foto del cuaderno de inventario.',
+        accion: 'Subir lista',
+        destacada: true,
+        onTap: () => irA('${Secciones.vehiculos.ruta}?importar=1'),
+      ),
+    ];
+
+    final chicas = [
+      _OpcionCarga(
+        icono: Secciones.gastos.icono,
+        titulo: 'Un gasto',
+        descripcion: 'Reparación, lavadero, batería o trámites de gestoría.',
+        accion: 'Anotar gasto',
+        onTap: () => irA(Secciones.gastos.ruta),
+      ),
+      _OpcionCarga(
+        icono: Secciones.ventas.icono,
+        titulo: 'Una venta',
+        descripcion: 'Registrar la entrega y cerrar la operación.',
+        accion: 'Cerrar venta',
+        onTap: () => irA(Secciones.ventas.ruta),
+      ),
+      _OpcionCarga(
+        icono: Secciones.precios.icono,
+        titulo: 'Cambiar precios',
+        descripcion: 'Actualizar los valores de venta de las unidades.',
+        accion: 'Actualizar',
+        onTap: () => irA(Secciones.precios.ruta),
+      ),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '¿Qué querés cargar?',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Elegí una opción para continuar',
+            style: TextStyle(fontSize: 15, color: p.tinta2),
+          ),
+          const SizedBox(height: Esp.lg),
+
+          LayoutBuilder(
+            builder: (context, r) {
+              final enFila = r.maxWidth >= 640;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (enFila)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < grandes.length; i++) ...[
+                          if (i > 0) const SizedBox(width: Esp.md),
+                          Expanded(child: grandes[i]),
+                        ],
+                      ],
+                    )
+                  else
+                    for (var i = 0; i < grandes.length; i++) ...[
+                      if (i > 0) const SizedBox(height: Esp.md),
+                      grandes[i],
+                    ],
+                  const SizedBox(height: Esp.md),
+                  if (enFila)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < chicas.length; i++) ...[
+                          if (i > 0) const SizedBox(width: Esp.md),
+                          Expanded(child: chicas[i]),
+                        ],
+                      ],
+                    )
+                  else
+                    for (var i = 0; i < chicas.length; i++) ...[
+                      if (i > 0) const SizedBox(height: Esp.md),
+                      chicas[i],
+                    ],
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: Esp.lg),
+          _UltimoQueCargaste(onIr: irA),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una de las opciones de "¿Qué querés cargar?".
+class _OpcionCarga extends StatelessWidget {
+  const _OpcionCarga({
+    required this.icono,
+    required this.titulo,
+    required this.descripcion,
+    required this.accion,
+    required this.onTap,
+    this.destacada = false,
+  });
+
+  final IconData icono;
+  final String titulo, descripcion, accion;
+  final VoidCallback onTap;
+  final bool destacada;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.lg),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconoEnCirculo(
+            icono: icono,
+            tamano: destacada ? 52 : 44,
+            color: destacada ? p.acentoTinta : p.acentoTexto,
+            fondo: destacada ? p.acento : p.acentoLavado,
+          ),
+          const SizedBox(height: Esp.md),
+          Text(titulo, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 2),
+          Text(
+            descripcion,
+            style: TextStyle(fontSize: 15, color: p.tinta2, height: 1.35),
+          ),
+          const SizedBox(height: Esp.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: destacada
+                ? FilledButton.icon(
+                    onPressed: onTap,
+                    icon: Text(accion),
+                    label: const Icon(Icons.arrow_forward_rounded, size: 20),
+                  )
+                : TextButton.icon(
+                    onPressed: onTap,
+                    icon: Text(accion),
+                    label: const Icon(Icons.arrow_forward_rounded, size: 20),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Lo último que cargaste": la actividad reciente, con el atajo para
+/// corregir lo que haya salido mal.
+class _UltimoQueCargaste extends ConsumerWidget {
+  const _UltimoQueCargaste({required this.onIr});
+
+  final void Function(String ruta) onIr;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.paleta;
+    final inventario = ref.watch(inventarioProvider).value ?? const [];
+    final gastos = ref.watch(gastosProvider).value ?? const [];
+    final ventas = ref.watch(ventasProvider).value ?? const [];
+
+    // Una sola lista con lo último de cada cosa, ordenada por fecha.
+    final movimientos =
+        <({DateTime cuando, IconData icono, String texto, String ruta})>[
+          for (final v in inventario.take(20))
+            (
+              cuando: v.fechaIngreso,
+              icono: Icons.directions_car_filled_rounded,
+              texto: '${v.titulo}${v.patente == null ? '' : ' · ${v.patente}'}',
+              ruta: '/inventario/${v.id}',
+            ),
+          for (final g in gastos.take(20))
+            (
+              cuando: g.fecha,
+              icono: Icons.receipt_long_outlined,
+              texto:
+                  'Gasto: ${g.descripcion?.isNotEmpty == true ? g.descripcion! : g.categoria.etiqueta}'
+                  ' · ${Fmt.pesos(g.importe)}',
+              ruta: Secciones.gastos.ruta,
+            ),
+          for (final v in ventas.take(20))
+            (
+              cuando: v.fechaVenta,
+              icono: Icons.sell_outlined,
+              texto:
+                  'Venta: ${v.vehiculoTitulo ?? v.vehiculoCodigo ?? 'una unidad'}',
+              ruta: Secciones.ventas.ruta,
+            ),
+        ]..sort((a, b) => b.cuando.compareTo(a.cuando));
+
+    if (movimientos.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.schedule_rounded, size: 20, color: p.tinta2),
+            const SizedBox(width: Esp.sm),
+            Expanded(
+              child: Text(
+                'Lo último que cargaste',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            Pastilla(
+              texto: 'Actividad reciente',
+              color: p.tinta2,
+              lavado: p.superficieHundida,
+              conPunto: false,
+            ),
+          ],
+        ),
+        const SizedBox(height: Esp.sm),
+        Tarjeta(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final m in movimientos.take(4))
+                Padding(
+                  padding: const EdgeInsets.all(Esp.md),
+                  child: Row(
+                    children: [
+                      IconoEnCirculo(
+                        icono: m.icono,
+                        tamano: 40,
+                        color: p.tinta2,
+                        fondo: p.superficieHundida,
+                      ),
+                      const SizedBox(width: Esp.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.texto,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              Fmt.fecha(m.cuando),
+                              style: TextStyle(fontSize: 14, color: p.tinta3),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: Esp.sm),
+                      OutlinedButton(
+                        onPressed: () => onIr(m.ruta),
+                        child: const Text('Corregir'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }

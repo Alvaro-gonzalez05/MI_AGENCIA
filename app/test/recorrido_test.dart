@@ -248,11 +248,16 @@ void main() {
     }
     expect(find.text('Panel'), findsWidgets);
 
-    // El "+" abre la hoja de cargar.
+    // El "+" abre la hoja "¿Qué querés cargar?" del diseño.
     await tester.tap(find.byIcon(Icons.add_circle_outline_rounded).first);
     await tester.pumpAndSettle();
-    expect(find.text('Vehículos'), findsWidgets);
-    await tester.tapAt(const Offset(200, 60)); // fuera de la hoja
+    expect(find.text('¿Qué querés cargar?'), findsOneWidget);
+    expect(find.text('Un auto solo'), findsOneWidget);
+    expect(find.text('Varios autos de una vez'), findsOneWidget);
+    expect(find.text('Un gasto'), findsOneWidget);
+    // La hoja se cierra con el gesto de volver del telefono: ahora ocupa
+    // casi toda la pantalla y no queda lugar donde tocar afuera.
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     // "Más" abre las opciones, con los bloques del diseño.
