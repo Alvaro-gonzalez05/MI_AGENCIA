@@ -14,6 +14,7 @@ import 'package:mi_agencia/dominio/bcra.dart';
 import 'package:mi_agencia/dominio/agencias.dart';
 import 'package:mi_agencia/dominio/gastos.dart';
 import 'package:mi_agencia/dominio/modelos.dart';
+import 'package:mi_agencia/dominio/papeles.dart';
 import 'package:mi_agencia/dominio/precios.dart';
 import 'package:mi_agencia/dominio/ventas.dart';
 import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
@@ -241,6 +242,47 @@ Interesado _persona({
 );
 
 class _Repo implements Repositorio {
+  /// Papeles a medio cargar: es el caso real de una unidad recien ingresada,
+  /// y es el que mejor muestra el bloque.
+  @override
+  Future<PapelesVehiculo> papeles(String id) async => PapelesVehiculo(
+    vehiculoId: id,
+    titulo: true,
+    cedula: true,
+    vtv: true,
+    vtvVence: DateTime.now().add(const Duration(days: 300)),
+    patentesDeuda: 0,
+  );
+
+  @override
+  Future<List<FotoVehiculo>> fotos(String id) async => const [];
+
+  @override
+  Future<List<DetalleVehiculo>> detalles(String id) async => [
+    DetalleVehiculo(
+      id: 'd1',
+      vehiculoId: id,
+      titulo: 'Paragolpe trasero',
+      descripcion: 'Rayón de 10 cm del lado izquierdo',
+      categoria: CategoriaDetalle.estetica,
+      costoEstimado: 85000,
+    ),
+    DetalleVehiculo(
+      id: 'd2',
+      vehiculoId: id,
+      titulo: 'Aire acondicionado',
+      descripcion: 'Tarda en enfriar, revisar carga de gas',
+      categoria: CategoriaDetalle.mecanica,
+      estado: EstadoDetalle.arreglado,
+    ),
+  ];
+
+  @override
+  Future<List<Reserva>> reservas({
+    String? vehiculoId,
+    bool soloActivas = true,
+  }) async => const [];
+
   @override
   Future<List<Interesado>> interesados() async => [
     _persona(

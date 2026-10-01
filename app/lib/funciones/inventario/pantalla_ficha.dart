@@ -780,7 +780,9 @@ class _Papeles extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final asincrono = ref.watch(papelesProvider(vehiculoId));
-    final papeles = asincrono.value;
+    // Si todavia no se cargaron (o fallo la lectura), se muestran los seis
+    // puntos en gris: un bloque vacio no dice si falta el dato o la carga.
+    final papeles = asincrono.value ?? PapelesVehiculo(vehiculoId: vehiculoId);
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
@@ -792,18 +794,16 @@ class _Papeles extends ConsumerWidget {
               Expanded(
                 child: CabeceraBloque(
                   titulo: 'Papeles y documentación',
-                  descripcion: papeles == null
-                      ? 'Estado legal y libre deuda'
-                      : '${papeles.completos} de ${PapelesVehiculo.total} '
-                            'puntos resueltos',
+                  descripcion:
+                      '${papeles.completos} de ${PapelesVehiculo.total} '
+                      'puntos resueltos',
                 ),
               ),
-              if (papeles != null)
-                Pastilla(
-                  texto: papeles.completo ? 'Completos' : 'Falta cargar',
-                  color: papeles.completo ? p.bien : p.observar,
-                  lavado: papeles.completo ? p.bienLavado : p.observarLavado,
-                ),
+              Pastilla(
+                texto: papeles.completo ? 'Completos' : 'Falta cargar',
+                color: papeles.completo ? p.bien : p.observar,
+                lavado: papeles.completo ? p.bienLavado : p.observarLavado,
+              ),
             ],
           ),
           const SizedBox(height: Esp.md),
@@ -812,7 +812,7 @@ class _Papeles extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: Esp.lg),
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (papeles != null) ...[
+          else ...[
             _Punto(
               titulo: 'Título del automotor',
               listo: papeles.titulo,
@@ -1638,23 +1638,33 @@ class _FilaDetalle extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Esp.sm),
-          Wrap(
-            spacing: Esp.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Pastilla(
-                texto: d.categoria.etiqueta,
-                color: p.tinta2,
-                lavado: p.superficieHundida,
-                conPunto: false,
-              ),
-              Pastilla(texto: d.estado.etiqueta, color: color, lavado: lavado),
-              IconButton(
-                tooltip: 'Editar este detalle',
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                onPressed: onEditar,
-              ),
-            ],
+          // Flexible: "Pendiente de arreglar" junto a la categoria no entra
+          // al lado del texto en una columna angosta, y baja de linea.
+          Flexible(
+            child: Wrap(
+              spacing: Esp.sm,
+              runSpacing: Esp.xs,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Pastilla(
+                  texto: d.categoria.etiqueta,
+                  color: p.tinta2,
+                  lavado: p.superficieHundida,
+                  conPunto: false,
+                ),
+                Pastilla(
+                  texto: d.estado.etiqueta,
+                  color: color,
+                  lavado: lavado,
+                ),
+                IconButton(
+                  tooltip: 'Editar este detalle',
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  onPressed: onEditar,
+                ),
+              ],
+            ),
           ),
         ],
       ),
