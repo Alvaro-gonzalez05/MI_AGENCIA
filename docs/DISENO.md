@@ -10,11 +10,18 @@ tokens y los componentes. El segundo (28/09/2026) trajo **16 pantallas**, y
 con eso se rehicieron Inicio, Inventario, Ficha del auto, Clientes,
 Estadísticas y Simulador, más las preferencias de "Más".
 
-**Lo que todavía no está**, porque necesita datos que la app no guarda:
-fotos de las unidades, reservas, tareas y agenda, papeles y vencimientos,
-cuotas y cobranzas, el precio de revista (ArgAutos) y usuarios y permisos.
-En las pantallas donde el diseño los muestra, el lugar está hecho y dice
-qué falta, en vez de fingir que no va nada.
+**Lo que ya está:** las 16 pantallas, con sus datos de verdad —fotos de las
+unidades, papeles con vencimientos, reservas con seña y plazo, la agenda de
+tareas, el estado y los detalles de cada auto, el alta en cuatro pasos y la
+carga masiva con su panel de revisión.
+
+**Lo que falta, y por qué:**
+
+| Del diseño | Por qué todavía no |
+|---|---|
+| Buscador de precio de revista (Inicio) y su modal | La guía de precios (ArgAutos) no está conectada: las tablas de referencia existen pero están vacías |
+| Cuotas y cobranzas | Quedó para su propia tanda, con la cuenta corriente bien hecha |
+| Usuarios y permisos | Hoy el alta de usuarios la hace el administrador desde Supabase |
 
 ## Qué cambió, en una línea
 
@@ -84,6 +91,12 @@ diseño: pastilla oscura flotante con cinco lugares.
 | Estadísticas | `funciones/estadisticas/pantalla_estadisticas.dart` |
 | Simulador de financiamiento | `funciones/simulador/pantalla_simulador.dart` |
 | Más opciones | la hoja de `ui/shell/shell_adaptativo.dart` |
+| ¿Qué querés cargar? | la hoja del "+" en `ui/shell/shell_adaptativo.dart` |
+| Cargar auto (4 pasos) | `funciones/vehiculos/formulario_vehiculo.dart` |
+| Cargar varios autos / revisar | `funciones/vehiculos/importar_vehiculos.dart` |
+| Nueva tarea | `funciones/panel/nueva_tarea.dart` |
+| Reservar unidad | `funciones/inventario/reservar_unidad.dart` |
+| Informe crediticio A4 | `funciones/interesados/informe_pdf.dart` |
 
 El "Más" del diseño es una pantalla entera; en la app quedó como hoja que
 sube desde la barra inferior, porque es lo que el cliente pidió mantener.
