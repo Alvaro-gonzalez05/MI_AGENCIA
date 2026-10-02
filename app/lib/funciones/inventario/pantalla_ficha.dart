@@ -405,21 +405,24 @@ class _FotoGrande extends ConsumerWidget {
         children: [
           GestureDetector(
             onTap: () => _verGrande(context, fotos, portada),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(Curva.lg),
-              child: Image.network(
-                portada.url,
-                width: ancho ?? double.infinity,
-                height: alto,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
+            child: Hero(
+              tag: 'foto-${vehiculo.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Curva.lg),
+                child: Image.network(
+                  portada.url,
                   width: ancho ?? double.infinity,
                   height: alto,
-                  color: p.superficieHundida,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    color: p.tinta3,
-                    size: 32,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: ancho ?? double.infinity,
+                    height: alto,
+                    color: p.superficieHundida,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: p.tinta3,
+                      size: 32,
+                    ),
                   ),
                 ),
               ),

@@ -6,6 +6,49 @@ import '../core/tema/colores.dart';
 import '../core/tema/tema.dart';
 import '../datos/repositorio.dart';
 
+/// Hace que lo que se toca se hunda un poquito.
+///
+/// Es la respuesta mas barata que existe a "¿me tomó el toque?": el dedo
+/// tapa el boton y la unica senal que queda es que la cosa se mueva. Dura
+/// menos de lo que tarda en levantarse el dedo, asi que no retrasa nada.
+class Pulsable extends StatefulWidget {
+  const Pulsable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.escala = 0.96,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final double escala;
+
+  @override
+  State<Pulsable> createState() => _PulsableState();
+}
+
+class _PulsableState extends State<Pulsable> {
+  bool _presionado = false;
+
+  void _marcar(bool v) {
+    if (widget.onTap == null) return;
+    if (_presionado != v) setState(() => _presionado = v);
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (_) => _marcar(true),
+    onPointerUp: (_) => _marcar(false),
+    onPointerCancel: (_) => _marcar(false),
+    child: AnimatedScale(
+      scale: _presionado ? widget.escala : 1,
+      duration: Duracion.rapida,
+      curve: Curves.easeOut,
+      child: widget.child,
+    ),
+  );
+}
+
 /// Pastilla de estado. Es el componente mas repetido de la app: aparece en
 /// cada fila del inventario, en cada ficha y en cada interesado.
 class Pastilla extends StatelessWidget {
@@ -427,70 +470,73 @@ class ChipSeleccion extends StatelessWidget {
       side: BorderSide(color: borde, width: 1.5),
     );
 
-    return AnimatedContainer(
-      duration: Duracion.media,
-      curve: Curves.easeOutCubic,
-      decoration: ShapeDecoration(color: fondo, shape: forma),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: forma,
-          // Sin `alignment` ni Center: estirarian el chip hasta las
-          // constraints maximas y en movil cada uno ocuparia todo el ancho.
-          child: ConstrainedBox(
-            // 48: el toque minimo comodo que pide el diseno.
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Esp.lg),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (c != null) ...[
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: Esp.sm),
-                  ],
-                  if (icono != null) ...[
-                    Icon(icono, size: 20, color: activo ? tinta : p.tinta3),
-                    const SizedBox(width: Esp.sm - 2),
-                  ],
-                  Text(
-                    etiqueta,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
-                      color: tinta,
-                    ),
-                  ),
-                  if (contador != null) ...[
-                    const SizedBox(width: Esp.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Esp.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: fondoContador,
-                        borderRadius: BorderRadius.circular(Curva.completo),
-                      ),
-                      child: Text(
-                        '$contador',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: tinta,
+    return Pulsable(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: Duracion.media,
+        curve: Curves.easeOutCubic,
+        decoration: ShapeDecoration(color: fondo, shape: forma),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: forma,
+            // Sin `alignment` ni Center: estirarian el chip hasta las
+            // constraints maximas y en movil cada uno ocuparia todo el ancho.
+            child: ConstrainedBox(
+              // 48: el toque minimo comodo que pide el diseno.
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Esp.lg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (c != null) ...[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: c,
+                          shape: BoxShape.circle,
                         ),
                       ),
+                      const SizedBox(width: Esp.sm),
+                    ],
+                    if (icono != null) ...[
+                      Icon(icono, size: 20, color: activo ? tinta : p.tinta3),
+                      const SizedBox(width: Esp.sm - 2),
+                    ],
+                    Text(
+                      etiqueta,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
+                        color: tinta,
+                      ),
                     ),
+                    if (contador != null) ...[
+                      const SizedBox(width: Esp.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Esp.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: fondoContador,
+                          borderRadius: BorderRadius.circular(Curva.completo),
+                        ),
+                        child: Text(
+                          '$contador',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: tinta,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -699,15 +745,32 @@ class TarjetaMetrica extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    valor,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: TemaApp.mono,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.8,
-                      color: tinta,
+                  // Cuando el numero cambia (se cargo un gasto, entro una
+                  // venta) la cifra se cruza en vez de saltar: asi se nota
+                  // que cambio sin tener que mirarla fijo.
+                  child: AnimatedSwitcher(
+                    duration: Duracion.media,
+                    transitionBuilder: (hijo, animacion) => FadeTransition(
+                      opacity: animacion,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.25),
+                          end: Offset.zero,
+                        ).animate(animacion),
+                        child: hijo,
+                      ),
+                    ),
+                    child: Text(
+                      valor,
+                      key: ValueKey(valor),
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontFamily: TemaApp.mono,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.8,
+                        color: tinta,
+                      ),
                     ),
                   ),
                 ),
@@ -1062,6 +1125,7 @@ class FotoPortada extends ConsumerWidget {
     this.radio = Curva.md,
     this.iconoVacio = Icons.directions_car_filled_rounded,
     this.textoVacio,
+    this.conHero = true,
   });
 
   final String vehiculoId;
@@ -1072,8 +1136,18 @@ class FotoPortada extends ConsumerWidget {
   final IconData iconoVacio;
   final String? textoVacio;
 
+  /// La foto viaja de la lista a la ficha. Se apaga cuando hay dos de la
+  /// misma unidad en pantalla (la galeria), porque dos Hero con la misma
+  /// etiqueta rompen la animacion.
+  final bool conHero;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hijo = _contenido(context, ref);
+    return conHero ? Hero(tag: 'foto-$vehiculoId', child: hijo) : hijo;
+  }
+
+  Widget _contenido(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final fotos = ref.watch(fotosProvider(vehiculoId)).value ?? const [];
     final portada = fotos.isEmpty

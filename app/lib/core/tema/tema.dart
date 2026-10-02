@@ -221,20 +221,37 @@ abstract final class TemaApp {
       ),
 
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: p.acento,
-          foregroundColor: p.acentoTinta,
-          disabledBackgroundColor: p.bordeFuerte,
-          disabledForegroundColor: p.tinta3,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Esp.xl,
-            vertical: Esp.lg,
-          ),
-          shape: _boton,
-          minimumSize: _altoBoton,
-          textStyle: textoBoton,
-        ),
+        style:
+            FilledButton.styleFrom(
+              backgroundColor: p.acento,
+              foregroundColor: p.acentoTinta,
+              disabledBackgroundColor: p.bordeFuerte,
+              disabledForegroundColor: p.tinta3,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Esp.xl,
+                vertical: Esp.lg,
+              ),
+              shape: _boton,
+              minimumSize: _altoBoton,
+              textStyle: textoBoton,
+              // Los 120 ms son el limite de lo que se percibe como
+              // instantaneo: alcanza para que el color viaje y no para que
+              // el boton se sienta lento.
+              animationDuration: Duracion.rapida,
+            ).copyWith(
+              // Al pasar el mouse el boton se aclara, y al apretarlo se
+              // oscurece: dos estados distintos, no el mismo gris para todo.
+              overlayColor: WidgetStateProperty.resolveWith((estados) {
+                if (estados.contains(WidgetState.pressed)) {
+                  return p.acentoTinta.withValues(alpha: 0.16);
+                }
+                if (estados.contains(WidgetState.hovered)) {
+                  return p.acentoTinta.withValues(alpha: 0.07);
+                }
+                return null;
+              }),
+            ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -253,17 +270,29 @@ abstract final class TemaApp {
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: p.tinta,
-          side: BorderSide(color: p.tinta, width: 1.6),
-          padding: const EdgeInsets.symmetric(
-            horizontal: Esp.lg + 2,
-            vertical: Esp.md,
-          ),
-          minimumSize: _altoBoton,
-          shape: _boton,
-          textStyle: textoBoton.copyWith(fontWeight: FontWeight.w500),
-        ),
+        style:
+            OutlinedButton.styleFrom(
+              foregroundColor: p.tinta,
+              side: BorderSide(color: p.tinta, width: 1.6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Esp.lg + 2,
+                vertical: Esp.md,
+              ),
+              minimumSize: _altoBoton,
+              shape: _boton,
+              textStyle: textoBoton.copyWith(fontWeight: FontWeight.w500),
+              animationDuration: Duracion.rapida,
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith((estados) {
+                if (estados.contains(WidgetState.pressed)) {
+                  return p.superficieHover;
+                }
+                if (estados.contains(WidgetState.hovered)) {
+                  return p.superficieHundida;
+                }
+                return null;
+              }),
+            ),
       ),
 
       textButtonTheme: TextButtonThemeData(
