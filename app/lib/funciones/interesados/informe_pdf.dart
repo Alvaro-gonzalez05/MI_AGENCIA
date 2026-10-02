@@ -42,7 +42,7 @@ abstract final class InformeCrediticio {
             ctx.pageNumber == 1 ? pw.SizedBox() : _encabezadoCorto(interesado),
         footer: (ctx) => _pie(ctx, generadoEl, generadoPor),
         build: (ctx) => [
-          _portada(agencia, generadoEl),
+          _portada(agencia, generadoEl, numeroDe(generadoEl, interesado.id)),
           pw.SizedBox(height: 18),
           _veredicto(interesado),
           pw.SizedBox(height: 16),
@@ -100,7 +100,15 @@ abstract final class InformeCrediticio {
   // Bloques
   // ------------------------------------------------------------------
 
-  static pw.Widget _portada(String? agencia, DateTime cuando) {
+  /// El número del informe: año y día del año. Sirve para nombrarlo por
+  /// teléfono ("mandame el 2026-0142") sin exponer ningún id interno.
+  static String numeroDe(DateTime cuando, String semilla) {
+    final dia = cuando.difference(DateTime(cuando.year, 1, 1)).inDays + 1;
+    final sufijo = (semilla.hashCode.abs() % 100).toString().padLeft(2, '0');
+    return 'INF-${cuando.year}-${dia.toString().padLeft(3, '0')}$sufijo';
+  }
+
+  static pw.Widget _portada(String? agencia, DateTime cuando, String numero) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -122,7 +130,7 @@ abstract final class InformeCrediticio {
                 ),
                 pw.SizedBox(height: 6),
                 pw.Text(
-                  'Informe de situación crediticia',
+                  'Informe crediticio del cliente',
                   style: pw.TextStyle(
                     fontSize: 21,
                     fontWeight: pw.FontWeight.bold,
@@ -150,17 +158,19 @@ abstract final class InformeCrediticio {
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    'EMITIDO',
+                    'N.° $numero',
                     style: pw.TextStyle(
-                      fontSize: 7,
-                      letterSpacing: 1.2,
-                      color: _tinta3,
+                      fontSize: 9,
+                      letterSpacing: 0.6,
+                      color: _tinta,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
+                  pw.SizedBox(height: 2),
                   pw.Text(
-                    DateFormat("d 'de' MMMM 'de' y", 'es_AR').format(cuando),
-                    style: const pw.TextStyle(fontSize: 9, color: _tinta2),
+                    'Emitido el '
+                    '${DateFormat("d 'de' MMMM 'de' y", 'es_AR').format(cuando)}',
+                    style: const pw.TextStyle(fontSize: 8.5, color: _tinta2),
                   ),
                 ],
               ),
@@ -296,6 +306,7 @@ abstract final class InformeCrediticio {
   }
 
   static pw.Widget _datosPersonales(Interesado i) => _seccion(
+    numero: 1,
     'Datos de la persona',
     _grilla([
       ('Nombre', i.nombre),
@@ -314,6 +325,7 @@ abstract final class InformeCrediticio {
   );
 
   static pw.Widget _laOperacion(Interesado i) => _seccion(
+    numero: 2,
     'La operación',
     pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -352,6 +364,7 @@ abstract final class InformeCrediticio {
   );
 
   static pw.Widget _resumenBcra(ConsultaBcra c) => _seccion(
+    numero: 3,
     'Situación en el BCRA',
     pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -534,6 +547,7 @@ abstract final class InformeCrediticio {
   static const _filasQueEntranEnUnaHoja = 12;
 
   static pw.Widget _entidades(ConsultaBcra c) => _seccion(
+    numero: 4,
     'Detalle por entidad',
     juntos: c.entidades.length <= _filasQueEntranEnUnaHoja,
     pw.TableHelper.fromTextArray(
@@ -659,6 +673,7 @@ abstract final class InformeCrediticio {
 
   static pw.Widget _cheques(ConsultaBcra c) => c.cheques.isEmpty
       ? _seccion(
+          numero: 5,
           'Cheques rechazados',
           juntos: true,
           pw.Text(
@@ -667,6 +682,7 @@ abstract final class InformeCrediticio {
           ),
         )
       : _seccion(
+          numero: 5,
           'Cheques rechazados',
           juntos: c.cheques.length <= _filasQueEntranEnUnaHoja,
           pw.TableHelper.fromTextArray(
@@ -834,19 +850,57 @@ abstract final class InformeCrediticio {
     String titulo,
     pw.Widget cuerpo, {
     bool juntos = true,
+    int? numero,
   }) {
+    // El cuadradito con el número es del diseño, y sirve: en un informe que
+    // se lee por teléfono ("mirá el punto 3") el número es la referencia.
+    final encabezado = pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (numero != null) ...[
+          pw.Container(
+            width: 14,
+            height: 14,
+            alignment: pw.Alignment.center,
+            decoration: pw.BoxDecoration(
+              color: _acento,
+              borderRadius: pw.BorderRadius.circular(3),
+            ),
+            child: pw.Text(
+              '$numero',
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                fontWeight: pw.FontWeight.bold,
+                color: _tinta,
+              ),
+            ),
+          ),
+          pw.SizedBox(width: 6),
+        ],
+        pw.Expanded(
+          child: pw.Text(
+            titulo.toUpperCase(),
+            style: pw.TextStyle(
+              fontSize: 8.5,
+              letterSpacing: 1.3,
+              fontWeight: pw.FontWeight.bold,
+              color: numero == null ? _tinta3 : _tinta,
+            ),
+          ),
+        ),
+      ],
+    );
+
     final columna = pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(
-          titulo.toUpperCase(),
-          style: pw.TextStyle(
-            fontSize: 8.5,
-            letterSpacing: 1.3,
-            fontWeight: pw.FontWeight.bold,
-            color: _tinta3,
+        encabezado,
+        if (numero != null)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 4),
+            height: 0.8,
+            color: _borde,
           ),
-        ),
         pw.SizedBox(height: 7),
         cuerpo,
       ],
