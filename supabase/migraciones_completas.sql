@@ -3825,3 +3825,1240 @@ left join public.clientes c      on c.id = o.cliente_id
 left join public.vehiculos v     on v.id = t.vehiculo_id;
 
 alter view public.v_tareas set (security_invoker = on);
+
+
+-- >>>>>>>>>>>>>>>>>>>>  0027_cuotas_y_cobranzas.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+--  MI AGENCIA — 0027: planes de pago, cuotas y cobranzas
+--
+--  El diseño muestra esto en tres lugares: "3 clientes atrasados en cuotas"
+--  en el Inicio, "Debe la cuota 4 de su plan: $ 350.000 · 12 días de atraso"
+--  en lo que hay para atender hoy, y la deuda del cliente en su ficha.
+--
+--  La agencia financia de su bolsillo: el auto sale del salón y la plata
+--  entra en cuotas durante un año. Hasta ahora eso vivía en un cuaderno, y
+--  el cuaderno no avisa quién se atrasó. Por eso el plan se guarda con sus
+--  cuotas una por una: sin las cuotas no hay vencimiento, y sin vencimiento
+--  no hay aviso.
+--
+--  Los pagos son su propia tabla y no un campo "pagado" en la cuota: pasa
+--  todo el tiempo que alguien pague la mitad de una cuota, o dos cuotas
+--  juntas, y hay que poder decir cuándo entró cada peso.
+-- =====================================================================
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'estado_plan') then
+    create type estado_plan as enum ('activo','terminado','cancelado');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'medio_pago') then
+    create type medio_pago as enum
+      ('efectivo','transferencia','debito','credito','cheque','otro');
+  end if;
+end $$;
+
+create table if not exists public.planes_pago (
+  id               uuid primary key default gen_random_uuid(),
+  agencia_id       uuid not null references public.agencias(id) on delete cascade,
+
+  -- A quién se le financió. La oportunidad es opcional porque muchas veces
+  -- el plan se arma con alguien que todavía no está cargado como cliente.
+  oportunidad_id   uuid references public.oportunidades(id) on delete set null,
+  cliente_nombre   text not null,
+  cliente_telefono text,
+
+  -- Sobre qué operación. También opcional: hay planes de una venta vieja
+  -- que nunca se cargó en el sistema.
+  venta_id         uuid references public.ventas(id) on delete set null,
+  vehiculo_id      uuid references public.vehiculos(id) on delete set null,
+
+  monto_financiado numeric(14,2) not null,
+  cantidad_cuotas  smallint not null,
+  sistema          text not null default 'frances',
+  tna              numeric(6,4) not null default 0,
+
+  estado           estado_plan not null default 'activo',
+  notas            text,
+
+  created_by       uuid references auth.users(id) on delete set null,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now(),
+
+  constraint planes_monto_positivo check (monto_financiado > 0),
+  constraint planes_cuotas_validas check (cantidad_cuotas between 1 and 120),
+  constraint planes_sistema_valido
+    check (sistema in ('frances','aleman','directo','global'))
+);
+
+create index if not exists planes_agencia_idx on public.planes_pago (agencia_id);
+create index if not exists planes_cliente_idx on public.planes_pago (oportunidad_id);
+
+create table if not exists public.cuotas (
+  id          uuid primary key default gen_random_uuid(),
+  plan_id     uuid not null references public.planes_pago(id) on delete cascade,
+  agencia_id  uuid not null references public.agencias(id) on delete cascade,
+
+  numero      smallint not null,
+  vence_el    date not null,
+  importe     numeric(14,2) not null,
+
+  created_at  timestamptz not null default now(),
+
+  unique (plan_id, numero),
+  constraint cuotas_importe_positivo check (importe > 0)
+);
+
+create index if not exists cuotas_vencimiento_idx
+  on public.cuotas (agencia_id, vence_el);
+
+create table if not exists public.pagos (
+  id          uuid primary key default gen_random_uuid(),
+  agencia_id  uuid not null references public.agencias(id) on delete cascade,
+  cuota_id    uuid not null references public.cuotas(id) on delete cascade,
+
+  fecha       date not null default current_date,
+  importe     numeric(14,2) not null,
+  medio       medio_pago not null default 'efectivo',
+  notas       text,
+
+  created_by  uuid references auth.users(id) on delete set null,
+  created_at  timestamptz not null default now(),
+
+  constraint pagos_importe_positivo check (importe > 0)
+);
+
+create index if not exists pagos_cuota_idx on public.pagos (cuota_id);
+create index if not exists pagos_fecha_idx on public.pagos (agencia_id, fecha);
+
+-- ---------------------------------------------------------------------
+--  Permisos
+-- ---------------------------------------------------------------------
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['planes_pago','cuotas','pagos'] loop
+    execute format('alter table public.%I enable row level security', t);
+
+    execute format('drop policy if exists %I on public.%I', t || '_select', t);
+    execute format($f$create policy %I on public.%I for select to authenticated
+                      using (public.puede_ver_agencia(agencia_id))$f$,
+                   t || '_select', t);
+
+    execute format('drop policy if exists %I on public.%I', t || '_insert', t);
+    execute format($f$create policy %I on public.%I for insert to authenticated
+                      with check (public.puede_editar(agencia_id))$f$,
+                   t || '_insert', t);
+
+    execute format('drop policy if exists %I on public.%I', t || '_update', t);
+    execute format($f$create policy %I on public.%I for update to authenticated
+                      using (public.puede_editar(agencia_id))
+                      with check (public.puede_editar(agencia_id))$f$,
+                   t || '_update', t);
+
+    execute format('drop policy if exists %I on public.%I', t || '_delete', t);
+    execute format($f$create policy %I on public.%I for delete to authenticated
+                      using (public.puede_editar(agencia_id))$f$,
+                   t || '_delete', t);
+  end loop;
+end $$;
+
+drop trigger if exists planes_pago_touch on public.planes_pago;
+create trigger planes_pago_touch
+  before update on public.planes_pago
+  for each row execute function public.tocar_updated_at();
+
+-- ---------------------------------------------------------------------
+--  Armar el plan: las cuotas se calculan una sola vez, al crearlo
+-- ---------------------------------------------------------------------
+--  El cálculo está en la base y no en la app para que el día que se cargue
+--  un plan desde otro lado (una importación, un script) las cuotas salgan
+--  iguales. Es el mismo criterio que usa el simulador.
+create or replace function public.generar_cuotas(p_plan uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  pl        public.planes_pago;
+  i         integer;
+  tasa      numeric;
+  cuota     numeric;
+  capital   numeric;
+  saldo     numeric;
+  interes   numeric;
+  primera   date;
+  creadas   integer := 0;
+begin
+  select * into pl from public.planes_pago where id = p_plan;
+  if not found then
+    raise exception 'El plan % no existe', p_plan;
+  end if;
+
+  delete from public.cuotas where plan_id = p_plan;
+
+  tasa    := pl.tna / 12;
+  saldo   := pl.monto_financiado;
+  -- La primera vence al mes de armado: es lo que se acuerda de palabra.
+  primera := (pl.created_at::date + interval '1 month')::date;
+
+  for i in 1..pl.cantidad_cuotas loop
+    case pl.sistema
+      when 'frances' then
+        cuota := case
+                   when tasa = 0 then pl.monto_financiado / pl.cantidad_cuotas
+                   else pl.monto_financiado * tasa
+                        * power(1 + tasa, pl.cantidad_cuotas)
+                        / (power(1 + tasa, pl.cantidad_cuotas) - 1)
+                 end;
+      when 'aleman' then
+        capital := pl.monto_financiado / pl.cantidad_cuotas;
+        interes := saldo * tasa;
+        cuota   := capital + interes;
+        saldo   := saldo - capital;
+      when 'directo' then
+        cuota := (pl.monto_financiado
+                  + pl.monto_financiado * tasa * pl.cantidad_cuotas)
+                 / pl.cantidad_cuotas;
+      when 'global' then
+        -- Todo al final: las cuotas intermedias no existen.
+        cuota := case
+                   when i = pl.cantidad_cuotas
+                   then pl.monto_financiado
+                        * power(1 + tasa, pl.cantidad_cuotas)
+                   else 0
+                 end;
+      else
+        cuota := pl.monto_financiado / pl.cantidad_cuotas;
+    end case;
+
+    if cuota > 0 then
+      insert into public.cuotas (plan_id, agencia_id, numero, vence_el, importe)
+      values (
+        pl.id,
+        pl.agencia_id,
+        i,
+        (primera + make_interval(months => i - 1))::date,
+        round(cuota, 2)
+      );
+      creadas := creadas + 1;
+    end if;
+  end loop;
+
+  return creadas;
+end $$;
+
+grant execute on function public.generar_cuotas(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
+--  La cuenta corriente, lista para leer
+-- ---------------------------------------------------------------------
+create or replace view public.v_cuotas as
+select
+  c.*,
+  pl.cliente_nombre,
+  pl.cliente_telefono,
+  pl.oportunidad_id,
+  pl.vehiculo_id,
+  pl.estado           as estado_plan,
+  coalesce(p.pagado, 0)                       as pagado,
+  c.importe - coalesce(p.pagado, 0)           as saldo,
+  p.ultimo_pago,
+  (c.importe - coalesce(p.pagado, 0)) <= 0.01 as saldada,
+  case
+    when (c.importe - coalesce(p.pagado, 0)) <= 0.01 then 0
+    else greatest(0, current_date - c.vence_el)
+  end as dias_de_atraso
+from public.cuotas c
+join public.planes_pago pl on pl.id = c.plan_id
+left join lateral (
+  select sum(importe) as pagado, max(fecha) as ultimo_pago
+    from public.pagos g
+   where g.cuota_id = c.id
+) p on true;
+
+alter view public.v_cuotas set (security_invoker = on);
+
+--  Una fila por plan: lo que debe, lo que ya pagó y cuánto hace que se
+--  atrasó. Es lo que mira el Inicio y la ficha del cliente.
+create or replace view public.v_planes as
+select
+  pl.*,
+  count(c.*)                                        as cuotas_totales,
+  count(*) filter (where c.saldada)                 as cuotas_pagas,
+  count(*) filter (where not c.saldada
+                     and c.dias_de_atraso > 0)      as cuotas_vencidas,
+  coalesce(sum(c.importe), 0)                       as total_plan,
+  coalesce(sum(c.pagado), 0)                        as total_pagado,
+  coalesce(sum(c.saldo), 0)                         as deuda,
+  coalesce(sum(c.saldo) filter (where c.dias_de_atraso > 0), 0) as deuda_vencida,
+  max(c.dias_de_atraso)                             as peor_atraso,
+  min(c.vence_el) filter (where not c.saldada)      as proximo_vencimiento
+from public.planes_pago pl
+left join public.v_cuotas c on c.plan_id = pl.id
+group by pl.id;
+
+alter view public.v_planes set (security_invoker = on);
+
+-- ---------------------------------------------------------------------
+--  Un plan sin cuotas pendientes se da por terminado solo
+-- ---------------------------------------------------------------------
+create or replace function public.cerrar_plan_si_termino()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan uuid;
+  falta  numeric;
+begin
+  select c.plan_id into v_plan
+    from public.cuotas c
+   where c.id = coalesce(new.cuota_id, old.cuota_id);
+
+  select coalesce(sum(saldo), 0) into falta
+    from public.v_cuotas where plan_id = v_plan;
+
+  update public.planes_pago
+     set estado = case when falta <= 0.01 then 'terminado'::estado_plan
+                       else 'activo'::estado_plan end
+   where id = v_plan
+     and estado <> 'cancelado';
+
+  return null;
+end $$;
+
+drop trigger if exists pagos_cierran_plan on public.pagos;
+create trigger pagos_cierran_plan
+  after insert or update or delete on public.pagos
+  for each row execute function public.cerrar_plan_si_termino();
+
+
+-- >>>>>>>>>>>>>>>>>>>>  0028_revista_cosechador.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+--  MI AGENCIA — 0028: el valor de revista, de a poco y solo lo que se usa
+--
+--  ArgAutos (argautos.com/api/v1) publica los precios de la guía gratis y
+--  sin clave, pero con dos límites: 3 consultas por minuto y 30 por día.
+--  Con eso, bajar el catálogo entero es imposible —son cientos de miles de
+--  combinaciones de versión y año— y tampoco haría falta: a una agencia le
+--  importa el precio de SUS autos.
+--
+--  Entonces el proceso trabaja a pedido: cuando entra una unidad, se encola;
+--  el cosechador gasta las consultas del día resolviendo esa cola, y una vez
+--  por mes vuelve a encolar el stock vigente para refrescar los precios.
+--
+--  Dos consultas por unidad nueva:
+--    1. `search`      → qué versión de la guía es, y su id.
+--    2. `valuations`  → todos los años de esa versión, de una sola vez.
+--  Y una sola por mes para refrescar.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+--  1. El catálogo deja de exigir la jerarquía completa
+-- ---------------------------------------------------------------------
+--  Antes una versión necesitaba su modelo y su marca ya cargados, lo que
+--  obligaba a bajar el catálogo de arriba hacia abajo (3 consultas antes de
+--  la primera versión). Como ahora se resuelve de a una unidad por
+--  búsqueda, la versión guarda los nombres y el modelo queda opcional.
+alter table public.ref_versiones
+  alter column modelo_id drop not null;
+
+alter table public.ref_versiones
+  add column if not exists marca_nombre  text,
+  add column if not exists modelo_nombre text;
+
+comment on column public.ref_versiones.marca_nombre is
+  'Marca tal como la devuelve la guía. Se guarda acá porque una versión se '
+  'puede resolver por búsqueda, sin haber bajado su marca ni su modelo.';
+
+-- ---------------------------------------------------------------------
+--  2. La cola de trabajo
+-- ---------------------------------------------------------------------
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'tarea_revista') then
+    create type tarea_revista as enum ('buscar','valuar');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'estado_tarea_revista') then
+    create type estado_tarea_revista as enum
+      ('pendiente','hecha','sin_resultado','error');
+  end if;
+end $$;
+
+create table if not exists public.ref_cola (
+  id           bigserial primary key,
+  tipo         tarea_revista not null,
+
+  -- Para 'buscar': qué texto mandarle a la guía y de qué año es la unidad.
+  consulta     text,
+  anio         smallint,
+
+  -- Para 'valuar': qué versión refrescar.
+  version_id   integer,
+
+  -- A qué unidad sirve este trabajo. Si la unidad se borra, el trabajo
+  -- deja de tener sentido.
+  vehiculo_id  uuid references public.vehiculos(id) on delete cascade,
+
+  -- Más bajo, antes. Una unidad recién cargada vale más que un refresco
+  -- mensual: el vendedor la está mirando ahora.
+  prioridad    smallint not null default 5,
+  intentos     smallint not null default 0,
+  estado       estado_tarea_revista not null default 'pendiente',
+  detalle      text,
+
+  created_at   timestamptz not null default now(),
+  procesado_at timestamptz
+);
+
+create index if not exists ref_cola_pendientes_idx
+  on public.ref_cola (prioridad, created_at)
+  where estado = 'pendiente';
+
+-- No encolar dos veces lo mismo mientras siga pendiente.
+create unique index if not exists ref_cola_sin_repetidos
+  on public.ref_cola (tipo, coalesce(consulta, ''), coalesce(version_id, 0), coalesce(anio, 0))
+  where estado = 'pendiente';
+
+--  Cuántas consultas gastamos hoy. La guía corta a 30; se para en 28 para
+--  dejar aire a una consulta manual desde la app.
+create table if not exists public.ref_api_uso (
+  fecha      date primary key default current_date,
+  consultas  integer not null default 0,
+  limite     integer not null default 28
+);
+
+alter table public.ref_cola    enable row level security;
+alter table public.ref_api_uso enable row level security;
+
+--  Los datos de referencia son de lectura para cualquiera que entró; solo
+--  el backend escribe (las funciones son security definer).
+drop policy if exists ref_cola_select on public.ref_cola;
+create policy ref_cola_select on public.ref_cola
+  for select to authenticated using (true);
+
+drop policy if exists ref_api_uso_select on public.ref_api_uso;
+create policy ref_api_uso_select on public.ref_api_uso
+  for select to authenticated using (true);
+
+-- ---------------------------------------------------------------------
+--  3. Encolar una unidad
+-- ---------------------------------------------------------------------
+create or replace function public.encolar_revista(p_vehiculo uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v public.vehiculos;
+begin
+  select * into v from public.vehiculos where id = p_vehiculo;
+  if not found or v.deleted_at is not null then
+    return;
+  end if;
+
+  -- Ya sabemos qué versión es: alcanza con pedir sus precios.
+  if v.ref_version_id is not null then
+    insert into public.ref_cola (tipo, version_id, anio, vehiculo_id)
+    values ('valuar', v.ref_version_id, v.anio, v.id)
+    on conflict do nothing;
+    return;
+  end if;
+
+  insert into public.ref_cola (tipo, consulta, anio, vehiculo_id)
+  values (
+    'buscar',
+    trim(both ' ' from concat_ws(' ', v.marca, v.modelo, v.version)),
+    v.anio,
+    v.id
+  )
+  on conflict do nothing;
+end $$;
+
+grant execute on function public.encolar_revista(uuid) to authenticated;
+
+create or replace function public.encolar_revista_al_guardar()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Solo cuando cambia lo que define el precio.
+  if tg_op = 'UPDATE'
+     and new.marca is not distinct from old.marca
+     and new.modelo is not distinct from old.modelo
+     and new.version is not distinct from old.version
+     and new.anio is not distinct from old.anio
+     and new.ref_version_id is not distinct from old.ref_version_id then
+    return null;
+  end if;
+
+  perform public.encolar_revista(new.id);
+  return null;
+end $$;
+
+drop trigger if exists vehiculos_encolan_revista on public.vehiculos;
+create trigger vehiculos_encolan_revista
+  after insert or update on public.vehiculos
+  for each row execute function public.encolar_revista_al_guardar();
+
+-- ---------------------------------------------------------------------
+--  4. Guardar lo que contesta la guía
+-- ---------------------------------------------------------------------
+--  Separado de la llamada HTTP para poder probarlo sin internet.
+create or replace function public.guardar_busqueda_revista(
+  p_tarea     bigint,
+  p_resultado jsonb
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  t        public.ref_cola;
+  elegido  jsonb;
+  mejor    numeric := -1;
+  fila     jsonb;
+  puntaje  numeric;
+begin
+  select * into t from public.ref_cola where id = p_tarea;
+  if not found then
+    return 0;
+  end if;
+
+  -- La guía devuelve varias versiones parecidas. Se queda la que más se
+  -- parece al texto que se buscó: comparar a ojo es justamente lo que no
+  -- se puede hacer cuatro mil veces por mes.
+  for fila in select * from jsonb_array_elements(coalesce(p_resultado, '[]'::jsonb))
+  loop
+    puntaje := similarity(
+      lower(coalesce(fila->>'version_raw', fila->>'version', '')),
+      lower(coalesce(t.consulta, ''))
+    );
+    -- Un empate se rompe por el año: la guía trae el año de su precio.
+    if t.anio is not null and (fila->>'price_year') is not null
+       and (fila->>'price_year')::int = t.anio then
+      puntaje := puntaje + 0.15;
+    end if;
+
+    if puntaje > mejor then
+      mejor := puntaje;
+      elegido := fila;
+    end if;
+  end loop;
+
+  if elegido is null then
+    update public.ref_cola
+       set estado = 'sin_resultado',
+           procesado_at = now(),
+           detalle = 'La guía no devolvió ninguna versión parecida.'
+     where id = p_tarea;
+    return 0;
+  end if;
+
+  insert into public.ref_versiones (id, nombre, nombre_raw, marca_nombre, modelo_nombre)
+  values (
+    (elegido->>'version_id')::int,
+    coalesce(elegido->>'version', ''),
+    elegido->>'version_raw',
+    elegido->>'brand',
+    elegido->>'model'
+  )
+  on conflict (id) do update
+    set nombre        = excluded.nombre,
+        nombre_raw    = excluded.nombre_raw,
+        marca_nombre  = excluded.marca_nombre,
+        modelo_nombre = excluded.modelo_nombre;
+
+  -- Se le pega la versión a la unidad que disparó la búsqueda.
+  if t.vehiculo_id is not null then
+    update public.vehiculos
+       set ref_version_id = (elegido->>'version_id')::int
+     where id = t.vehiculo_id
+       and ref_version_id is null;
+  end if;
+
+  update public.ref_cola
+     set estado = 'hecha',
+         procesado_at = now(),
+         detalle = format('%s (parecido %s)',
+                          elegido->>'version_raw',
+                          round(mejor, 2))
+   where id = p_tarea;
+
+  -- Y ahora sí, a pedir sus precios.
+  insert into public.ref_cola (tipo, version_id, anio, vehiculo_id, prioridad)
+  values ('valuar', (elegido->>'version_id')::int, t.anio, t.vehiculo_id, 3)
+  on conflict do nothing;
+
+  return (elegido->>'version_id')::int;
+end $$;
+
+create or replace function public.guardar_valuaciones_revista(
+  p_tarea     bigint,
+  p_resultado jsonb,
+  p_tc        numeric default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  t      public.ref_cola;
+  fila   jsonb;
+  cuenta integer := 0;
+begin
+  select * into t from public.ref_cola where id = p_tarea;
+  if not found then
+    return 0;
+  end if;
+
+  for fila in select * from jsonb_array_elements(coalesce(p_resultado, '[]'::jsonb))
+  loop
+    insert into public.ref_precios (version_id, anio, precio_ars, precio_usd, tc_usado, actualizado_at)
+    values (
+      coalesce((fila->>'version_id')::int, t.version_id),
+      (fila->>'year')::smallint,
+      (fila->>'price')::numeric,
+      case when p_tc > 0 then (fila->>'price')::numeric / p_tc end,
+      p_tc,
+      now()
+    )
+    on conflict (version_id, anio) do update
+      set precio_ars     = excluded.precio_ars,
+          precio_usd     = excluded.precio_usd,
+          tc_usado       = excluded.tc_usado,
+          actualizado_at = now();
+    cuenta := cuenta + 1;
+  end loop;
+
+  update public.ref_cola
+     set estado = case when cuenta = 0 then 'sin_resultado' else 'hecha' end,
+         procesado_at = now(),
+         detalle = format('%s año(s) guardado(s)', cuenta)
+   where id = p_tarea;
+
+  return cuenta;
+end $$;
+
+revoke all on function public.guardar_busqueda_revista(bigint, jsonb)
+  from public, anon, authenticated;
+revoke all on function public.guardar_valuaciones_revista(bigint, jsonb, numeric)
+  from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+--  5. El cosechador
+-- ---------------------------------------------------------------------
+--  Igual que el IPC y el dólar: la llamada sale de Postgres con la
+--  extensión `http`. En el Postgres de los tests (PGlite) esa extensión no
+--  existe, así que todo lo que la necesita va adentro del bloque.
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'http') then
+    create extension if not exists http with schema extensions;
+
+    create or replace function public.sincronizar_revista(p_maximo integer default 3)
+    returns jsonb
+    language plpgsql
+    security definer
+    set search_path = public, extensions
+    as $fn$
+    declare
+      uso        public.ref_api_uso;
+      t          public.ref_cola;
+      r          extensions.http_response;
+      cuerpo     jsonb;
+      url        text;
+      hechas     integer := 0;
+      fallidas   integer := 0;
+      disponible integer;
+    begin
+      -- Cuánto nos queda hoy. La guía corta a 30 por día: se para en 28.
+      insert into public.ref_api_uso (fecha) values (current_date)
+      on conflict (fecha) do nothing;
+      select * into uso from public.ref_api_uso where fecha = current_date;
+
+      disponible := least(p_maximo, uso.limite - uso.consultas);
+      if disponible <= 0 then
+        return jsonb_build_object(
+          'consultas', 0,
+          'motivo', 'Se acabó el cupo diario de la guía');
+      end if;
+
+      perform extensions.http_set_curlopt('CURLOPT_TIMEOUT', '20');
+
+      for t in
+        select * from public.ref_cola
+         where estado = 'pendiente'
+         order by prioridad, created_at
+         limit disponible
+      loop
+        url := case t.tipo
+                 when 'buscar' then
+                   'https://argautos.com/api/v1/search?q='
+                   || extensions.urlencode(t.consulta)
+                 else
+                   'https://argautos.com/api/v1/versions/'
+                   || t.version_id || '/valuations?currency=ars'
+               end;
+
+        begin
+          select * into r from extensions.http_get(url);
+
+          update public.ref_api_uso
+             set consultas = consultas + 1
+           where fecha = current_date;
+
+          if r.status = 429 then
+            -- Nos pasamos del límite: se deja la tarea para la próxima
+            -- corrida y se corta acá, sin gastar las que quedan.
+            return jsonb_build_object(
+              'consultas', hechas,
+              'motivo', 'La guía contestó 429 (demasiadas consultas)');
+          end if;
+
+          if r.status <> 200 then
+            raise exception 'La guía respondió %', r.status;
+          end if;
+
+          cuerpo := r.content::jsonb;
+
+          if t.tipo = 'buscar' then
+            perform public.guardar_busqueda_revista(t.id, cuerpo->'data');
+          else
+            perform public.guardar_valuaciones_revista(
+              t.id,
+              cuerpo->'data',
+              nullif(cuerpo #>> '{meta,exchange_rate,ars_per_usd}', '')::numeric
+            );
+          end if;
+
+          hechas := hechas + 1;
+
+        exception when others then
+          fallidas := fallidas + 1;
+          update public.ref_cola
+             set intentos = intentos + 1,
+                 -- Tres intentos y se deja: una versión que la guía no
+                 -- tiene no la va a tener mañana tampoco.
+                 estado = case when intentos + 1 >= 3 then 'error'::estado_tarea_revista
+                               else 'pendiente'::estado_tarea_revista end,
+                 detalle = left(sqlerrm, 300),
+                 procesado_at = now()
+           where id = t.id;
+        end;
+      end loop;
+
+      return jsonb_build_object(
+        'consultas', hechas,
+        'fallidas', fallidas,
+        'pendientes', (select count(*) from public.ref_cola where estado = 'pendiente'),
+        'cupo_restante', (select limite - consultas from public.ref_api_uso
+                           where fecha = current_date)
+      );
+    end $fn$;
+
+    revoke all on function public.sincronizar_revista(integer)
+      from public, anon, authenticated;
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+--  6. Refresco mensual del stock vigente
+-- ---------------------------------------------------------------------
+--  La guía actualiza sus valores a principio de mes. Se re-encola solo lo
+--  que está en el salón: por un auto vendido en marzo no se gasta una
+--  consulta.
+create or replace function public.encolar_revista_mensual()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  cuantas integer;
+begin
+  insert into public.ref_cola (tipo, version_id, anio, prioridad)
+  select distinct 'valuar'::tarea_revista, v.ref_version_id, v.anio, 8
+    from public.vehiculos v
+   where v.deleted_at is null
+     and v.ref_version_id is not null
+     and v.estado <> 'vendido'
+  on conflict do nothing;
+
+  get diagnostics cuantas = row_count;
+
+  -- Las que nunca se pudieron resolver vuelven a intentarse una vez por mes:
+  -- la guía agrega versiones nuevas todo el tiempo.
+  insert into public.ref_cola (tipo, consulta, anio, vehiculo_id, prioridad)
+  select distinct
+         'buscar'::tarea_revista,
+         trim(both ' ' from concat_ws(' ', v.marca, v.modelo, v.version)),
+         v.anio,
+         v.id,
+         9
+    from public.vehiculos v
+   where v.deleted_at is null
+     and v.ref_version_id is null
+     and v.estado <> 'vendido'
+  on conflict do nothing;
+
+  return cuantas;
+end $$;
+
+revoke all on function public.encolar_revista_mensual() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+--  7. Que corra solo
+-- ---------------------------------------------------------------------
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron')
+     and exists (select 1 from pg_proc where proname = 'sincronizar_revista') then
+    create extension if not exists pg_cron;
+
+    -- Cada cinco minutos, hasta tres consultas. El cupo diario lo corta
+    -- solo: en la práctica son unas diez corridas con trabajo y el resto
+    -- no hace nada.
+    perform cron.unschedule(jobid) from cron.job where jobname = 'sincronizar-revista';
+    perform cron.schedule('sincronizar-revista', '*/5 * * * *',
+                          'select public.sincronizar_revista(3)');
+
+    -- El día 2 de cada mes se re-encola el stock: ArgAutos actualiza el 1.
+    perform cron.unschedule(jobid) from cron.job where jobname = 'encolar-revista-mensual';
+    perform cron.schedule('encolar-revista-mensual', '0 9 2 * *',
+                          'select public.encolar_revista_mensual()');
+  end if;
+end $$;
+
+
+-- >>>>>>>>>>>>>>>>>>>>  0029_revista_busqueda_limpia.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+--  MI AGENCIA — 0029: buscar en la guía con el texto que la guía entiende
+--
+--  Probando contra ArgAutos con el stock real apareció esto: buscar
+--  "FORD RANGER XLT 3.2" devuelve CERO resultados, y "ford ranger xlt"
+--  devuelve veinticinco. Su buscador exige que las palabras aparezcan tal
+--  cual, y en su catálogo los decimales van con coma ("3,2") y los modelos
+--  tienen nombres propios ("RANGER PICK - UP").
+--
+--  Entonces se manda una consulta limpia —marca, modelo y las palabras de
+--  la versión que son solo letras— y el parecido se mide contra el texto
+--  completo de la unidad, que es el que tiene los números. Mandar poco y
+--  comparar con todo: al revés no encuentra nada.
+-- =====================================================================
+
+--  El texto original queda guardado para poder puntuar los candidatos.
+alter table public.ref_cola
+  add column if not exists texto text;
+
+comment on column public.ref_cola.texto is
+  'Marca, modelo y versión tal como los escribió la agencia. Se usa para '
+  'elegir cuál de los candidatos de la guía es el bueno.';
+
+-- ---------------------------------------------------------------------
+--  Limpiar el texto que se le manda a la guía
+-- ---------------------------------------------------------------------
+create or replace function public.consulta_para_revista(
+  p_marca   text,
+  p_modelo  text,
+  p_version text
+)
+returns text
+language sql
+immutable
+as $$
+  select nullif(
+    trim(both ' ' from
+      regexp_replace(
+        lower(
+          -- Fuera lo que no sea letra: "3.2", "4x4", comas y barras hacen
+          -- que su buscador no encuentre nada.
+          regexp_replace(
+            concat_ws(' ', p_marca, p_modelo, p_version),
+            '[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ ]', ' ', 'g')
+        ),
+        '\s+', ' ', 'g')
+    ),
+  '');
+$$;
+
+-- ---------------------------------------------------------------------
+--  Encolar con la consulta limpia
+-- ---------------------------------------------------------------------
+create or replace function public.encolar_revista(p_vehiculo uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v        public.vehiculos;
+  limpia   text;
+  completo text;
+begin
+  select * into v from public.vehiculos where id = p_vehiculo;
+  if not found or v.deleted_at is not null then
+    return;
+  end if;
+
+  if v.ref_version_id is not null then
+    insert into public.ref_cola (tipo, version_id, anio, vehiculo_id)
+    values ('valuar', v.ref_version_id, v.anio, v.id)
+    on conflict do nothing;
+    return;
+  end if;
+
+  limpia   := public.consulta_para_revista(v.marca, v.modelo, v.version);
+  completo := trim(both ' ' from concat_ws(' ', v.marca, v.modelo, v.version));
+
+  if limpia is null then
+    return;  -- Sin marca ni modelo no hay nada que preguntar.
+  end if;
+
+  insert into public.ref_cola (tipo, consulta, texto, anio, vehiculo_id)
+  values ('buscar', limpia, completo, v.anio, v.id)
+  on conflict do nothing;
+end $$;
+
+grant execute on function public.encolar_revista(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
+--  Elegir el candidato comparando contra el texto completo
+-- ---------------------------------------------------------------------
+create or replace function public.guardar_busqueda_revista(
+  p_tarea     bigint,
+  p_resultado jsonb
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  t        public.ref_cola;
+  elegido  jsonb;
+  mejor    numeric := -1;
+  fila     jsonb;
+  puntaje  numeric;
+  buscado  text;
+begin
+  select * into t from public.ref_cola where id = p_tarea;
+  if not found then
+    return 0;
+  end if;
+
+  buscado := lower(coalesce(t.texto, t.consulta, ''));
+
+  for fila in select * from jsonb_array_elements(coalesce(p_resultado, '[]'::jsonb))
+  loop
+    -- Se compara contra marca + modelo + versión de la guía: su "version"
+    -- sola no trae la marca, y dos marcas distintas tienen versiones que se
+    -- llaman igual.
+    puntaje := similarity(
+      lower(concat_ws(' ',
+        fila->>'brand',
+        fila->>'model',
+        coalesce(fila->>'version_raw', fila->>'version'))),
+      buscado
+    );
+
+    -- El año de la unidad rompe los empates: la guía dice de qué año es el
+    -- precio que devuelve en la búsqueda.
+    if t.anio is not null and (fila->>'price_year') is not null
+       and (fila->>'price_year')::int = t.anio then
+      puntaje := puntaje + 0.15;
+    end if;
+
+    if puntaje > mejor then
+      mejor := puntaje;
+      elegido := fila;
+    end if;
+  end loop;
+
+  -- Un parecido muy bajo es un error con disfraz: mejor dejar la unidad sin
+  -- valor de revista que ponerle el precio de otro auto.
+  if elegido is null or mejor < 0.25 then
+    update public.ref_cola
+       set estado = 'sin_resultado',
+           procesado_at = now(),
+           detalle = case
+                       when elegido is null
+                         then 'La guía no devolvió resultados.'
+                       else format('El mejor candidato (%s) se parece muy '
+                                   'poco: %s', elegido->>'version_raw',
+                                   round(mejor, 2))
+                     end
+     where id = p_tarea;
+    return 0;
+  end if;
+
+  insert into public.ref_versiones (id, nombre, nombre_raw, marca_nombre, modelo_nombre)
+  values (
+    (elegido->>'version_id')::int,
+    coalesce(elegido->>'version', ''),
+    elegido->>'version_raw',
+    elegido->>'brand',
+    elegido->>'model'
+  )
+  on conflict (id) do update
+    set nombre        = excluded.nombre,
+        nombre_raw    = excluded.nombre_raw,
+        marca_nombre  = excluded.marca_nombre,
+        modelo_nombre = excluded.modelo_nombre;
+
+  if t.vehiculo_id is not null then
+    update public.vehiculos
+       set ref_version_id = (elegido->>'version_id')::int
+     where id = t.vehiculo_id
+       and ref_version_id is null;
+  end if;
+
+  update public.ref_cola
+     set estado = 'hecha',
+         procesado_at = now(),
+         detalle = format('%s (parecido %s)',
+                          elegido->>'version_raw', round(mejor, 2))
+   where id = p_tarea;
+
+  insert into public.ref_cola (tipo, version_id, anio, vehiculo_id, prioridad)
+  values ('valuar', (elegido->>'version_id')::int, t.anio, t.vehiculo_id, 3)
+  on conflict do nothing;
+
+  return (elegido->>'version_id')::int;
+end $$;
+
+revoke all on function public.guardar_busqueda_revista(bigint, jsonb)
+  from public, anon, authenticated;
+
+-- El refresco mensual también manda la consulta limpia.
+create or replace function public.encolar_revista_mensual()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  cuantas integer;
+begin
+  insert into public.ref_cola (tipo, version_id, anio, prioridad)
+  select distinct 'valuar'::tarea_revista, v.ref_version_id, v.anio, 8
+    from public.vehiculos v
+   where v.deleted_at is null
+     and v.ref_version_id is not null
+     and v.estado <> 'vendido'
+  on conflict do nothing;
+
+  get diagnostics cuantas = row_count;
+
+  insert into public.ref_cola (tipo, consulta, texto, anio, vehiculo_id, prioridad)
+  select distinct
+         'buscar'::tarea_revista,
+         public.consulta_para_revista(v.marca, v.modelo, v.version),
+         trim(both ' ' from concat_ws(' ', v.marca, v.modelo, v.version)),
+         v.anio,
+         v.id,
+         9
+    from public.vehiculos v
+   where v.deleted_at is null
+     and v.ref_version_id is null
+     and v.estado <> 'vendido'
+     and public.consulta_para_revista(v.marca, v.modelo, v.version) is not null
+  on conflict do nothing;
+
+  return cuantas;
+end $$;
+
+revoke all on function public.encolar_revista_mensual() from public, anon, authenticated;
+
+
+-- >>>>>>>>>>>>>>>>>>>>  0030_revista_arreglos.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+--  MI AGENCIA — 0030: dos arreglos del cosechador, encontrados probándolo
+--
+--  1. Guardar las valuaciones fallaba: el `case` que decide el estado
+--     devuelve texto y la columna es un enum. Postgres no convierte solo
+--     adentro de un `case`.
+--  2. La consulta gastada no se contaba cuando el guardado fallaba. El
+--     contador vivía adentro del bloque con `exception`, y ese bloque se
+--     deshace entero al fallar: la consulta ya se le hizo a la guía, pero
+--     para nosotros no había pasado. Ahora se cuenta antes de salir.
+-- =====================================================================
+
+create or replace function public.guardar_valuaciones_revista(
+  p_tarea     bigint,
+  p_resultado jsonb,
+  p_tc        numeric default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  t      public.ref_cola;
+  fila   jsonb;
+  cuenta integer := 0;
+begin
+  select * into t from public.ref_cola where id = p_tarea;
+  if not found then
+    return 0;
+  end if;
+
+  for fila in select * from jsonb_array_elements(coalesce(p_resultado, '[]'::jsonb))
+  loop
+    insert into public.ref_precios (
+      version_id, anio, precio_ars, precio_usd, tc_usado, actualizado_at
+    )
+    values (
+      coalesce((fila->>'version_id')::int, t.version_id),
+      (fila->>'year')::smallint,
+      (fila->>'price')::numeric,
+      case when p_tc > 0 then (fila->>'price')::numeric / p_tc end,
+      p_tc,
+      now()
+    )
+    on conflict (version_id, anio) do update
+      set precio_ars     = excluded.precio_ars,
+          precio_usd     = excluded.precio_usd,
+          tc_usado       = excluded.tc_usado,
+          actualizado_at = now();
+    cuenta := cuenta + 1;
+  end loop;
+
+  update public.ref_cola
+     set estado = case
+                    when cuenta = 0 then 'sin_resultado'::estado_tarea_revista
+                    else 'hecha'::estado_tarea_revista
+                  end,
+         procesado_at = now(),
+         detalle = format('%s año(s) guardado(s)', cuenta)
+   where id = p_tarea;
+
+  return cuenta;
+end $$;
+
+revoke all on function public.guardar_valuaciones_revista(bigint, jsonb, numeric)
+  from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'http') then
+    create extension if not exists http with schema extensions;
+
+    create or replace function public.sincronizar_revista(p_maximo integer default 3)
+    returns jsonb
+    language plpgsql
+    security definer
+    set search_path = public, extensions
+    as $fn$
+    declare
+      uso        public.ref_api_uso;
+      t          public.ref_cola;
+      r          extensions.http_response;
+      cuerpo     jsonb;
+      url        text;
+      hechas     integer := 0;
+      fallidas   integer := 0;
+      disponible integer;
+    begin
+      insert into public.ref_api_uso (fecha) values (current_date)
+      on conflict (fecha) do nothing;
+      select * into uso from public.ref_api_uso where fecha = current_date;
+
+      disponible := least(p_maximo, uso.limite - uso.consultas);
+      if disponible <= 0 then
+        return jsonb_build_object(
+          'consultas', 0,
+          'motivo', 'Se acabó el cupo diario de la guía');
+      end if;
+
+      perform extensions.http_set_curlopt('CURLOPT_TIMEOUT', '20');
+
+      for t in
+        select * from public.ref_cola
+         where estado = 'pendiente'
+         order by prioridad, created_at
+         limit disponible
+      loop
+        url := case t.tipo
+                 when 'buscar' then
+                   'https://argautos.com/api/v1/search?q='
+                   || extensions.urlencode(t.consulta)
+                 else
+                   'https://argautos.com/api/v1/versions/'
+                   || t.version_id || '/valuations?currency=ars'
+               end;
+
+        -- La consulta se cuenta ANTES de usarla: si lo que sigue falla, la
+        -- guía igual la recibió y el cupo del día se gastó.
+        update public.ref_api_uso
+           set consultas = consultas + 1
+         where fecha = current_date;
+
+        begin
+          select * into r from extensions.http_get(url);
+
+          if r.status = 429 then
+            return jsonb_build_object(
+              'consultas', hechas,
+              'motivo', 'La guía contestó 429 (demasiadas consultas)');
+          end if;
+
+          if r.status <> 200 then
+            raise exception 'La guía respondió %', r.status;
+          end if;
+
+          cuerpo := r.content::jsonb;
+
+          if t.tipo = 'buscar' then
+            perform public.guardar_busqueda_revista(t.id, cuerpo->'data');
+          else
+            perform public.guardar_valuaciones_revista(
+              t.id,
+              cuerpo->'data',
+              nullif(cuerpo #>> '{meta,exchange_rate,ars_per_usd}', '')::numeric
+            );
+          end if;
+
+          hechas := hechas + 1;
+
+        exception when others then
+          fallidas := fallidas + 1;
+          update public.ref_cola
+             set intentos = intentos + 1,
+                 estado = case
+                            when intentos + 1 >= 3
+                              then 'error'::estado_tarea_revista
+                            else 'pendiente'::estado_tarea_revista
+                          end,
+                 detalle = left(sqlerrm, 300),
+                 procesado_at = now()
+           where id = t.id;
+        end;
+      end loop;
+
+      return jsonb_build_object(
+        'consultas', hechas,
+        'fallidas', fallidas,
+        'pendientes', (select count(*) from public.ref_cola where estado = 'pendiente'),
+        'cupo_restante', (select limite - consultas from public.ref_api_uso
+                           where fecha = current_date)
+      );
+    end $fn$;
+
+    revoke all on function public.sincronizar_revista(integer)
+      from public, anon, authenticated;
+  end if;
+end $$;
