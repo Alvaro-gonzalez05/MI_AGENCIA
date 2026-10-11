@@ -14,6 +14,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/cobranzas.dart';
 import '../dominio/revista.dart';
 import '../dominio/tareas.dart';
 import 'repositorio.dart';
@@ -383,6 +384,130 @@ class RepositorioSupabase implements Repositorio {
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
   }
+
+  // -------------------------------------------------------------------
+  // Cuotas y cobranzas
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<PlanPago>> planes({
+    String? oportunidadId,
+    bool soloActivos = true,
+  }) async {
+    var consulta = _db
+        .from('v_planes')
+        .select()
+        .eq('agencia_id', await _miAgencia());
+    if (oportunidadId != null) {
+      consulta = consulta.eq('oportunidad_id', oportunidadId);
+    }
+    if (soloActivos) consulta = consulta.eq('estado', 'activo');
+
+    final filas = await consulta.order('created_at', ascending: false);
+    return filas.map(_aPlan).toList();
+  }
+
+  @override
+  Future<List<CuotaPlan>> cuotas(String planId) async {
+    final filas = await _db
+        .from('v_cuotas')
+        .select()
+        .eq('plan_id', planId)
+        .order('numero');
+    return filas.map(_aCuota).toList();
+  }
+
+  @override
+  Future<List<CuotaPlan>> cuotasVencidas() async {
+    final filas = await _db
+        .from('v_cuotas')
+        .select()
+        .eq('agencia_id', await _miAgencia())
+        .eq('estado_plan', 'activo')
+        .gt('dias_de_atraso', 0)
+        .order('dias_de_atraso', ascending: false);
+    return filas.map(_aCuota).toList();
+  }
+
+  @override
+  Future<String> crearPlan(AltaPlan p) async {
+    final fila = await _db
+        .from('planes_pago')
+        .insert({
+          'agencia_id': await _miAgencia(),
+          'oportunidad_id': p.oportunidadId,
+          'cliente_nombre': p.clienteNombre.trim(),
+          'cliente_telefono': _oNulo(p.clienteTelefono ?? ''),
+          'venta_id': p.ventaId,
+          'vehiculo_id': p.vehiculoId,
+          'monto_financiado': p.montoFinanciado,
+          'cantidad_cuotas': p.cantidadCuotas,
+          'sistema': p.sistema,
+          'tna': p.tna,
+          'notas': _oNulo(p.notas),
+          'created_by': _db.auth.currentUser?.id,
+        })
+        .select('id')
+        .single();
+
+    final id = fila['id'] as String;
+    // Las cuotas las arma la base: el mismo calculo para todos los que
+    // escriban en esta tabla, venga de la app o de una importacion.
+    await _db.rpc<dynamic>('generar_cuotas', params: {'p_plan': id});
+    return id;
+  }
+
+  @override
+  Future<void> registrarPago(AltaPago p) async {
+    await _db.from('pagos').insert({
+      'agencia_id': await _miAgencia(),
+      'cuota_id': p.cuotaId,
+      'fecha': _soloFecha(p.fecha),
+      'importe': p.importe,
+      'medio': p.medio.valorBd,
+      'notas': _oNulo(p.notas),
+      'created_by': _db.auth.currentUser?.id,
+    });
+  }
+
+  @override
+  Future<void> anularPago(String id) async {
+    await _db.from('pagos').delete().eq('id', id);
+  }
+
+  static PlanPago _aPlan(Map<String, dynamic> f) => PlanPago(
+    id: f['id'] as String,
+    clienteNombre: f['cliente_nombre'] as String? ?? '',
+    clienteTelefono: f['cliente_telefono'] as String?,
+    oportunidadId: f['oportunidad_id'] as String?,
+    vehiculoId: f['vehiculo_id'] as String?,
+    montoFinanciado: _decimal(f['monto_financiado']) ?? 0,
+    cantidadCuotas: _entero(f['cantidad_cuotas']) ?? 0,
+    sistema: f['sistema'] as String? ?? 'frances',
+    tna: _decimal(f['tna']) ?? 0,
+    estado: EstadoPlan.desde(f['estado'] as String?),
+    notas: f['notas'] as String? ?? '',
+    cuotasPagas: _entero(f['cuotas_pagas']) ?? 0,
+    cuotasVencidas: _entero(f['cuotas_vencidas']) ?? 0,
+    totalPlan: _decimal(f['total_plan']) ?? 0,
+    totalPagado: _decimal(f['total_pagado']) ?? 0,
+    deuda: _decimal(f['deuda']) ?? 0,
+    deudaVencida: _decimal(f['deuda_vencida']) ?? 0,
+    peorAtraso: _entero(f['peor_atraso']) ?? 0,
+    proximoVencimiento: _fecha(f['proximo_vencimiento']),
+  );
+
+  static CuotaPlan _aCuota(Map<String, dynamic> f) => CuotaPlan(
+    id: f['id'] as String,
+    planId: f['plan_id'] as String,
+    numero: _entero(f['numero']) ?? 0,
+    venceEl: _fecha(f['vence_el']) ?? DateTime.now(),
+    importe: _decimal(f['importe']) ?? 0,
+    pagado: _decimal(f['pagado']) ?? 0,
+    ultimoPago: _fecha(f['ultimo_pago']),
+    clienteNombre: f['cliente_nombre'] as String? ?? '',
+    clienteTelefono: f['cliente_telefono'] as String?,
+  );
 
   // -------------------------------------------------------------------
   // Guia de precios (valor de revista)

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/cobranzas.dart';
 import '../dominio/revista.dart';
 import '../dominio/tareas.dart';
 import '../dominio/motor_calculo.dart';
@@ -118,6 +120,24 @@ abstract interface class Repositorio {
   /// Encola una busqueda para el cosechador, cuando lo buscado todavia no
   /// esta en nuestra copia.
   Future<void> pedirRevista(String texto, {int? anio});
+
+  /// Los planes de pago. Sin filtro, los activos de la agencia.
+  Future<List<PlanPago>> planes({
+    String? oportunidadId,
+    bool soloActivos = true,
+  });
+
+  /// Las cuotas de un plan, con lo que ya se pago de cada una.
+  Future<List<CuotaPlan>> cuotas(String planId);
+
+  /// Todas las cuotas vencidas de la agencia: es lo que mira el Inicio.
+  Future<List<CuotaPlan>> cuotasVencidas();
+
+  Future<String> crearPlan(AltaPlan p);
+
+  Future<void> registrarPago(AltaPago p);
+
+  Future<void> anularPago(String id);
 
   Future<List<Gasto>> gastos({String? vehiculoId});
 
@@ -329,6 +349,108 @@ class RepositorioDemo implements Repositorio {
   final List<Reserva> _reservas = [];
   final Map<String, List<DetalleVehiculo>> _detalles = {};
   final List<Tarea> _tareas = [];
+  final List<PlanPago> _planes = [];
+  final Map<String, List<CuotaPlan>> _cuotas = {};
+
+  @override
+  Future<List<PlanPago>> planes({
+    String? oportunidadId,
+    bool soloActivos = true,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _planes
+        .where((p) => oportunidadId == null || p.oportunidadId == oportunidadId)
+        .where((p) => !soloActivos || p.estado == EstadoPlan.activo)
+        .toList();
+  }
+
+  @override
+  Future<List<CuotaPlan>> cuotas(String planId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return List.unmodifiable(_cuotas[planId] ?? const <CuotaPlan>[]);
+  }
+
+  @override
+  Future<List<CuotaPlan>> cuotasVencidas() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return [
+      for (final lista in _cuotas.values) ...lista.where((c) => c.vencida),
+    ]..sort((a, b) => a.venceEl.compareTo(b.venceEl));
+  }
+
+  @override
+  Future<String> crearPlan(AltaPlan alta) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final id = 'demo-plan-${_planes.length}';
+    // Las cuotas se arman con el mismo criterio que la base: frances.
+    final i = alta.tna / 12;
+    final cuota = i == 0
+        ? alta.montoFinanciado / alta.cantidadCuotas
+        : alta.montoFinanciado *
+              i *
+              math.pow(1 + i, alta.cantidadCuotas) /
+              (math.pow(1 + i, alta.cantidadCuotas) - 1);
+    final hoy = DateTime.now();
+
+    _cuotas[id] = [
+      for (var n = 1; n <= alta.cantidadCuotas; n++)
+        CuotaPlan(
+          id: '$id-$n',
+          planId: id,
+          numero: n,
+          venceEl: DateTime(hoy.year, hoy.month + n, hoy.day),
+          importe: cuota.toDouble(),
+          clienteNombre: alta.clienteNombre,
+          clienteTelefono: alta.clienteTelefono,
+        ),
+    ];
+
+    _planes.add(
+      PlanPago(
+        id: id,
+        clienteNombre: alta.clienteNombre,
+        clienteTelefono: alta.clienteTelefono,
+        oportunidadId: alta.oportunidadId,
+        vehiculoId: alta.vehiculoId,
+        montoFinanciado: alta.montoFinanciado,
+        cantidadCuotas: alta.cantidadCuotas,
+        sistema: alta.sistema,
+        tna: alta.tna,
+        notas: alta.notas,
+        totalPlan: cuota.toDouble() * alta.cantidadCuotas,
+        deuda: cuota.toDouble() * alta.cantidadCuotas,
+        proximoVencimiento: DateTime(hoy.year, hoy.month + 1, hoy.day),
+      ),
+    );
+    return id;
+  }
+
+  @override
+  Future<void> registrarPago(AltaPago pago) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    for (final entrada in _cuotas.entries) {
+      final i = entrada.value.indexWhere((c) => c.id == pago.cuotaId);
+      if (i < 0) continue;
+      final c = entrada.value[i];
+      entrada.value[i] = CuotaPlan(
+        id: c.id,
+        planId: c.planId,
+        numero: c.numero,
+        venceEl: c.venceEl,
+        importe: c.importe,
+        pagado: c.pagado + pago.importe,
+        ultimoPago: pago.fecha,
+        clienteNombre: c.clienteNombre,
+        clienteTelefono: c.clienteTelefono,
+      );
+      return;
+    }
+  }
+
+  @override
+  Future<void> anularPago(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+  }
 
   @override
   Future<List<PrecioRevista>> buscarRevista(String texto, {int? anio}) async {
@@ -1144,6 +1266,28 @@ final miAgenciaProvider = FutureProvider<Agencia?>(
 /// pintar umbrales, y bloquear cada una en un FutureBuilder por un par de
 /// numeros seria ruido. Mientras carga rigen los valores por defecto, que son
 /// los mismos que la base pone al crear una agencia: la pantalla no parpadea.
+/// Los planes de pago activos de la agencia.
+final planesProvider = FutureProvider<List<PlanPago>>(
+  (ref) => ref.watch(repositorioProvider).planes(),
+);
+
+/// Los planes de un cliente.
+final planesDeProvider = FutureProvider.family<List<PlanPago>, String>(
+  (ref, id) => ref
+      .watch(repositorioProvider)
+      .planes(oportunidadId: id, soloActivos: false),
+);
+
+/// Las cuotas de un plan.
+final cuotasProvider = FutureProvider.family<List<CuotaPlan>, String>(
+  (ref, planId) => ref.watch(repositorioProvider).cuotas(planId),
+);
+
+/// Lo que esta vencido en toda la agencia: el Inicio lo pone primero.
+final cuotasVencidasProvider = FutureProvider<List<CuotaPlan>>(
+  (ref) => ref.watch(repositorioProvider).cuotasVencidas(),
+);
+
 /// La agenda de la agencia: lo que hay para hacer.
 final tareasProvider = FutureProvider<List<Tarea>>(
   (ref) => ref.watch(repositorioProvider).tareas(),

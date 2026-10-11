@@ -10,6 +10,7 @@ import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../dominio/gastos.dart';
 import '../../dominio/modelos.dart';
+import '../../dominio/cobranzas.dart';
 import '../../dominio/papeles.dart';
 import '../../dominio/tareas.dart';
 import '../../dominio/ventas.dart';
@@ -59,6 +60,8 @@ class _Contenido extends ConsumerWidget {
 
     final reservas = ref.watch(reservasProvider).value ?? const <Reserva>[];
     final tareas = ref.watch(tareasProvider).value ?? const <Tarea>[];
+    final vencidas =
+        ref.watch(cuotasVencidasProvider).value ?? const <CuotaPlan>[];
     final pendientes = _pendientes(
       context,
       ref,
@@ -66,6 +69,7 @@ class _Contenido extends ConsumerWidget {
       interesados,
       reservas,
       tareas,
+      vencidas,
     );
     final atender = _ParaAtenderHoy(pendientes: pendientes);
     final ventasMes = _ComoVienenLasVentas(ventas: ventas);
@@ -80,6 +84,7 @@ class _Contenido extends ConsumerWidget {
             ventas: ventas,
             gastos: gastos,
             pendientes: pendientes.length,
+            atrasados: vencidas.map((c) => c.clienteNombre).toSet().length,
           ),
         ),
         const SizedBox(height: Esp.lg + 2),
@@ -124,11 +129,37 @@ class _Contenido extends ConsumerWidget {
     List<Interesado> interesados,
     List<Reserva> reservas,
     List<Tarea> tareas,
+    List<CuotaPlan> vencidas,
   ) {
     final p = context.paleta;
     final hoy = DateTime.now();
     final dia = DateTime(hoy.year, hoy.month, hoy.day);
     final lista = <_Pendiente>[];
+
+    // La plata que no entró va primero: es lo único de esta lista que, si se
+    // deja pasar, cuesta plata de verdad.
+    for (final c in vencidas.take(4)) {
+      final conTelefono = (c.clienteTelefono ?? '').isNotEmpty;
+      lista.add(
+        _Pendiente(
+          icono: Icons.payments_outlined,
+          color: p.critico,
+          titulo: c.clienteNombre,
+          plazo: '${Fmt.dias(c.diasDeAtraso)} de atraso',
+          detalle:
+              'Debe la cuota ${c.numero} de su plan: ${Fmt.pesos(c.saldo)}',
+          accion: conTelefono ? 'Enviar WhatsApp' : 'Ver ficha',
+          iconoAccion: conTelefono
+              ? Icons.chat_rounded
+              : Icons.drive_file_rename_outline,
+          verde: conTelefono,
+          onAccion: () => conTelefono
+              ? _abrirWhatsApp(c.clienteTelefono!)
+              : context.go('/interesados'),
+          urgencia: 500 + c.diasDeAtraso,
+        ),
+      );
+    }
 
     // Lo que alguien anoto en la agenda va primero: es un compromiso con una
     // persona, no una deduccion del sistema.
@@ -272,6 +303,7 @@ class _Saludo extends StatefulWidget {
     required this.ventas,
     required this.gastos,
     required this.pendientes,
+    required this.atrasados,
   });
 
   final Usuario? usuario;
@@ -279,6 +311,10 @@ class _Saludo extends StatefulWidget {
   final List<Venta> ventas;
   final List<Gasto> gastos;
   final int pendientes;
+
+  /// Cuántos clientes deben una cuota vencida. Es la nota de la tarjeta de
+  /// gastos en el diseño.
+  final int atrasados;
 
   @override
   State<_Saludo> createState() => _SaludoState();
@@ -399,7 +435,10 @@ class _SaludoState extends State<_Saludo> {
                   valorRojo: true,
                   icono: Icons.error_outline_rounded,
                   colorIcono: p.critico,
-                  nota: delMesGastos.isEmpty
+                  nota: widget.atrasados > 0
+                      ? '${widget.atrasados} '
+                            '${widget.atrasados == 1 ? 'cliente atrasado' : 'clientes atrasados'} en cuotas'
+                      : delMesGastos.isEmpty
                       ? 'Todavía no cargaste gastos este mes'
                       : '${delMesGastos.length} '
                             '${delMesGastos.length == 1 ? 'comprobante cargado' : 'comprobantes cargados'}',

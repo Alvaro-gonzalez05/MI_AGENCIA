@@ -16,6 +16,7 @@ import '../../ui/formulario.dart';
 import '../../ui/confirmacion.dart';
 import 'historial_bcra.dart';
 import 'informe_pdf.dart';
+import 'plan_de_pagos.dart';
 import 'eliminar_interesado.dart';
 
 /// Ficha de un interesado: quién es, qué quiere y si le podemos financiar.
@@ -290,6 +291,11 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
 
                     const SizedBox(height: Esp.md),
                     Aparecer(indice: 5, child: _Operacion(interesado: _i)),
+                    const SizedBox(height: Esp.lg),
+                    Aparecer(
+                      indice: 6,
+                      child: BloquePlanDePagos(interesado: _i),
+                    ),
                     const SizedBox(height: Esp.md),
                     Tarjeta(
                       child: Column(

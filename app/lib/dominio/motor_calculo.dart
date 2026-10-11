@@ -19,14 +19,22 @@ import 'modelos.dart';
 /// pasan por aca. Si se cambia una formula, se cambia en el SQL primero.
 /// Como se devuelve un credito. Los cuatro que pide el diseno.
 enum SistemaAmortizacion {
-  frances('Francés', 'Cuota fija todos los meses'),
-  aleman('Alemán', 'Arranca mas alta y va bajando'),
-  directo('Directo', 'Interes sobre el capital entero'),
-  global('Global', 'Un solo pago al final');
+  frances('Francés', 'Cuota fija todos los meses', 'frances'),
+  aleman('Alemán', 'Arranca mas alta y va bajando', 'aleman'),
+  directo('Directo', 'Interes sobre el capital entero', 'directo'),
+  global('Global', 'Un solo pago al final', 'global');
 
-  const SistemaAmortizacion(this.etiqueta, this.explicacion);
+  const SistemaAmortizacion(this.etiqueta, this.explicacion, this.valorBd);
   final String etiqueta;
   final String explicacion;
+
+  /// Como se guarda en la base: los planes de pago usan el mismo nombre,
+  /// asi la cuota que calcula Postgres es la que mostro el simulador.
+  final String valorBd;
+
+  static SistemaAmortizacion desde(String? v) =>
+      SistemaAmortizacion.values.where((s) => s.valorBd == v).firstOrNull ??
+      SistemaAmortizacion.frances;
 }
 
 abstract final class Motor {
