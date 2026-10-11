@@ -15,6 +15,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/revista.dart';
 import '../dominio/tareas.dart';
 import '../dominio/motor_calculo.dart';
 import 'datos_demo.dart';
@@ -106,6 +107,17 @@ abstract interface class Repositorio {
   Future<void> guardarTarea(AltaTarea t);
 
   Future<void> cambiarEstadoTarea(String id, EstadoTarea estado);
+
+  /// Busca en nuestra copia de la guia de precios. No le pega a la guia:
+  /// eso lo hace el cosechador, de a poco y respetando su limite diario.
+  Future<List<PrecioRevista>> buscarRevista(String texto, {int? anio});
+
+  /// Que anios tiene la guia para lo que se busco.
+  Future<List<AnioRevista>> aniosRevista(String texto);
+
+  /// Encola una busqueda para el cosechador, cuando lo buscado todavia no
+  /// esta en nuestra copia.
+  Future<void> pedirRevista(String texto, {int? anio});
 
   Future<List<Gasto>> gastos({String? vehiculoId});
 
@@ -317,6 +329,44 @@ class RepositorioDemo implements Repositorio {
   final List<Reserva> _reservas = [];
   final Map<String, List<DetalleVehiculo>> _detalles = {};
   final List<Tarea> _tareas = [];
+
+  @override
+  Future<List<PrecioRevista>> buscarRevista(String texto, {int? anio}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // En demo no hay guia: se devuelve algo coherente con el texto para
+    // poder ver la pantalla.
+    final q = texto.trim().toLowerCase();
+    if (q.length < 3) return const [];
+    final base = 18000000 + q.length * 450000;
+    return [
+      for (var i = 0; i < 3; i++)
+        PrecioRevista(
+          versionId: 1000 + i,
+          anio: (anio ?? DateTime.now().year - 4) - i,
+          precioArs: (base - i * 900000).toDouble(),
+          marca: q.split(' ').first.toUpperCase(),
+          modelo: q.split(' ').skip(1).join(' ').toUpperCase(),
+          version: ['Base', 'Full', 'Automatica'][i],
+          versionCompleta:
+              '${q.toUpperCase()} ${['Base', 'Full', 'Automatica'][i]}',
+          actualizado: DateTime.now(),
+        ),
+    ];
+  }
+
+  @override
+  Future<List<AnioRevista>> aniosRevista(String texto) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    final hoy = DateTime.now().year;
+    return [
+      for (var i = 0; i < 5; i++) AnioRevista(anio: hoy - i, versiones: 3),
+    ];
+  }
+
+  @override
+  Future<void> pedirRevista(String texto, {int? anio}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+  }
 
   @override
   Future<List<Tarea>> tareas({bool soloPendientes = true}) async {

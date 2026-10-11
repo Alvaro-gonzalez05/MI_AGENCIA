@@ -14,6 +14,7 @@ import '../dominio/precios.dart';
 import '../dominio/ventas.dart';
 import '../dominio/modelos.dart';
 import '../dominio/papeles.dart';
+import '../dominio/revista.dart';
 import '../dominio/tareas.dart';
 import 'repositorio.dart';
 
@@ -381,6 +382,55 @@ class RepositorioSupabase implements Repositorio {
         .from('vehiculos')
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
+  }
+
+  // -------------------------------------------------------------------
+  // Guia de precios (valor de revista)
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<PrecioRevista>> buscarRevista(String texto, {int? anio}) async {
+    final filas = await _db.rpc<List<dynamic>>(
+      'buscar_revista',
+      params: {'p_texto': texto, 'p_anio': anio, 'p_tope': 12},
+    );
+
+    return [
+      for (final f in filas.cast<Map<String, dynamic>>())
+        PrecioRevista(
+          versionId: _entero(f['version_id']) ?? 0,
+          anio: _entero(f['anio']) ?? 0,
+          precioArs: _decimal(f['precio_ars']) ?? 0,
+          marca: f['marca'] as String? ?? '',
+          modelo: f['modelo'] as String? ?? '',
+          version: f['version'] as String? ?? '',
+          versionCompleta: f['version_raw'] as String? ?? '',
+          actualizado: _fecha(f['actualizado']),
+        ),
+    ];
+  }
+
+  @override
+  Future<List<AnioRevista>> aniosRevista(String texto) async {
+    final filas = await _db.rpc<List<dynamic>>(
+      'anios_revista',
+      params: {'p_texto': texto},
+    );
+    return [
+      for (final f in filas.cast<Map<String, dynamic>>())
+        AnioRevista(
+          anio: _entero(f['anio']) ?? 0,
+          versiones: _entero(f['versiones']) ?? 0,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> pedirRevista(String texto, {int? anio}) async {
+    await _db.rpc<dynamic>(
+      'pedir_revista',
+      params: {'p_texto': texto, 'p_anio': anio},
+    );
   }
 
   // -------------------------------------------------------------------
@@ -1374,6 +1424,7 @@ class RepositorioSupabase implements Repositorio {
       nroMotor: f['nro_motor'] as String?,
       nroChasis: f['nro_chasis'] as String?,
       estadoGeneral: f['estado_general'] as String?,
+      refVersionId: _entero(f['ref_version_id']),
     );
   }
 

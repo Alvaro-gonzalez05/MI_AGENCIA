@@ -15,6 +15,7 @@ import '../../dominio/tareas.dart';
 import '../../dominio/ventas.dart';
 import '../../ui/componentes.dart';
 import 'nueva_tarea.dart';
+import 'precio_revista.dart';
 
 /// Inicio, calcado de la pantalla "Inicio · búsqueda rápida de revista" del
 /// diseño: arriba el saludo con el buscador de revista y el resumen del mes;
@@ -294,14 +295,16 @@ class _SaludoState extends State<_Saludo> {
   }
 
   void _verPrecio() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'La guía de precios todavía no está conectada. Mientras tanto, el '
-          'valor de referencia se carga a mano en la ficha de cada unidad.',
+    final texto = _busqueda.text.trim();
+    if (texto.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Escribí al menos la marca y el modelo. Ej: Hilux SRV'),
         ),
-      ),
-    );
+      );
+      return;
+    }
+    ModalPrecioRevista.abrir(context, texto: texto, anio: _anio);
   }
 
   @override

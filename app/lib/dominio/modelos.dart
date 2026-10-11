@@ -121,6 +121,7 @@ class VehiculoInventario {
     this.nroMotor,
     this.nroChasis,
     this.estadoGeneral,
+    this.refVersionId,
   });
 
   final String id;
@@ -174,6 +175,10 @@ class VehiculoInventario {
   /// Como esta el auto a ojo del que lo recibio (migracion 0025). Se guarda
   /// como texto para no atar el modelo al enum de la base.
   final String? estadoGeneral;
+
+  /// Que version de la guia de precios le corresponde, si ya se resolvio.
+  /// Es lo que une la unidad con su valor de revista.
+  final int? refVersionId;
 
   final DateTime? fechaVenta;
   final double? precioFinal;
