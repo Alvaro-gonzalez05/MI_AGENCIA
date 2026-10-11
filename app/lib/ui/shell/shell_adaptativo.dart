@@ -12,7 +12,6 @@ import '../../core/tema/control_tema.dart';
 import '../../core/tema/preferencias.dart';
 import '../../core/tema/tema.dart';
 import '../componentes.dart';
-import '../../funciones/vehiculos/importar_vehiculos.dart';
 import 'secciones.dart';
 
 /// Cascara de la app.
@@ -115,37 +114,40 @@ class _BarraLateral extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
-    final secciones = Secciones.visibles(
-      esDesarrollador: usuario?.esDesarrollador ?? false,
-    );
-
-    String? grupoAnterior;
-    final items = <Widget>[];
-    for (final s in secciones) {
-      if (s.grupo != grupoAnterior) {
-        grupoAnterior = s.grupo;
-        items.add(
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              compacta ? Esp.md : Esp.lg,
-              items.isEmpty ? Esp.sm : Esp.xl,
-              Esp.md,
-              Esp.sm,
-            ),
-            child: compacta
-                ? Divider(color: p.negroBorde, height: 1)
-                : EtiquetaSeccion(s.grupo, color: p.sobreNegro2),
-          ),
-        );
-      }
-      items.add(
+    // Los mismos destinos que abajo en el teléfono. El diseño tiene cinco
+    // lugares; tener once acá y cinco allá obliga a aprender dos apps. Lo
+    // que se da de alta vive adentro de "Cargar"; las herramientas, abajo.
+    final items = <Widget>[
+      for (final s in Secciones.barraInferior)
         _EnlaceNav(
           seccion: s,
           activo: s.id == seccionActual.id,
           compacta: compacta,
         ),
-      );
-    }
+      Padding(
+        padding: EdgeInsets.fromLTRB(
+          compacta ? Esp.md : Esp.lg,
+          Esp.lg,
+          Esp.md,
+          Esp.sm,
+        ),
+        child: compacta
+            ? Divider(color: p.negroBorde, height: 1)
+            : EtiquetaSeccion('Herramientas', color: p.sobreNegro2),
+      ),
+      for (final s in Secciones.herramientas)
+        _EnlaceNav(
+          seccion: s,
+          activo: s.id == seccionActual.id,
+          compacta: compacta,
+        ),
+      if (usuario?.esDesarrollador ?? false)
+        _EnlaceNav(
+          seccion: Secciones.agencias,
+          activo: seccionActual.id == Secciones.agencias.id,
+          compacta: compacta,
+        ),
+    ];
 
     // Sin animar el ancho: a mitad de camino las etiquetas no entran y Flutter
     // marca desborde en cada cuadro.
@@ -581,10 +583,13 @@ class _ShellMovil extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final principales = Secciones.barraInferior;
-    final indice = principales.indexWhere((s) => s.id == seccion.id);
-    // Cuando la seccion actual no esta en la barra (Gastos, Precios, Ventas,
-    // Campanas...), se resalta "Mas". Sin esto quedaba iluminado Panel
-    // estando en otra pantalla, que es peor que no resaltar nada.
+    var indice = principales.indexWhere((s) => s.id == seccion.id);
+    // Las altas (vehiculos, gastos, precios, ventas) se abren desde Cargar:
+    // estando en una de ellas, el que queda encendido es Cargar. El resto
+    // (campanas, estadisticas, configuracion) vive en Mas.
+    if (indice < 0 && Secciones.cargar.any((s) => s.id == seccion.id)) {
+      indice = principales.indexWhere((s) => s.id == Secciones.cargarDatos.id);
+    }
     final indiceVisible = indice < 0 ? principales.length : indice;
     final esPanel = seccion.id == Secciones.panel.id;
 
@@ -647,57 +652,30 @@ class _ShellMovil extends ConsumerWidget {
             : null,
       ),
       body: child,
-      // La barra es la del diseño y la que ya estaba: pastilla oscura
-      // flotante, con el "+" de cargar en el medio y "Más" al final, que abre
-      // el resto de las secciones y el cambio de tema.
+      // La barra del diseño: Inicio, Inventario, Cargar, Clientes y Más.
+      // "Cargar" es una sección más —no una hoja— y queda en el medio, que
+      // es donde cae el pulgar.
       bottomNavigationBar: _BarraInferior(
-        indiceActivo: indiceVisible < principales.length
-            ? (indiceVisible >= _lugarDelMas
-                  ? indiceVisible + 1
-                  : indiceVisible)
-            : principales.length + 1,
+        indiceActivo: indiceVisible,
         items: [
-          for (var i = 0; i < principales.length; i++) ...[
-            if (i == _lugarDelMas) (Icons.add_circle_outline_rounded, 'Cargar'),
-            (principales[i].icono, principales[i].etiqueta),
-          ],
+          for (final s in principales) (s.icono, s.etiqueta),
           (Icons.more_horiz_rounded, 'Más'),
         ],
-        // El "+" no marca sección activa: es una acción, no un destino.
-        indiceAccion: _lugarDelMas,
+        // "Cargar" se pinta en ámbar, como el botón del medio del diseño.
+        indiceAccion: principales.indexWhere(
+          (s) => s.id == Secciones.cargarDatos.id,
+        ),
         onTap: (i) {
-          if (i == _lugarDelMas) return _abrirCargar(context);
-          final real = i > _lugarDelMas ? i - 1 : i;
-          if (real >= principales.length) return _abrirMenu(context, ref);
-          context.go(principales[real].ruta);
+          if (i >= principales.length) return _abrirMenu(context, ref);
+          context.go(principales[i].ruta);
         },
       ),
     );
   }
 
-  /// El "+" va en el medio de la barra, entre la segunda y la tercera
-  /// sección: es donde cae el pulgar.
-  static const _lugarDelMas = 2;
-
   /// La hoja del "+": todo lo que se carga a mano, en un solo lugar.
   ///
   /// Antes había que acordarse de en qué sección se daba de alta cada cosa.
-  /// "¿Qué querés cargar?", como la pantalla del diseño, en la hoja que
-  /// sube desde el "+" de la barra.
-  void _abrirCargar(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: 820),
-      builder: (_) => _HojaCargar(shell: context),
-    );
-  }
-
-  /// Lo que no entra en la barra inferior vive aca. Se usa una hoja y no un
-  /// drawer lateral porque en un telefono grande la esquina superior izquierda
-  /// no se alcanza con una mano.
   /// "Más opciones", como en el diseño.
   ///
   /// El cliente pidió que siga siendo la hoja que sube desde la barra —no una
@@ -1457,314 +1435,3 @@ class _FilaInterruptor extends StatelessWidget {
 }
 
 /// Lo que se puede dar de alta, y lo último que se cargó.
-class _HojaCargar extends ConsumerWidget {
-  const _HojaCargar({required this.shell});
-
-  /// El contexto del shell: la hoja se cierra antes de navegar.
-  final BuildContext shell;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.paleta;
-
-    void irA(String ruta) {
-      Navigator.pop(context);
-      shell.go(ruta);
-    }
-
-    final grandes = [
-      _OpcionCarga(
-        icono: Icons.add_rounded,
-        titulo: 'Un auto solo',
-        descripcion: 'Completás los datos de a uno, paso a paso.',
-        accion: 'Comenzar ahora',
-        destacada: true,
-        onTap: () => irA(Secciones.vehiculos.ruta),
-      ),
-      _OpcionCarga(
-        icono: Icons.description_outlined,
-        titulo: 'Varios autos de una vez',
-        descripcion:
-            'Subí una planilla, un PDF o la foto del cuaderno de inventario.',
-        accion: 'Subir lista',
-        destacada: true,
-        onTap: () {
-          // Abre la importación derecho, sin pasar por la lista de unidades:
-          // el que entra por acá ya sabe que viene con un archivo.
-          Navigator.pop(context);
-          Navigator.of(shell).push<bool>(
-            MaterialPageRoute(
-              fullscreenDialog: true,
-              builder: (_) => const ImportarVehiculos(),
-            ),
-          );
-        },
-      ),
-    ];
-
-    final chicas = [
-      _OpcionCarga(
-        icono: Secciones.gastos.icono,
-        titulo: 'Un gasto',
-        descripcion: 'Reparación, lavadero, batería o trámites de gestoría.',
-        accion: 'Anotar gasto',
-        onTap: () => irA(Secciones.gastos.ruta),
-      ),
-      _OpcionCarga(
-        icono: Secciones.ventas.icono,
-        titulo: 'Una venta',
-        descripcion: 'Registrar la entrega y cerrar la operación.',
-        accion: 'Cerrar venta',
-        onTap: () => irA(Secciones.ventas.ruta),
-      ),
-      _OpcionCarga(
-        icono: Secciones.precios.icono,
-        titulo: 'Cambiar precios',
-        descripcion: 'Actualizar los valores de venta de las unidades.',
-        accion: 'Actualizar',
-        onTap: () => irA(Secciones.precios.ruta),
-      ),
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(Esp.xl, 0, Esp.xl, Esp.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '¿Qué querés cargar?',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Elegí una opción para continuar',
-            style: TextStyle(fontSize: 15, color: p.tinta2),
-          ),
-          const SizedBox(height: Esp.lg),
-
-          LayoutBuilder(
-            builder: (context, r) {
-              final enFila = r.maxWidth >= 640;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (enFila)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < grandes.length; i++) ...[
-                          if (i > 0) const SizedBox(width: Esp.md),
-                          Expanded(child: grandes[i]),
-                        ],
-                      ],
-                    )
-                  else
-                    for (var i = 0; i < grandes.length; i++) ...[
-                      if (i > 0) const SizedBox(height: Esp.md),
-                      grandes[i],
-                    ],
-                  const SizedBox(height: Esp.md),
-                  if (enFila)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < chicas.length; i++) ...[
-                          if (i > 0) const SizedBox(width: Esp.md),
-                          Expanded(child: chicas[i]),
-                        ],
-                      ],
-                    )
-                  else
-                    for (var i = 0; i < chicas.length; i++) ...[
-                      if (i > 0) const SizedBox(height: Esp.md),
-                      chicas[i],
-                    ],
-                ],
-              );
-            },
-          ),
-
-          const SizedBox(height: Esp.lg),
-          _UltimoQueCargaste(onIr: irA),
-        ],
-      ),
-    );
-  }
-}
-
-/// Una de las opciones de "¿Qué querés cargar?".
-class _OpcionCarga extends StatelessWidget {
-  const _OpcionCarga({
-    required this.icono,
-    required this.titulo,
-    required this.descripcion,
-    required this.accion,
-    required this.onTap,
-    this.destacada = false,
-  });
-
-  final IconData icono;
-  final String titulo, descripcion, accion;
-  final VoidCallback onTap;
-  final bool destacada;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.paleta;
-    return Tarjeta(
-      padding: const EdgeInsets.all(Esp.lg),
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconoEnCirculo(
-            icono: icono,
-            tamano: destacada ? 52 : 44,
-            color: destacada ? p.acentoTinta : p.acentoTexto,
-            fondo: destacada ? p.acento : p.acentoLavado,
-          ),
-          const SizedBox(height: Esp.md),
-          Text(titulo, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 2),
-          Text(
-            descripcion,
-            style: TextStyle(fontSize: 15, color: p.tinta2, height: 1.35),
-          ),
-          const SizedBox(height: Esp.md),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: destacada
-                ? FilledButton.icon(
-                    onPressed: onTap,
-                    icon: Text(accion),
-                    label: const Icon(Icons.arrow_forward_rounded, size: 20),
-                  )
-                : TextButton.icon(
-                    onPressed: onTap,
-                    icon: Text(accion),
-                    label: const Icon(Icons.arrow_forward_rounded, size: 20),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Lo último que cargaste": la actividad reciente, con el atajo para
-/// corregir lo que haya salido mal.
-class _UltimoQueCargaste extends ConsumerWidget {
-  const _UltimoQueCargaste({required this.onIr});
-
-  final void Function(String ruta) onIr;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.paleta;
-    final inventario = ref.watch(inventarioProvider).value ?? const [];
-    final gastos = ref.watch(gastosProvider).value ?? const [];
-    final ventas = ref.watch(ventasProvider).value ?? const [];
-
-    // Una sola lista con lo último de cada cosa, ordenada por fecha.
-    final movimientos =
-        <({DateTime cuando, IconData icono, String texto, String ruta})>[
-          for (final v in inventario.take(20))
-            (
-              cuando: v.fechaIngreso,
-              icono: Icons.directions_car_filled_rounded,
-              texto: '${v.titulo}${v.patente == null ? '' : ' · ${v.patente}'}',
-              ruta: '/inventario/${v.id}',
-            ),
-          for (final g in gastos.take(20))
-            (
-              cuando: g.fecha,
-              icono: Icons.receipt_long_outlined,
-              texto:
-                  'Gasto: ${g.descripcion?.isNotEmpty == true ? g.descripcion! : g.categoria.etiqueta}'
-                  ' · ${Fmt.pesos(g.importe)}',
-              ruta: Secciones.gastos.ruta,
-            ),
-          for (final v in ventas.take(20))
-            (
-              cuando: v.fechaVenta,
-              icono: Icons.sell_outlined,
-              texto:
-                  'Venta: ${v.vehiculoTitulo ?? v.vehiculoCodigo ?? 'una unidad'}',
-              ruta: Secciones.ventas.ruta,
-            ),
-        ]..sort((a, b) => b.cuando.compareTo(a.cuando));
-
-    if (movimientos.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.schedule_rounded, size: 20, color: p.tinta2),
-            const SizedBox(width: Esp.sm),
-            Expanded(
-              child: Text(
-                'Lo último que cargaste',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            Pastilla(
-              texto: 'Actividad reciente',
-              color: p.tinta2,
-              lavado: p.superficieHundida,
-              conPunto: false,
-            ),
-          ],
-        ),
-        const SizedBox(height: Esp.sm),
-        Tarjeta(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (final m in movimientos.take(4))
-                Padding(
-                  padding: const EdgeInsets.all(Esp.md),
-                  child: Row(
-                    children: [
-                      IconoEnCirculo(
-                        icono: m.icono,
-                        tamano: 40,
-                        color: p.tinta2,
-                        fondo: p.superficieHundida,
-                      ),
-                      const SizedBox(width: Esp.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              m.texto,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(
-                              Fmt.fecha(m.cuando),
-                              style: TextStyle(fontSize: 14, color: p.tinta3),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: Esp.sm),
-                      OutlinedButton(
-                        onPressed: () => onIr(m.ruta),
-                        child: const Text('Corregir'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}

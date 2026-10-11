@@ -76,14 +76,11 @@ void main() {
 
     for (final seccion in [
       'Inventario',
+      'Cargar',
       'Clientes',
-      'Vehículos',
-      'Gastos',
-      'Precios',
-      'Ventas',
-      'Campañas',
       'Estadísticas',
       'Simulador',
+      'Campañas',
       'Configuración',
     ]) {
       await ir(tester, seccion);
@@ -159,8 +156,9 @@ void main() {
         .first
         .data!;
 
-    // 1. Se abre el alta y se cancela: no tiene que quedar nada.
-    await ir(tester, 'Vehículos');
+    // 1. Se abre el alta desde "Cargar" y se cancela: no queda nada.
+    await ir(tester, 'Cargar');
+    await tocar(tester, find.text('Comenzar ahora').first);
     await tocar(tester, find.text('Nueva unidad').first);
     // El asistente del diseño: cuatro pasos, y arranca en "El auto".
     expect(find.text('El auto'), findsWidgets);
@@ -246,19 +244,14 @@ void main() {
         reason: 'Falta el icono $icono en la barra inferior',
       );
     }
-    expect(find.text('Panel'), findsWidgets);
+    expect(find.text('Inicio'), findsWidgets);
 
-    // El "+" abre la hoja "¿Qué querés cargar?" del diseño.
+    // "Cargar" es una sección del diseño: lleva a "¿Qué querés cargar?".
     await tester.tap(find.byIcon(Icons.add_circle_outline_rounded).first);
     await tester.pumpAndSettle();
-    expect(find.text('¿Qué querés cargar?'), findsOneWidget);
     expect(find.text('Un auto solo'), findsOneWidget);
     expect(find.text('Varios autos de una vez'), findsOneWidget);
     expect(find.text('Un gasto'), findsOneWidget);
-    // La hoja se cierra con el gesto de volver del telefono: ahora ocupa
-    // casi toda la pantalla y no queda lugar donde tocar afuera.
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
 
     // "Más" abre las opciones, con los bloques del diseño.
     await tester.tap(find.byIcon(Icons.more_horiz_rounded).first);

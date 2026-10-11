@@ -80,6 +80,22 @@ diseño: pastilla oscura flotante con cinco lugares.
 - **"Más"**: el resto de las secciones y el **cambio de tema** (claro /
   oscuro), que se queda donde estaba.
 
+## Las secciones son cinco
+
+El diseño tiene cinco lugares y nada más: **Inicio, Inventario, Cargar,
+Clientes y Más**. La app los respeta en los dos tamaños —la barra de abajo
+en el teléfono y la barra lateral en escritorio muestran lo mismo—, porque
+once entradas en una y cinco en la otra obligan a aprender dos apps.
+
+- **Cargar** es una sección de verdad (`/cargar`), no una hoja: de ahí salen
+  el alta de un auto, la carga de varios de una vez, los gastos, las ventas
+  y los cambios de precio. Estando en cualquiera de esas pantallas, la barra
+  deja encendido "Cargar".
+- **Más** es la hoja que sube desde la barra, con el perfil, las
+  herramientas (Estadísticas, Simulador, Campañas, Configuración) y las
+  preferencias. En escritorio esas herramientas se listan directamente en la
+  barra lateral, abajo de los cuatro destinos.
+
 ## Qué pantalla es cada archivo
 
 | Pantalla del diseño | En el código |
@@ -91,7 +107,7 @@ diseño: pastilla oscura flotante con cinco lugares.
 | Estadísticas | `funciones/estadisticas/pantalla_estadisticas.dart` |
 | Simulador de financiamiento | `funciones/simulador/pantalla_simulador.dart` |
 | Más opciones | la hoja de `ui/shell/shell_adaptativo.dart` |
-| ¿Qué querés cargar? | la hoja del "+" en `ui/shell/shell_adaptativo.dart` |
+| ¿Qué querés cargar? | `funciones/cargar/pantalla_cargar.dart` |
 | Cargar auto (4 pasos) | `funciones/vehiculos/formulario_vehiculo.dart` |
 | Cargar varios autos / revisar | `funciones/vehiculos/importar_vehiculos.dart` |
 | Nueva tarea | `funciones/panel/nueva_tarea.dart` |

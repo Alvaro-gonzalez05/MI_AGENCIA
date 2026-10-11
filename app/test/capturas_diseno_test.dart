@@ -117,9 +117,16 @@ void main() {
     });
   });
 
-  testWidgets('hoja cargar', (t) async {
-    await capturarApp(t, 'hoja-cargar', const Size(430, 900), (t) async {
+  testWidgets('cargar celular', (t) async {
+    await capturarApp(t, 'cargar-celular', const Size(430, 1000), (t) async {
       await t.tap(find.byIcon(Icons.add_circle_outline_rounded).first);
+      await t.pumpAndSettle();
+    });
+  });
+
+  testWidgets('cargar escritorio', (t) async {
+    await capturarApp(t, 'cargar-escritorio', const Size(1280, 900), (t) async {
+      await t.tap(find.text('Cargar').first);
       await t.pumpAndSettle();
     });
   });

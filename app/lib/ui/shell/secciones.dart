@@ -28,19 +28,20 @@ class Seccion {
   /// Visible solo para la cuenta de plataforma (nosotros).
   final bool soloDesarrollador;
 
-  /// En movil no entran diez destinos abajo: solo estos cinco, el resto va
-  /// en la hoja de "Más".
+  /// Los cinco lugares del diseño: Inicio, Inventario, Cargar, Clientes y
+  /// Más. Todo lo demás se llega desde Cargar (las altas) o desde Más (las
+  /// herramientas): el que usa la app tiene cinco destinos, no once.
   final bool enBarraInferior;
 }
 
 abstract final class Secciones {
   static const panel = Seccion(
     id: 'panel',
-    etiqueta: 'Panel',
+    etiqueta: 'Inicio',
     ruta: '/panel',
-    icono: Icons.dashboard_outlined,
+    icono: Icons.home_outlined,
     grupo: 'Gestión',
-    titulo: 'Panel',
+    titulo: 'Inicio',
     subtitulo: 'Estado del negocio de un vistazo',
     enBarraInferior: true,
   );
@@ -67,6 +68,20 @@ abstract final class Secciones {
     grupo: 'Gestión',
     titulo: 'Clientes',
     subtitulo: 'Interesados y compradores, con semáforo crediticio del BCRA',
+    enBarraInferior: true,
+  );
+
+  /// "Cargar" es una sección de verdad, como en el diseño: una pantalla que
+  /// pregunta qué querés cargar y lleva a cada alta. Antes era una hoja que
+  /// subía desde el "+", y eso dejaba cuatro secciones sueltas en el menú.
+  static const cargarDatos = Seccion(
+    id: 'cargar',
+    etiqueta: 'Cargar',
+    ruta: '/cargar',
+    icono: Icons.add_circle_outline_rounded,
+    grupo: 'Gestión',
+    titulo: '¿Qué querés cargar?',
+    subtitulo: 'Elegí una opción para continuar',
     enBarraInferior: true,
   );
 
@@ -164,6 +179,7 @@ abstract final class Secciones {
   static const todas = <Seccion>[
     panel,
     inventario,
+    cargarDatos,
     interesados,
     vehiculos,
     gastos,
@@ -185,8 +201,16 @@ abstract final class Secciones {
 
   /// Lo que se carga a mano, en el orden en que sucede en la agencia: entra
   /// la unidad, se le hacen gastos, se le pone precio, se vende. Es lo que
-  /// ofrece el botón "+" de la barra inferior.
+  /// ofrece la sección "Cargar".
   static const cargar = <Seccion>[vehiculos, gastos, precios, ventas];
+
+  /// Las herramientas que viven en "Más".
+  static const herramientas = <Seccion>[
+    estadisticas,
+    simulador,
+    campanas,
+    configuracion,
+  ];
 
   static Seccion? porRuta(String ruta) {
     for (final s in todas) {
