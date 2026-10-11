@@ -8,6 +8,7 @@ import '../../datos/repositorio.dart';
 import '../../dominio/agencias.dart';
 import '../../ui/componentes.dart';
 import '../../ui/confirmacion.dart';
+import 'cuenta_agencia.dart';
 import 'formulario_agencia.dart';
 
 /// Panel de la cuenta de desarrollador: las agencias cliente.
@@ -252,6 +253,15 @@ class _Tarjeta extends ConsumerWidget {
                       : Fmt.fecha(a.vigenteHasta),
                   color: a.vencida ? p.critico : null,
                 ),
+              ),
+              IconButton(
+                tooltip: 'Dar de alta la cuenta',
+                icon: Icon(
+                  Icons.person_add_alt_1_outlined,
+                  size: 20,
+                  color: p.tinta3,
+                ),
+                onPressed: () => HojaCuentaAgencia.abrir(context, a),
               ),
               IconButton(
                 tooltip: a.activa ? 'Suspender' : 'Reactivar',

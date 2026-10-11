@@ -47,17 +47,42 @@ class Agencia {
 }
 
 /// Rol de un usuario dentro de una agencia.
+///
+/// Es el mismo enum que en la base (`rol_membresia`). Lo que decide casi
+/// todo es [vePlata]: el vendedor negocia mejor sin saber el piso, y el
+/// dueño no quiere que el precio de compra circule por el salón.
 enum RolMembresia {
-  owner('Dueño', 'owner', 'Todo, incluida la configuración y los usuarios'),
-  admin('Administrador', 'admin', 'Todo menos transferir la cuenta'),
-  vendedor('Vendedor', 'vendedor', 'Carga unidades, gastos, precios y ventas'),
-  soloLectura('Solo lectura', 'solo_lectura', 'Mira, no toca');
+  owner(
+    'Dueño',
+    'owner',
+    'Ve y cambia todo, incluida la plata: costos, ganancias y usuarios.',
+  ),
+  admin(
+    'Administrador',
+    'admin',
+    'Lo mismo que el dueño, salvo transferir o dar de baja la cuenta.',
+  ),
+  vendedor(
+    'Vendedor',
+    'vendedor',
+    'Carga y vende. No ve el precio de compra ni la ganancia.',
+  ),
+  soloLectura(
+    'Solo lectura',
+    'solo_lectura',
+    'Mira el inventario y los clientes. No carga ni modifica nada.',
+  );
 
   const RolMembresia(this.etiqueta, this.valorBd, this.descripcion);
 
   final String etiqueta;
   final String valorBd;
   final String descripcion;
+
+  /// Quién ve lo que costó la unidad y cuánto se gana con ella.
+  bool get vePlata => this == owner || this == admin;
+
+  bool get puedeEditar => this != soloLectura;
 
   static RolMembresia desde(String? s) => RolMembresia.values.firstWhere(
     (r) => r.valorBd == s,
@@ -267,4 +292,28 @@ class DatosAgencia {
       telefono.trim() != (a.telefono ?? '') ||
       localidad.trim() != (a.localidad ?? '') ||
       provincia.trim() != (a.provincia ?? '');
+}
+
+/// Lo que queda de dar de alta la cuenta de una agencia.
+///
+/// La clave se devuelve UNA sola vez, para poder entregarla. No se guarda
+/// en ningun lado: si se pierde, se genera otra.
+class CuentaCreada {
+  const CuentaCreada({
+    required this.email,
+    required this.rol,
+    required this.agencia,
+    this.clave,
+    this.yaExistia = false,
+  });
+
+  final String email;
+  final String rol;
+  final String agencia;
+
+  /// Null cuando la cuenta ya existia: no se le cambia la clave a alguien
+  /// que ya la tiene, porque le sacaria el acceso a su otra agencia.
+  final String? clave;
+
+  final bool yaExistia;
 }

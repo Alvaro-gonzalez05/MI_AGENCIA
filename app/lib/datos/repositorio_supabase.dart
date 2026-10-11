@@ -386,6 +386,57 @@ class RepositorioSupabase implements Repositorio {
   }
 
   // -------------------------------------------------------------------
+  // Alta de cuentas (solo desarrollador)
+  // -------------------------------------------------------------------
+
+  @override
+  Future<CuentaCreada> crearCuentaAgencia({
+    required String agenciaId,
+    required String email,
+    required String nombre,
+    RolMembresia rol = RolMembresia.owner,
+  }) async {
+    late FunctionResponse r;
+    try {
+      r = await _db.functions.invoke(
+        'crear-cuenta-agencia',
+        body: {
+          'agencia_id': agenciaId,
+          'email': email.trim().toLowerCase(),
+          'nombre': nombre.trim(),
+          'rol': rol.valorBd,
+        },
+      );
+    } on FunctionException catch (e) {
+      final detalle = e.details;
+      if (detalle is Map && detalle['error'] != null) {
+        throw Exception(detalle['error']);
+      }
+      throw Exception(
+        e.status == 404
+            ? 'El alta de cuentas todavía no está desplegada.'
+            : 'No se pudo crear la cuenta. Reintentá en unos minutos.',
+      );
+    }
+
+    final datos = r.data;
+    if (datos is Map && datos['error'] != null) {
+      throw Exception(datos['error'].toString());
+    }
+    if (datos is! Map) {
+      throw Exception('El servidor contestó algo que no se entiende.');
+    }
+
+    return CuentaCreada(
+      email: datos['email'] as String? ?? email,
+      clave: datos['clave'] as String?,
+      rol: datos['rol'] as String? ?? rol.valorBd,
+      agencia: datos['agencia'] as String? ?? nombre,
+      yaExistia: datos['ya_existia'] as bool? ?? false,
+    );
+  }
+
+  // -------------------------------------------------------------------
   // Cuotas y cobranzas
   // -------------------------------------------------------------------
 

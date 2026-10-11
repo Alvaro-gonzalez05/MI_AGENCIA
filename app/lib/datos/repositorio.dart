@@ -139,6 +139,16 @@ abstract interface class Repositorio {
 
   Future<void> anularPago(String id);
 
+  /// Da de alta la cuenta con la que entra una agencia. Solo la cuenta de
+  /// desarrollador puede: crear usuarios exige la clave de servicio, que
+  /// nunca viaja dentro de la app.
+  Future<CuentaCreada> crearCuentaAgencia({
+    required String agenciaId,
+    required String email,
+    required String nombre,
+    RolMembresia rol = RolMembresia.owner,
+  });
+
   Future<List<Gasto>> gastos({String? vehiculoId});
 
   Future<void> crearGasto(AltaGasto g);
@@ -350,6 +360,23 @@ class RepositorioDemo implements Repositorio {
   final Map<String, List<DetalleVehiculo>> _detalles = {};
   final List<Tarea> _tareas = [];
   final List<PlanPago> _planes = [];
+
+  @override
+  Future<CuentaCreada> crearCuentaAgencia({
+    required String agenciaId,
+    required String email,
+    required String nombre,
+    RolMembresia rol = RolMembresia.owner,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    return CuentaCreada(
+      email: email,
+      clave: 'demo-1234',
+      rol: rol.valorBd,
+      agencia: nombre,
+    );
+  }
+
   final Map<String, List<CuotaPlan>> _cuotas = {};
 
   @override
