@@ -35,7 +35,10 @@ class PantallaVehiculos extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       floatingActionButton: asincrono.value?.any((v) => !v.vendido) == true
           ? FloatingActionButton.extended(
-              onPressed: () => _abrirFormulario(context, ref),
+              // Con la lista de la agencia en la mano, cargar de a uno no lo
+              // hace nadie: antes de empezar se pregunta.
+              onPressed: () =>
+                  _abrirFormulario(context, ref, preguntarModo: true),
               icon: const Icon(Icons.add_rounded, size: 22),
               label: const Text('Nueva unidad'),
             )
@@ -149,11 +152,13 @@ class PantallaVehiculos extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     AltaVehiculo? inicial,
+    bool preguntarModo = false,
   }) async {
     final guardado = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => FormularioVehiculo(inicial: inicial),
+        builder: (_) =>
+            FormularioVehiculo(inicial: inicial, preguntarModo: preguntarModo),
       ),
     );
 

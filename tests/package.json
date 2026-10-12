@@ -11,7 +11,10 @@
     "sql-completo": "node generar_sql_completo.mjs",
     "historial": "node --experimental-strip-types --no-warnings historial_bcra.mjs",
     "ipc": "node ipc.mjs",
-    "dolar": "node dolar.mjs"
+    "dolar": "node dolar.mjs",
+    "e2e": "node e2e_permisos.mjs && node e2e_alta_de_cuentas.mjs",
+    "e2e-permisos": "node e2e_permisos.mjs",
+    "e2e-alta": "node e2e_alta_de_cuentas.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.11"

@@ -157,9 +157,10 @@ void main() {
         .data!;
 
     // 1. Se abre el alta desde "Cargar" y se cancela: no queda nada.
+    //    Desde acá el asistente se abre derecho: el que tocó "un auto solo"
+    //    ya eligió y no se le vuelve a preguntar.
     await ir(tester, 'Cargar');
     await tocar(tester, find.text('Comenzar ahora').first);
-    await tocar(tester, find.text('Nueva unidad').first);
     // El asistente del diseño: cuatro pasos, y arranca en "El auto".
     expect(find.text('El auto'), findsWidgets);
     expect(find.text('Precio'), findsWidgets);

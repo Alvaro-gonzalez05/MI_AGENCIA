@@ -12,6 +12,8 @@ import '../../dominio/modelos.dart';
 import '../../dominio/papeles.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import '../cargar/pantalla_cargar.dart';
+import 'importar_vehiculos.dart';
 import '../panel/precio_revista.dart';
 
 /// Cargar un auto, en los cuatro pasos del diseño: el auto, el precio, los
@@ -22,9 +24,19 @@ import '../panel/precio_revista.dart';
 /// en la vida real —el auto entra, se anota, y los papeles y las fotos llegan
 /// después—, y evita perder media carga si suena el teléfono en el paso 3.
 class FormularioVehiculo extends ConsumerStatefulWidget {
-  const FormularioVehiculo({super.key, this.inicial});
+  const FormularioVehiculo({
+    super.key,
+    this.inicial,
+    this.preguntarModo = false,
+  });
 
   final AltaVehiculo? inicial;
+
+  /// Si antes de empezar hay que preguntar cómo se carga: una unidad a mano
+  /// o una lista entera. Va en true cuando se entra por el botón de
+  /// "Nueva unidad", y en false cuando el que llega ya eligió —desde la
+  /// sección Cargar o desde la revisión de una importación—.
+  final bool preguntarModo;
 
   @override
   ConsumerState<FormularioVehiculo> createState() => _FormularioVehiculoState();
@@ -41,6 +53,9 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
   String? _idGuardado;
 
   int _paso = 0;
+
+  /// Mientras es true, en vez del paso 1 se ve la pregunta de cómo cargar.
+  late bool _eligiendoModo = widget.preguntarModo && widget.inicial == null;
   Map<String, String> _errores = {};
   bool _guardando = false;
   String? _errorGeneral;
@@ -312,89 +327,186 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            _Pasos(actual: _paso, pasos: _pasos),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  Esp.xl,
-                  Esp.lg,
-                  Esp.xl,
-                  Esp.xl,
+        child: _eligiendoModo
+            ? _ComoCargar(
+                onUno: () => setState(() => _eligiendoModo = false),
+                onLista: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    fullscreenDialog: true,
+                    builder: (_) => const ImportarVehiculos(),
+                  ),
                 ),
+              )
+            : Column(
                 children: [
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_paso > 0) ...[
-                            _ResumenUnidad(
-                              vehiculo: _v,
-                              estado: switch (_paso) {
-                                1 => 'Paso 1 listo',
-                                2 => 'Precio guardado',
-                                _ => 'Papeles completados',
-                              },
-                            ),
-                            const SizedBox(height: Esp.lg),
-                          ],
-
-                          if (_errorGeneral != null) ...[
-                            AvisoError(mensaje: _errorGeneral!),
-                            const SizedBox(height: Esp.lg),
-                          ],
-
-                          switch (_paso) {
-                            0 => _PasoAuto(
-                              v: _v,
-                              errores: _errores,
-                              onCambio: (x) => setState(() => _v = x),
-                            ),
-                            1 => _PasoPrecio(
-                              v: _v,
-                              cfg: cfg,
-                              vePlata: ref.watch(vePlataProvider),
-                              errores: _errores,
-                              onCambio: (x) => setState(() => _v = x),
-                            ),
-                            2 => _PasoPapeles(
-                              papeles:
-                                  _papeles ??
-                                  PapelesVehiculo(
-                                    vehiculoId: _idGuardado ?? '',
-                                  ),
-                              onCambio: (x) => setState(() => _papeles = x),
-                            ),
-                            _ => _PasoFotos(
-                              fotos: _fotos,
-                              subiendo: _subiendo,
-                              onElegir: _elegirFotos,
-                              onBorrar: _borrarFoto,
-                              onPortada: _hacerPortada,
-                            ),
-                          },
-                        ],
+                  _Pasos(actual: _paso, pasos: _pasos),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        Esp.xl,
+                        Esp.lg,
+                        Esp.xl,
+                        Esp.xl,
                       ),
+                      children: [
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 760),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (_paso > 0) ...[
+                                  _ResumenUnidad(
+                                    vehiculo: _v,
+                                    estado: switch (_paso) {
+                                      1 => 'Paso 1 listo',
+                                      2 => 'Precio guardado',
+                                      _ => 'Papeles completados',
+                                    },
+                                  ),
+                                  const SizedBox(height: Esp.lg),
+                                ],
+
+                                if (_errorGeneral != null) ...[
+                                  AvisoError(mensaje: _errorGeneral!),
+                                  const SizedBox(height: Esp.lg),
+                                ],
+
+                                switch (_paso) {
+                                  0 => _PasoAuto(
+                                    v: _v,
+                                    errores: _errores,
+                                    onCambio: (x) => setState(() => _v = x),
+                                  ),
+                                  1 => _PasoPrecio(
+                                    v: _v,
+                                    cfg: cfg,
+                                    vePlata: ref.watch(vePlataProvider),
+                                    errores: _errores,
+                                    onCambio: (x) => setState(() => _v = x),
+                                  ),
+                                  2 => _PasoPapeles(
+                                    papeles:
+                                        _papeles ??
+                                        PapelesVehiculo(
+                                          vehiculoId: _idGuardado ?? '',
+                                        ),
+                                    onCambio: (x) =>
+                                        setState(() => _papeles = x),
+                                  ),
+                                  _ => _PasoFotos(
+                                    fotos: _fotos,
+                                    subiendo: _subiendo,
+                                    onElegir: _elegirFotos,
+                                    onBorrar: _borrarFoto,
+                                    onPortada: _hacerPortada,
+                                  ),
+                                },
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  _BarraPasos(
+                    paso: _paso,
+                    total: _pasos.length,
+                    guardando: _guardando,
+                    onAtras: _paso == 0
+                        ? () => Navigator.of(context).pop(false)
+                        : () => setState(() => _paso--),
+                    onSiguiente: _paso == _pasos.length - 1
+                        ? _terminar
+                        : _siguiente,
                   ),
                 ],
               ),
-            ),
-            _BarraPasos(
-              paso: _paso,
-              total: _pasos.length,
-              guardando: _guardando,
-              onAtras: _paso == 0
-                  ? () => Navigator.of(context).pop(false)
-                  : () => setState(() => _paso--),
-              onSiguiente: _paso == _pasos.length - 1 ? _terminar : _siguiente,
-            ),
-          ],
-        ),
       ),
+    );
+  }
+}
+
+/// La pregunta de antes de empezar: ¿una unidad o una lista entera?
+///
+/// Es la misma de la sección "Cargar", repetida acá porque a la carga se
+/// llega de los dos lados y la decisión es la misma. Con la lista en la mano,
+/// cargar 30 autos de a uno no lo hace nadie: termina sin cargarse nada.
+class _ComoCargar extends StatelessWidget {
+  const _ComoCargar({required this.onUno, required this.onLista});
+
+  final VoidCallback onUno, onLista;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(Esp.xl, Esp.xl, Esp.xl, Esp.xxl),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '¿Cómo lo vas a cargar?',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Elegí una opción para continuar',
+                  style: TextStyle(fontSize: 15, color: p.tinta2),
+                ),
+                const SizedBox(height: Esp.lg),
+                LayoutBuilder(
+                  builder: (context, r) {
+                    final tarjetas = [
+                      OpcionCarga(
+                        icono: Icons.add_rounded,
+                        titulo: 'Un auto solo',
+                        descripcion:
+                            'Completás los datos de a uno, paso a paso.',
+                        accion: 'Comenzar ahora',
+                        destacada: true,
+                        onTap: onUno,
+                      ),
+                      OpcionCarga(
+                        icono: Icons.description_outlined,
+                        titulo: 'Varios autos de una vez',
+                        descripcion:
+                            'Subí una planilla, un PDF o la foto del cuaderno '
+                            'de inventario.',
+                        accion: 'Subir lista',
+                        destacada: true,
+                        onTap: onLista,
+                      ),
+                    ];
+                    return r.maxWidth >= 620
+                        ? IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: tarjetas[0]),
+                                const SizedBox(width: Esp.md),
+                                Expanded(child: tarjetas[1]),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              tarjetas[0],
+                              const SizedBox(height: Esp.md),
+                              tarjetas[1],
+                            ],
+                          );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

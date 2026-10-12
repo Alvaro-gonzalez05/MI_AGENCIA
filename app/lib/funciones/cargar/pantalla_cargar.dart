@@ -8,6 +8,7 @@ import '../../core/tema/tema.dart';
 import '../../datos/repositorio.dart';
 import '../../ui/componentes.dart';
 import '../../ui/shell/secciones.dart';
+import '../vehiculos/formulario_vehiculo.dart';
 import '../vehiculos/importar_vehiculos.dart';
 
 /// "¿Qué querés cargar?": la sección Cargar del diseño.
@@ -45,15 +46,22 @@ class _Opciones extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grandes = [
-      _OpcionCarga(
+      OpcionCarga(
         icono: Icons.add_rounded,
         titulo: 'Un auto solo',
         descripcion: 'Completás los datos de a uno, paso a paso.',
         accion: 'Comenzar ahora',
         destacada: true,
-        onTap: () => onIr(Secciones.vehiculos.ruta),
+        // Derecho al formulario: el que toca acá ya eligió, no hace falta
+        // pasar por la lista de unidades para volver a decidir.
+        onTap: () => Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => const FormularioVehiculo(),
+          ),
+        ),
       ),
-      _OpcionCarga(
+      OpcionCarga(
         icono: Icons.description_outlined,
         titulo: 'Varios autos de una vez',
         descripcion:
@@ -74,21 +82,21 @@ class _Opciones extends StatelessWidget {
     ];
 
     final chicas = [
-      _OpcionCarga(
+      OpcionCarga(
         icono: Secciones.gastos.icono,
         titulo: 'Un gasto',
         descripcion: 'Reparación, lavadero, batería o trámites de gestoría.',
         accion: 'Anotar gasto',
         onTap: () => onIr(Secciones.gastos.ruta),
       ),
-      _OpcionCarga(
+      OpcionCarga(
         icono: Secciones.ventas.icono,
         titulo: 'Una venta',
         descripcion: 'Registrar la entrega y cerrar la operación.',
         accion: 'Cerrar venta',
         onTap: () => onIr(Secciones.ventas.ruta),
       ),
-      _OpcionCarga(
+      OpcionCarga(
         icono: Secciones.precios.icono,
         titulo: 'Cambiar precios',
         descripcion: 'Actualizar los valores de venta de las unidades.',
@@ -146,8 +154,12 @@ class _Opciones extends StatelessWidget {
 }
 
 /// Una de las opciones de "¿Qué querés cargar?".
-class _OpcionCarga extends StatelessWidget {
-  const _OpcionCarga({
+/// Una de las tarjetas de "¿Qué querés cargar?". Es pública porque el
+/// formulario de alta la vuelve a usar cuando pregunta si se carga una
+/// unidad o una lista: la misma pregunta se ve igual en los dos lados.
+class OpcionCarga extends StatelessWidget {
+  const OpcionCarga({
+    super.key,
     required this.icono,
     required this.titulo,
     required this.descripcion,
