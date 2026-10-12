@@ -1,6 +1,6 @@
 # Qué falta
 
-Estado al 28/09/2026. Ordenado por lo que desbloquea más cosas.
+Estado al 12/10/2026. Ordenado por lo que desbloquea más cosas.
 
 **El diseño nuevo ("Clarity Drive") ya está aplicado**: tema claro por
 defecto, tipografías Atkinson Hyperlegible Next y Work Sans, componentes y
@@ -19,8 +19,20 @@ trae el detalle por entidad y por mes, y la función de campañas está subida.
 Resend, el dominio y dos secretos en Supabase: paso a paso en
 [EMAIL_MARKETING.md](EMAIL_MARKETING.md).
 
-Sigue pendiente el valor de revista (ver abajo: ArgAutos gratis, 3 consultas
-por minuto).
+**El valor de revista ya funciona** con ArgAutos en su plan gratis. No es un
+cosechador de todo el catálogo: cada unidad que se carga se anota en una cola
+y la base la va resolviendo sola. El límite real que descubrimos no son las 3
+consultas por minuto sino **30 por día**, así que una flota de 20 unidades
+tarda un par de días en completarse la primera vez y después se refresca el
+día 2 de cada mes. Los nombres se normalizan al guardar (0033) para que
+"VW", "Volkswagen" y "volkswagen " no sean tres autos distintos.
+
+**Cuotas y cobranzas está hecho**: planes con los cuatro sistemas de
+amortización, cuotas, pagos parciales, atrasos y la deuda de cada cliente.
+
+**Usuarios y permisos está hecho**: desde la cuenta de desarrollador se da de
+alta la cuenta de cada agencia (usuario, clave y rol) y el vendedor ya no ve
+el precio de compra ni la ganancia, ni en la pantalla ni en la base.
 
 **La base quedó vacía y lista para cargar.** Se borraron los datos de
 ejemplo (13 unidades, gastos, precios, ventas e interesados) y quedó la
@@ -53,6 +65,36 @@ app.
 
 Si alguna vez faltaran, el build no falla: sale en modo demo contra los datos
 de ejemplo.
+
+## Usuarios, roles y qué ve cada uno
+
+Desde la cuenta de desarrollador (`alvarogonzalez7070@gmail.com`) se entra a
+**Agencias**, y cada agencia tiene el botón de dar de alta su cuenta. La hoja
+sugiere `nombredelaagencia@miagencia.com`, se elige el rol y el sistema crea
+el usuario y su acceso de una sola vez. La clave la genera el servidor,
+evitando los caracteres que se confunden al dictarlos (`0/O`, `1/l/I`), y se
+muestra **una sola vez**, con un botón que copia usuario y clave juntos.
+
+No queda guardada en ningún lado: si se pierde, se genera otra. Y si el email
+ya existía (alguien que administra dos agencias), no se le toca la clave: se
+le agrega el acceso y se avisa en pantalla.
+
+| Rol | Ve la plata | Puede cargar y vender | Para quién |
+|---|---|---|---|
+| Dueño | sí | sí | el titular de la agencia |
+| Administrador | sí | sí | el encargado |
+| Vendedor | **no** | sí | el que atiende el salón |
+| Solo lectura | **no** | no | contador, auditor, alguien mirando |
+
+"Ver la plata" es el precio de compra, el costo total, los márgenes y la
+ganancia. El vendedor ve el precio de venta, el valor de revista y todo lo
+demás de la unidad; en Inicio, en vez de la ganancia del mes ve lo facturado,
+y Estadísticas no le aparece. El precio de compra **sí** lo escribe cuando
+carga una unidad —es el que la recibió—, pero al volver a abrirla ya no está.
+
+Esto no se sostiene sólo en la pantalla: `v_inventario` devuelve esas
+columnas en null para quien no es dueño ni administrador, así que tampoco
+salen pidiéndoselas a la API con el token de su propia sesión.
 
 ## Publicar una versión
 
@@ -137,11 +179,15 @@ Android y web funcionan sin nada de esto.
 | ~~**Precios**~~ | **Hecho.** Falta el gráfico de evolución del precio contra el costo. |
 | ~~**Ventas**~~ | **Hecho.** |
 | ~~**Campañas**~~ | **Hecho y desplegado.** Falta cargar `RESEND_API_KEY` y `RESEND_FROM` ([EMAIL_MARKETING.md](EMAIL_MARKETING.md)). |
-| ~~**Configuración**~~ | **Hecho**, incluidos los datos de la agencia (nombre, CUIT, contacto). Falta la gestión de usuarios. |
+| ~~**Configuración**~~ | **Hecho**, incluidos los datos de la agencia (nombre, CUIT, contacto). |
+| ~~**Usuarios y permisos**~~ | **Hecho.** Alta de cuentas desde Agencias y cuatro roles: dueño, administrador, vendedor y solo lectura. |
+| ~~**Cuotas y cobranzas**~~ | **Hecho.** Planes, cuotas, pagos y atrasos, dentro de la ficha del cliente. |
 | ~~**Agencias**~~ | **Hecho.** |
 | ~~**Interesados**~~ | **Hecho, incluido el semáforo del BCRA y el informe en PDF.** |
 
-**Las 10 secciones tienen pantalla real.** Ya no queda ninguna de relleno.
+**La navegación es la del diseño: cinco lugares** —Inicio, Inventario,
+Cargar, Clientes y Más—. Las altas viven adentro de "Cargar" y las
+herramientas adentro de "Más"; ninguna pantalla es de relleno.
 
 ### Interesados y semáforo crediticio — terminado
 
@@ -198,13 +244,12 @@ consumirse desde Edge Functions, nunca desde la app.
 - **Quedan encabezados de tabla en 13 px** (el diseño pide 14 como piso).
   Son los de las columnas del inventario, donde 14 no entra en el ancho de
   columna: hay que rediseñar esa tabla, no solo agrandar la letra.
-- **Valor de revista**: la decisión es usar **ArgAutos en su plan gratis**
-  (sin API key, 3 consultas por minuto) y completar los precios de a poco con
-  un proceso que respete ese límite: 3 por minuto son 180 por hora, así que
-  un stock de 60 unidades se completa en 20 minutos y se refresca una vez por
-  mes (ArgAutos actualiza sus fuentes el día 1). Falta programarlo. Lo de
-  abajo queda como alternativa.
-- **Valor de revista, alternativas**: falta la fuente de datos. El cálculo y la comparación
+- ~~**Valor de revista**~~ **Hecho** con ArgAutos gratis, resolviendo sólo lo
+  que los clientes cargan. El techo es de **30 consultas por día** por IP (no
+  las 3 por minuto que suponíamos), así que el primer llenado de una flota
+  grande lleva unos días. Si el cliente crece, hay que pagarle el plan a
+  ArgAutos: ya está hablado con el dueño.
+- **Valor de revista, alternativas** (sólo si ArgAutos deja de estar): el cálculo y la comparación
   porcentual ya están en la base (`v_inventario.revista_ars`,
   `var_vs_revista`). La opción gratuita verificada es la tabla de valuación
   del DNRPA: la publica el Estado todos los meses en PDF con dirección
