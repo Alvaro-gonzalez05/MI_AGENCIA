@@ -15,13 +15,17 @@ unidades, papeles con vencimientos, reservas con seña y plazo, la agenda de
 tareas, el estado y los detalles de cada auto, el alta en cuatro pasos y la
 carga masiva con su panel de revisión.
 
-**Lo que falta, y por qué:**
+**No falta nada del diseño.** Lo último que quedaba ya está:
 
-| Del diseño | Por qué todavía no |
+| Del diseño | Dónde quedó |
 |---|---|
-| Buscador de precio de revista (Inicio) y su modal | La guía de precios (ArgAutos) no está conectada: las tablas de referencia existen pero están vacías |
-| Cuotas y cobranzas | Quedó para su propia tanda, con la cuenta corriente bien hecha |
-| Usuarios y permisos | Hoy el alta de usuarios la hace el administrador desde Supabase |
+| Buscador de precio de revista (Inicio) y su modal | `funciones/panel/precio_revista.dart`, contra ArgAutos: cada unidad cargada se anota en una cola y la base la resuelve sola |
+| Cuotas y cobranzas | `funciones/interesados/plan_de_pagos.dart`, con los cuatro sistemas de amortización |
+| Usuarios y permisos | `funciones/agencias/cuenta_agencia.dart` y los cuatro roles de `dominio/agencias.dart` |
+
+La navegación quedó en los **cinco lugares del diseño** —Inicio, Inventario,
+Cargar, Clientes y Más—: lo que se da de alta vive adentro de "Cargar" y las
+herramientas adentro de "Más".
 
 ## Qué cambió, en una línea
 
