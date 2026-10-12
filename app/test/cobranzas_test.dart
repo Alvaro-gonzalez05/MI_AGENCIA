@@ -55,14 +55,8 @@ void main() {
       expect(cuota(diasDesdeVencimiento: 12).vencida, isTrue);
       expect(cuota(diasDesdeVencimiento: 12).diasDeAtraso, 12);
       // La misma cuota, pagada, no está vencida: ya no se le reclama nada.
-      expect(
-        cuota(diasDesdeVencimiento: 12, pagado: 100000).vencida,
-        isFalse,
-      );
-      expect(
-        cuota(diasDesdeVencimiento: 12, pagado: 100000).diasDeAtraso,
-        0,
-      );
+      expect(cuota(diasDesdeVencimiento: 12, pagado: 100000).vencida, isFalse);
+      expect(cuota(diasDesdeVencimiento: 12, pagado: 100000).diasDeAtraso, 0);
     });
 
     test('lo dice en castellano', () {

@@ -114,6 +114,7 @@ class _BarraLateral extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
+    final vePlata = ref.watch(vePlataProvider);
     // Los mismos destinos que abajo en el teléfono. El diseño tiene cinco
     // lugares; tener once acá y cinco allá obliga a aprender dos apps. Lo
     // que se da de alta vive adentro de "Cargar"; las herramientas, abajo.
@@ -135,7 +136,7 @@ class _BarraLateral extends ConsumerWidget {
             ? Divider(color: p.negroBorde, height: 1)
             : EtiquetaSeccion('Herramientas', color: p.sobreNegro2),
       ),
-      for (final s in Secciones.herramientas)
+      for (final s in Secciones.herramientasPara(vePlata: vePlata))
         _EnlaceNav(
           seccion: s,
           activo: s.id == seccionActual.id,
@@ -934,6 +935,7 @@ class _HojaMasOpciones extends ConsumerWidget {
     final usuario = ref.watch(usuarioProvider);
     final agencia = ref.watch(miAgenciaProvider).value;
     final esDesarrollador = usuario?.esDesarrollador ?? false;
+    final vePlata = ref.watch(vePlataProvider);
 
     void irA(String ruta) {
       Navigator.pop(context);
@@ -1054,13 +1056,15 @@ class _HojaMasOpciones extends ConsumerWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                _FilaOpcion(
-                  icono: Icons.insights_outlined,
-                  titulo: 'Estadísticas',
-                  descripcion:
-                      'Cómo vienen las ventas, los tiempos y las ganancias',
-                  onTap: () => irA(Secciones.estadisticas.ruta),
-                ),
+                // Las ganancias son del dueño: el vendedor no las ve.
+                if (vePlata)
+                  _FilaOpcion(
+                    icono: Icons.insights_outlined,
+                    titulo: 'Estadísticas',
+                    descripcion:
+                        'Cómo vienen las ventas, los tiempos y las ganancias',
+                    onTap: () => irA(Secciones.estadisticas.ruta),
+                  ),
                 _FilaOpcion(
                   icono: Icons.calculate_outlined,
                   titulo: 'Simulador de financiamiento',

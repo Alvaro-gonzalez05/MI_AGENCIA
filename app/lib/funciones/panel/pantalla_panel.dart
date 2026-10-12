@@ -72,7 +72,10 @@ class _Contenido extends ConsumerWidget {
       vencidas,
     );
     final atender = _ParaAtenderHoy(pendientes: pendientes);
-    final ventasMes = _ComoVienenLasVentas(ventas: ventas);
+    final ventasMes = _ComoVienenLasVentas(
+      ventas: ventas,
+      vePlata: ref.watch(vePlataProvider),
+    );
 
     return ListView(
       padding: EdgeInsets.fromLTRB(margen, Esp.sm, margen, Esp.xxl),
@@ -80,6 +83,7 @@ class _Contenido extends ConsumerWidget {
         Aparecer(
           child: _Saludo(
             usuario: ref.watch(usuarioProvider),
+            vePlata: ref.watch(vePlataProvider),
             agencia: ref.watch(miAgenciaProvider).value?.nombre,
             ventas: ventas,
             gastos: gastos,
@@ -299,6 +303,7 @@ class _Contenido extends ConsumerWidget {
 class _Saludo extends StatefulWidget {
   const _Saludo({
     required this.usuario,
+    required this.vePlata,
     required this.agencia,
     required this.ventas,
     required this.gastos,
@@ -307,6 +312,10 @@ class _Saludo extends StatefulWidget {
   });
 
   final Usuario? usuario;
+
+  /// El vendedor ve cuánto se vendió, no cuánto se ganó.
+  final bool vePlata;
+
   final String? agencia;
   final List<Venta> ventas;
   final List<Gasto> gastos;
@@ -368,6 +377,11 @@ class _SaludoState extends State<_Saludo> {
       0,
       (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
     );
+    final facturado = delMes.fold<double>(0, (s, v) => s + v.precioFinal);
+    final facturadoPasado = delMesPasado.fold<double>(
+      0,
+      (s, v) => s + v.precioFinal,
+    );
     final delMesGastos = widget.gastos
         .where((g) => !g.fecha.isBefore(desde))
         .toList();
@@ -414,21 +428,42 @@ class _SaludoState extends State<_Saludo> {
                       ? p.bien
                       : p.critico,
                 ),
-                _TarjetaMes(
-                  titulo: 'Ganancia del mes',
-                  valor: Fmt.pesos(ganancia),
-                  icono: Icons.payments_outlined,
-                  colorIcono: p.acentoTexto,
-                  nota: gananciaPasada == 0
-                      ? 'Ganancia real, ajustada por dólar'
-                      : ganancia >= gananciaPasada
-                      ? 'Mejor que $nombreMesPasado'
-                      : 'Por debajo de $nombreMesPasado',
-                  iconoNota: ganancia >= gananciaPasada
-                      ? Icons.trending_up_rounded
-                      : Icons.horizontal_rule_rounded,
-                  colorNota: ganancia >= gananciaPasada ? p.bien : p.observar,
-                ),
+                // Al vendedor, lo facturado: es lo que él mismo vendió y no
+                // deja ver el precio de compra por diferencia.
+                if (widget.vePlata)
+                  _TarjetaMes(
+                    titulo: 'Ganancia del mes',
+                    valor: Fmt.pesos(ganancia),
+                    icono: Icons.payments_outlined,
+                    colorIcono: p.acentoTexto,
+                    nota: gananciaPasada == 0
+                        ? 'Ganancia real, ajustada por dólar'
+                        : ganancia >= gananciaPasada
+                        ? 'Mejor que $nombreMesPasado'
+                        : 'Por debajo de $nombreMesPasado',
+                    iconoNota: ganancia >= gananciaPasada
+                        ? Icons.trending_up_rounded
+                        : Icons.horizontal_rule_rounded,
+                    colorNota: ganancia >= gananciaPasada ? p.bien : p.observar,
+                  )
+                else
+                  _TarjetaMes(
+                    titulo: 'Facturado este mes',
+                    valor: Fmt.pesos(facturado),
+                    icono: Icons.payments_outlined,
+                    colorIcono: p.acentoTexto,
+                    nota: facturadoPasado == 0
+                        ? 'Lo que entró por ventas'
+                        : facturado >= facturadoPasado
+                        ? 'Mejor que $nombreMesPasado'
+                        : 'Por debajo de $nombreMesPasado',
+                    iconoNota: facturado >= facturadoPasado
+                        ? Icons.trending_up_rounded
+                        : Icons.horizontal_rule_rounded,
+                    colorNota: facturado >= facturadoPasado
+                        ? p.bien
+                        : p.observar,
+                  ),
                 _TarjetaMes(
                   titulo: 'Gastos del mes',
                   valor: Fmt.pesos(gastoMes),
@@ -1130,9 +1165,10 @@ class _AgendarTarea extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ComoVienenLasVentas extends StatelessWidget {
-  const _ComoVienenLasVentas({required this.ventas});
+  const _ComoVienenLasVentas({required this.ventas, required this.vePlata});
 
   final List<Venta> ventas;
+  final bool vePlata;
 
   @override
   Widget build(BuildContext context) {
@@ -1219,7 +1255,7 @@ class _ComoVienenLasVentas extends StatelessWidget {
                   Expanded(
                     child: _BarraMes(
                       unidades: x.unidades,
-                      ganancia: x.ganancia,
+                      ganancia: vePlata ? x.ganancia : null,
                       maximo: maximo < 1 ? 1 : maximo,
                       etiqueta: Fmt.mes(x.mes),
                       actual: x == actual,
@@ -1263,7 +1299,9 @@ class _BarraMes extends StatelessWidget {
   });
 
   final int unidades, maximo;
-  final double ganancia;
+
+  /// Null cuando el que mira no ve la plata: queda solo la cantidad.
+  final double? ganancia;
   final String etiqueta;
   final bool actual;
 
@@ -1287,8 +1325,8 @@ class _BarraMes extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                '${Fmt.pesosCompacto(ganancia)} · $unidades '
-                '${unidades == 1 ? 'auto' : 'autos'}',
+                '${ganancia == null ? '' : '${Fmt.pesosCompacto(ganancia!)} · '}'
+                '$unidades ${unidades == 1 ? 'auto' : 'autos'}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

@@ -61,7 +61,16 @@ class ControlSesion extends Notifier<EstadoSesion> {
     if (Config.modoDemo) return const SesionCerrada();
     final sesion = Supabase.instance.client.auth.currentSession;
     if (sesion == null) return const SesionCerrada();
-    return SesionAbierta(_desdeSupabase(sesion.user));
+
+    // Al volver a abrir la app la sesion ya esta guardada, pero el token no
+    // trae ni el rol ni si es la cuenta de desarrollador. Se entra con lo
+    // minimo y se completa enseguida; sin esto, el duenio volveria del
+    // reinicio convertido en vendedor y sin ver su propia plata.
+    final base = _desdeSupabase(sesion.user);
+    _completar(base).then((completo) {
+      if (state is SesionAbierta) state = SesionAbierta(completo);
+    });
+    return SesionAbierta(base);
   }
 
   /// Version minima, con lo que ya trae el token. Sirve para pintar la UI

@@ -11,6 +11,7 @@ import '../../dominio/papeles.dart';
 import '../../dominio/motor_calculo.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import '../panel/precio_revista.dart';
 import 'ficha_pdf.dart';
 import 'reservar_unidad.dart';
 
@@ -44,17 +45,30 @@ class PantallaFicha extends ConsumerWidget {
             ),
           );
         }
-        return _Ficha(vehiculo: v, cfg: ref.watch(configProvider));
+        return _Ficha(
+          vehiculo: v,
+          cfg: ref.watch(configProvider),
+          vePlata: ref.watch(vePlataProvider),
+        );
       },
     );
   }
 }
 
 class _Ficha extends StatelessWidget {
-  const _Ficha({required this.vehiculo, required this.cfg});
+  const _Ficha({
+    required this.vehiculo,
+    required this.cfg,
+    required this.vePlata,
+  });
 
   final VehiculoInventario vehiculo;
   final ConfigAgencia cfg;
+
+  /// Lo que costó y lo que se gana es del dueño. Al vendedor le queda la
+  /// ficha completa menos esos tres bloques: igual puede vender con el
+  /// valor de mercado y el precio de venta, que sí ve.
+  final bool vePlata;
 
   @override
   Widget build(BuildContext context) {
@@ -71,24 +85,30 @@ class _Ficha extends StatelessWidget {
       hueco,
       Aparecer(indice: 1, child: _Valuacion(vehiculo: v)),
       hueco,
-      Aparecer(indice: 2, child: _Costos(vehiculo: v)),
-      hueco,
-      Aparecer(
-        indice: 3,
-        child: _GananciaReal(vehiculo: v, cfg: cfg),
-      ),
-      hueco,
+      if (vePlata) ...[
+        Aparecer(indice: 2, child: _Costos(vehiculo: v)),
+        hueco,
+        Aparecer(
+          indice: 3,
+          child: _GananciaReal(vehiculo: v, cfg: cfg),
+        ),
+        hueco,
+      ],
       Aparecer(indice: 4, child: _EstadoYObservaciones(vehiculo: v)),
       hueco,
       Aparecer(indice: 5, child: _GastosUnidad(vehiculo: v)),
     ];
 
     final derecha = <Widget>[
-      Aparecer(
-        indice: dosColumnas ? 1 : 5,
-        child: _SimuladorPrecio(vehiculo: v, cfg: cfg),
-      ),
-      hueco,
+      // El simulador parte del costo para decir cuánto pedir: sin ver la
+      // plata no tiene nada que mostrar.
+      if (vePlata) ...[
+        Aparecer(
+          indice: dosColumnas ? 1 : 5,
+          child: _SimuladorPrecio(vehiculo: v, cfg: cfg),
+        ),
+        hueco,
+      ],
       Aparecer(
         indice: dosColumnas ? 2 : 6,
         child: _DatosTecnicos(vehiculo: v),
@@ -608,9 +628,22 @@ class _Valuacion extends StatelessWidget {
             const SizedBox(height: Esp.md),
             _Aviso(
               texto:
-                  'El valor de revista se completa con la guía de precios. '
-                  'Todavía no está conectada: mientras tanto, el precio lo '
-                  'decidís vos con el simulador de acá al lado.',
+                  'Esta unidad está anotada en la guía de precios y el valor '
+                  'llega solo en los próximos días: la guía nos deja hacer '
+                  'unas pocas consultas por día y van por orden.',
+            ),
+            const SizedBox(height: Esp.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => ModalPrecioRevista.abrir(
+                  context,
+                  texto: [v.marca, v.modelo, v.version ?? ''].join(' ').trim(),
+                  anio: v.anio,
+                ),
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
+                label: const Text('Buscar el valor ahora'),
+              ),
             ),
           ],
         ],

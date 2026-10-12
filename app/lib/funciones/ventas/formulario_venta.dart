@@ -311,6 +311,9 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
 
   /// El resultado real de la operacion, antes de confirmarla.
   Widget _resultado(VehiculoInventario v) {
+    // Al vendedor no se le muestra qué dejó la operación: el precio de
+    // cierre lo pone él, la ganancia la mira el dueño.
+    if (!ref.watch(vePlataProvider)) return const SizedBox.shrink();
     final p = context.paleta;
     final precio = _v.precioFinal;
 

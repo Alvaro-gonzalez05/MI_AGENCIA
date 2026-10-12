@@ -12,6 +12,7 @@ import '../../dominio/modelos.dart';
 import '../../dominio/papeles.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
+import '../panel/precio_revista.dart';
 
 /// Cargar un auto, en los cuatro pasos del diseño: el auto, el precio, los
 /// papeles y las fotos.
@@ -355,6 +356,7 @@ class _FormularioVehiculoState extends ConsumerState<FormularioVehiculo> {
                             1 => _PasoPrecio(
                               v: _v,
                               cfg: cfg,
+                              vePlata: ref.watch(vePlataProvider),
                               errores: _errores,
                               onCambio: (x) => setState(() => _v = x),
                             ),
@@ -860,12 +862,18 @@ class _PasoPrecio extends StatelessWidget {
   const _PasoPrecio({
     required this.v,
     required this.cfg,
+    required this.vePlata,
     required this.errores,
     required this.onCambio,
   });
 
   final AltaVehiculo v;
   final ConfigAgencia cfg;
+
+  /// El vendedor escribe el precio de compra cuando carga la unidad —es el
+  /// que la recibió—, pero al volver a abrirla ya no lo ve. Mostrarlo en la
+  /// edición sería dejarlo a la vista para siempre.
+  final bool vePlata;
   final Map<String, String> errores;
   final ValueChanged<AltaVehiculo> onCambio;
 
@@ -873,63 +881,87 @@ class _PasoPrecio extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.paleta;
     final margen = v.margenInicial;
+    final verCompra = vePlata || !v.esEdicion;
+    final consulta = [
+      v.marca,
+      v.modelo,
+      v.version,
+    ].map((x) => x.trim()).where((x) => x.isNotEmpty).join(' ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // El valor de revista del diseño. La guía todavía no está conectada:
-        // el lugar está y lo dice, en vez de mostrar un número inventado.
-        Container(
-          padding: const EdgeInsets.all(Esp.md + 2),
-          decoration: BoxDecoration(
-            color: p.acentoLavado,
-            borderRadius: BorderRadius.circular(Curva.md),
-            border: Border.all(color: p.acento, width: 1.5),
-          ),
-          child: Row(
-            children: [
-              IconoEnCirculo(
-                icono: Icons.menu_book_outlined,
-                tamano: 40,
-                color: p.acentoTinta,
-                fondo: p.acento,
-              ),
-              const SizedBox(width: Esp.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Valor de revista',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      'La guía oficial todavía no está conectada: por ahora el '
-                      'precio lo ponés vos.',
-                      style: TextStyle(fontSize: 14, color: p.tinta2),
-                    ),
-                  ],
+        // El valor de revista del diseño, ya enganchado a la guía: con la
+        // marca, el modelo y el año alcanza para consultarla.
+        Pulsable(
+          onTap: consulta.isEmpty
+              ? null
+              : () => ModalPrecioRevista.abrir(
+                  context,
+                  texto: consulta,
+                  anio: v.anio,
                 ),
-              ),
-            ],
+          child: Container(
+            padding: const EdgeInsets.all(Esp.md + 2),
+            decoration: BoxDecoration(
+              color: p.acentoLavado,
+              borderRadius: BorderRadius.circular(Curva.md),
+              border: Border.all(color: p.acento, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                IconoEnCirculo(
+                  icono: Icons.menu_book_outlined,
+                  tamano: 40,
+                  color: p.acentoTinta,
+                  fondo: p.acento,
+                ),
+                const SizedBox(width: Esp.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Valor de revista',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        consulta.isEmpty
+                            ? 'Escribí la marca y el modelo en el paso '
+                                  'anterior y acá te muestro cuánto vale.'
+                            : 'Mirá cuánto vale $consulta según la guía, '
+                                  'antes de ponerle precio.',
+                        style: TextStyle(fontSize: 14, color: p.tinta2),
+                      ),
+                    ],
+                  ),
+                ),
+                if (consulta.isNotEmpty)
+                  Icon(Icons.chevron_right_rounded, color: p.tinta3),
+              ],
+            ),
           ),
         ),
+
         const SizedBox(height: Esp.lg),
 
         BloqueFormulario(
           titulo: 'Plata',
-          descripcion: 'Lo que costó y lo que se va a pedir',
+          descripcion: verCompra
+              ? 'Lo que costó y lo que se va a pedir'
+              : 'Lo que se va a pedir por la unidad',
           hijos: [
             FilaCampos(
               children: [
-                CampoMonto(
-                  etiqueta: 'Precio de compra',
-                  ayuda: 'Solo lo ve el dueño',
-                  obligatorio: true,
-                  valor: v.precioCompra,
-                  error: errores['precioCompra'],
-                  onCambio: (x) => onCambio(v.copiar(precioCompra: x)),
-                ),
+                if (verCompra)
+                  CampoMonto(
+                    etiqueta: 'Precio de compra',
+                    ayuda: 'Solo lo ve el dueño',
+                    obligatorio: true,
+                    valor: v.precioCompra,
+                    error: errores['precioCompra'],
+                    onCambio: (x) => onCambio(v.copiar(precioCompra: x)),
+                  ),
                 CampoMonto(
                   etiqueta: 'Precio de venta',
                   ayuda: 'El que se publica en el salón',
@@ -940,7 +972,7 @@ class _PasoPrecio extends StatelessWidget {
                 ),
               ],
             ),
-            if (margen != null)
+            if (margen != null && vePlata)
               Container(
                 padding: const EdgeInsets.all(Esp.md),
                 decoration: BoxDecoration(

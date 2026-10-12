@@ -11,6 +11,7 @@ class Seccion {
     required this.titulo,
     required this.subtitulo,
     this.soloDesarrollador = false,
+    this.soloPlata = false,
     this.enBarraInferior = false,
   });
 
@@ -27,6 +28,10 @@ class Seccion {
 
   /// Visible solo para la cuenta de plataforma (nosotros).
   final bool soloDesarrollador;
+
+  /// Visible solo para quien ve la plata (dueño y administrador). Una
+  /// sección entera de márgenes y ganancias no se le muestra al vendedor.
+  final bool soloPlata;
 
   /// Los cinco lugares del diseño: Inicio, Inventario, Cargar, Clientes y
   /// Más. Todo lo demás se llega desde Cargar (las altas) o desde Más (las
@@ -143,6 +148,7 @@ abstract final class Secciones {
     grupo: 'Gestión',
     titulo: 'Estadísticas',
     subtitulo: 'Cómo vienen las ventas, los tiempos y las ganancias',
+    soloPlata: true,
   );
 
   static const simulador = Seccion(
@@ -192,8 +198,12 @@ abstract final class Secciones {
     agencias,
   ];
 
-  static List<Seccion> visibles({required bool esDesarrollador}) => todas
+  static List<Seccion> visibles({
+    required bool esDesarrollador,
+    bool vePlata = true,
+  }) => todas
       .where((s) => !s.soloDesarrollador || esDesarrollador)
+      .where((s) => !s.soloPlata || vePlata)
       .toList(growable: false);
 
   static List<Seccion> get barraInferior =>
@@ -203,6 +213,11 @@ abstract final class Secciones {
   /// la unidad, se le hacen gastos, se le pone precio, se vende. Es lo que
   /// ofrece la sección "Cargar".
   static const cargar = <Seccion>[vehiculos, gastos, precios, ventas];
+
+  /// Las herramientas de "Más" que le corresponden a quien está mirando.
+  static List<Seccion> herramientasPara({required bool vePlata}) => herramientas
+      .where((s) => !s.soloPlata || vePlata)
+      .toList(growable: false);
 
   /// Las herramientas que viven en "Más".
   static const herramientas = <Seccion>[

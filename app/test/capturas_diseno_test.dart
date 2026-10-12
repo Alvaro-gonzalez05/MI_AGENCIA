@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:mi_agencia/core/sesion.dart';
 import 'package:mi_agencia/core/tema/tema.dart';
 import 'package:mi_agencia/datos/repositorio.dart';
 import 'package:mi_agencia/dominio/bcra.dart';
@@ -25,6 +26,19 @@ import 'package:mi_agencia/funciones/estadisticas/pantalla_estadisticas.dart';
 import 'package:mi_agencia/funciones/vehiculos/formulario_vehiculo.dart';
 import 'package:mi_agencia/main.dart';
 import 'package:mi_agencia/funciones/simulador/pantalla_simulador.dart';
+
+/// La duena de la agencia: es quien ve la ficha completa, con costos y
+/// ganancia. Las capturas son del diseno, asi que se toman con el rol que
+/// ve todo.
+const _duena = Usuario(
+  id: 'u0',
+  email: 'duena@agencia.test',
+  nombre: 'Marcela Duarte',
+  esDesarrollador: false,
+  agenciaId: 'a0',
+  agenciaNombre: 'Agencia Demo',
+  rol: 'owner',
+);
 
 /// Capturas para revisar el diseno a ojo. No es una prueba: se corre a mano
 /// con `flutter test --update-goldens test/capturas_tmp_test.dart`.
@@ -72,7 +86,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [repositorioProvider.overrideWithValue(_Repo())],
+        overrides: [
+          repositorioProvider.overrideWithValue(_Repo()),
+          usuarioProvider.overrideWithValue(_duena),
+        ],
         child: MaterialApp(
           theme: oscuro ? TemaApp.oscuro() : TemaApp.claro(),
           home: Scaffold(body: pantalla),

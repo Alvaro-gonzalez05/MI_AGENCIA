@@ -1353,6 +1353,24 @@ final configProvider = Provider<ConfigAgencia>(
   (ref) => ref.watch(configAsyncProvider).value ?? const ConfigAgencia(),
 );
 
+/// Qué puede ver y tocar el que está mirando.
+///
+/// La cuenta de desarrollador entra como dueña: administra el sistema y
+/// necesita ver lo mismo que el cliente para poder ayudarlo por teléfono.
+/// Sin sesión se asume lo mínimo, no lo máximo.
+final permisosProvider = Provider<RolMembresia>((ref) {
+  final u = ref.watch(usuarioProvider);
+  if (u == null) return RolMembresia.soloLectura;
+  if (u.esDesarrollador) return RolMembresia.owner;
+  return RolMembresia.desde(u.rol);
+});
+
+/// Atajo del permiso que más se consulta: quién ve el precio de compra, el
+/// costo y la ganancia. El vendedor negocia sin saber el piso.
+final vePlataProvider = Provider<bool>(
+  (ref) => ref.watch(permisosProvider).vePlata,
+);
+
 /// Totales derivados del inventario ya cargado: no se vuelve a pedir nada.
 final resumenProvider = Provider<ResumenAgencia>((ref) {
   final inv = ref.watch(inventarioProvider).value ?? const [];

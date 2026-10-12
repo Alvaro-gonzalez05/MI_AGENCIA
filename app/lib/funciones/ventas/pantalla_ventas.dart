@@ -74,12 +74,22 @@ class PantallaVentas extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(Esp.xl, Esp.xl, Esp.xl, 96),
             children: [
-              _Resumen(
-                cantidad: ventas.length,
-                nominal: nominal,
-                real: real,
-                diasPromedio: promedio,
-              ),
+              if (ref.watch(vePlataProvider))
+                _Resumen(
+                  cantidad: ventas.length,
+                  nominal: nominal,
+                  real: real,
+                  diasPromedio: promedio,
+                )
+              else
+                _ResumenVendedor(
+                  cantidad: ventas.length,
+                  facturado: ventas.fold<double>(
+                    0,
+                    (s, v) => s + v.precioFinal,
+                  ),
+                  diasPromedio: promedio,
+                ),
               const SizedBox(height: Esp.lg),
               for (final v in ventas) ...[
                 _Fila(venta: v),
@@ -274,6 +284,7 @@ class _Fila extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final v = venta;
+    final vePlata = ref.watch(vePlataProvider);
     final real = v.gananciaReal;
     final color = real == null
         ? p.neutro
@@ -372,28 +383,95 @@ class _Fila extends ConsumerWidget {
           const SizedBox(height: Esp.sm),
           Row(
             children: [
-              Expanded(
-                child: _Mini(
-                  etiqueta: 'Ganancia',
-                  valor: Fmt.pesosCompacto(v.ganancia),
-                  color: (v.ganancia ?? 0) < 0 ? p.critico : p.tinta2,
+              if (vePlata) ...[
+                Expanded(
+                  child: _Mini(
+                    etiqueta: 'Ganancia',
+                    valor: Fmt.pesosCompacto(v.ganancia),
+                    color: (v.ganancia ?? 0) < 0 ? p.critico : p.tinta2,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _Mini(
-                  etiqueta: 'Real (USD)',
-                  valor: Fmt.pesosCompacto(real),
-                  color: color,
+                Expanded(
+                  child: _Mini(
+                    etiqueta: 'Real (USD)',
+                    valor: Fmt.pesosCompacto(real),
+                    color: color,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _Mini(
-                  etiqueta: 'Margen',
-                  valor: Fmt.porcentaje(v.margenReal),
-                  color: p.tinta2,
+                Expanded(
+                  child: _Mini(
+                    etiqueta: 'Margen',
+                    valor: Fmt.porcentaje(v.margenReal),
+                    color: p.tinta2,
+                  ),
                 ),
-              ),
+              ] else ...[
+                Expanded(
+                  child: _Mini(
+                    etiqueta: 'Precio de venta',
+                    valor: Fmt.pesosCompacto(v.precioFinal),
+                    color: p.tinta2,
+                  ),
+                ),
+                Expanded(
+                  child: _Mini(
+                    etiqueta: 'Forma de pago',
+                    valor: v.formaPago ?? '—',
+                    color: p.tinta2,
+                  ),
+                ),
+              ],
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lo mismo que [_Resumen] pero sin ganancia: cuántas se vendieron, por
+/// cuánto y cuánto tardaron. Es lo que el vendedor necesita de verdad.
+class _ResumenVendedor extends StatelessWidget {
+  const _ResumenVendedor({
+    required this.cantidad,
+    required this.facturado,
+    required this.diasPromedio,
+  });
+
+  final int cantidad;
+  final double facturado;
+  final double? diasPromedio;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Tarjeta(
+      padding: const EdgeInsets.all(Esp.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CabeceraBloque(
+            titulo:
+                '$cantidad venta${cantidad == 1 ? '' : 's'} cerrada'
+                '${cantidad == 1 ? '' : 's'}',
+            descripcion: diasPromedio == null
+                ? null
+                : 'Rotación promedio: ${diasPromedio!.toStringAsFixed(0)} días',
+          ),
+          const SizedBox(height: Esp.lg),
+          Text('Facturado', style: TextStyle(fontSize: 13, color: p.tinta3)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              Fmt.pesos(facturado),
+              style: TextStyle(
+                fontFamily: TemaApp.mono,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: p.tinta,
+              ),
+            ),
           ),
         ],
       ),

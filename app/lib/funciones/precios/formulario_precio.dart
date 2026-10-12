@@ -234,6 +234,34 @@ class _FormularioPrecioState extends ConsumerState<FormularioPrecio> {
     final cfg = ref.watch(configProvider);
     final nuevo = _p.precioNuevo;
 
+    // El impacto se mide contra el costo. Al vendedor, que puede retocar el
+    // precio pero no ve lo que costó, se le muestra la variación nomás:
+    // decirle "queda a pérdida" ya sería decirle el piso.
+    if (!ref.watch(vePlataProvider)) {
+      final variacion = v.precioActual <= 0 || nuevo == null || nuevo <= 0
+          ? null
+          : nuevo / v.precioActual - 1;
+      return Tarjeta(
+        padding: const EdgeInsets.all(Esp.xl),
+        child: Row(
+          children: [
+            Icon(Icons.swap_vert_rounded, size: 17, color: p.tinta3),
+            const SizedBox(width: Esp.md),
+            Expanded(
+              child: Text(
+                variacion == null
+                    ? 'Escribí el precio nuevo. El margen lo revisa el dueño.'
+                    : 'Queda en ${Fmt.pesos(nuevo!)}, '
+                          '${Fmt.porcentajeConSigno(variacion)} contra el '
+                          'precio de hoy.',
+                style: TextStyle(fontSize: 14, color: p.tinta2, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (nuevo == null || nuevo <= 0) {
       return Tarjeta(
         padding: const EdgeInsets.all(Esp.xl),

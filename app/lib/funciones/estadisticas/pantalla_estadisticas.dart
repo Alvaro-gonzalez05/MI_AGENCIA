@@ -60,6 +60,23 @@ class PantallaEstadisticas extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // La pantalla es toda ganancias y márgenes. No está en el menú del
+    // vendedor, pero el enlace se puede escribir a mano: se dice que no en
+    // vez de mostrar números en blanco.
+    if (!ref.watch(vePlataProvider)) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: EstadoVacio(
+          icono: Icons.lock_outline_rounded,
+          titulo: 'Esto lo ve el dueño de la agencia',
+          descripcion:
+              'Las estadísticas muestran ganancias y márgenes. Si las '
+              'necesitás, pedile a quien administra la cuenta que te cambie '
+              'el rol.',
+        ),
+      );
+    }
+
     final ancho = MediaQuery.sizeOf(context).width;
     final margen = ancho < Corte.tablet ? Esp.lg + 4 : Esp.xxl;
     final enFila = ancho >= Corte.escritorio;

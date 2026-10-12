@@ -348,7 +348,9 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                 indice: 4,
                 child: _Resumen(
                   cuantos: lista.length,
-                  capital: capital,
+                  // El capital inmovilizado es la suma de lo que costó cada
+                  // unidad: eso no lo ve el vendedor.
+                  capital: ref.watch(vePlataProvider) ? capital : 0,
                   filtro: filtro,
                   onLimpiar: () {
                     _buscador.clear();
