@@ -145,15 +145,26 @@ Deno.serve(async (req) => {
     usuarioId = creado.user.id;
   }
 
-  // El perfil puede existir ya (lo crea un trigger de auth): se completa.
-  await admin.from('perfiles').upsert(
+  // El perfil ya existe: lo crea el trigger `on_auth_user_created`. Se
+  // completa el nombre, y va el email porque la columna es NOT NULL y
+  // Postgres la valida ANTES de resolver el `on conflict`: sin el email,
+  // este upsert falla en silencio y el nombre nunca se guarda.
+  const { error: errorPerfil } = await admin.from('perfiles').upsert(
     {
       id: usuarioId,
+      email,
       nombre: nombre || agencia.nombre,
       es_desarrollador: false,
     },
     { onConflict: 'id' },
   );
+
+  if (errorPerfil) {
+    return responder(
+      { error: `No se pudo guardar el perfil: ${errorPerfil.message}` },
+      500,
+    );
+  }
 
   const { error: errorMembresia } = await admin.from('membresias').upsert(
     {
