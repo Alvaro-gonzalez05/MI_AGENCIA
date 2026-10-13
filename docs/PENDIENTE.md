@@ -30,9 +30,12 @@ día 2 de cada mes. Los nombres se normalizan al guardar (0033) para que
 **Cuotas y cobranzas está hecho**: planes con los cuatro sistemas de
 amortización, cuotas, pagos parciales, atrasos y la deuda de cada cliente.
 
-**Usuarios y permisos está hecho**: desde la cuenta de desarrollador se da de
-alta la cuenta de cada agencia (usuario, clave y rol) y el vendedor ya no ve
-el precio de compra ni la ganancia, ni en la pantalla ni en la base.
+**Usuarios y permisos está hecho, de las dos puntas**: nosotros damos de alta
+la cuenta del dueño de cada agencia, y el dueño da de alta a su gente desde
+la **pizarra de usuarios** —un tablero con él en el medio y las zonas
+alrededor, que se arrastran—. Cada persona lleva el icono de su rol y una
+monedita si ve la plata. El vendedor no ve el precio de compra ni la
+ganancia, ni en la pantalla ni en la base.
 
 **La base quedó vacía y lista para cargar.** Se borraron los datos de
 ejemplo (13 unidades, gastos, precios, ventas e interesados) y quedó la
@@ -180,7 +183,7 @@ Android y web funcionan sin nada de esto.
 | ~~**Ventas**~~ | **Hecho.** |
 | ~~**Campañas**~~ | **Hecho y desplegado.** Falta cargar `RESEND_API_KEY` y `RESEND_FROM` ([EMAIL_MARKETING.md](EMAIL_MARKETING.md)). |
 | ~~**Configuración**~~ | **Hecho**, incluidos los datos de la agencia (nombre, CUIT, contacto). |
-| ~~**Usuarios y permisos**~~ | **Hecho.** Alta de cuentas desde Agencias y cuatro roles: dueño, administrador, vendedor y solo lectura. |
+| ~~**Usuarios y permisos**~~ | **Hecho.** La pizarra del equipo: zonas con icono, altas, claves nuevas, cambio de rol y baja de acceso. Cuatro roles: dueño, administrador, vendedor y solo lectura. |
 | ~~**Cuotas y cobranzas**~~ | **Hecho.** Planes, cuotas, pagos y atrasos, dentro de la ficha del cliente. |
 | ~~**Agencias**~~ | **Hecho.** |
 | ~~**Interesados**~~ | **Hecho, incluido el semáforo del BCRA y el informe en PDF.** |
