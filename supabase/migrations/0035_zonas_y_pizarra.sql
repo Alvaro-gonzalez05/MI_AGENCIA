@@ -179,9 +179,9 @@ as $$
 begin
   insert into public.zonas (agencia_id, nombre, icono, x, y) values
     (new.id, 'Administración', 'calculator',    20,  20),
-    (new.id, 'Ventas',         'car',          430,  20),
-    (new.id, 'Marketing',      'speakerphone', 430, 260),
-    (new.id, 'Taller',         'tool',          20, 260);
+    (new.id, 'Ventas',         'car',          684,  20),
+    (new.id, 'Marketing',      'speakerphone', 684, 320),
+    (new.id, 'Taller',         'tool',          20, 320);
   return new;
 end $$;
 
@@ -196,9 +196,9 @@ select a.id, z.nombre, z.icono, z.x, z.y
   from public.agencias a
  cross join (values
    ('Administración', 'calculator',    20,  20),
-   ('Ventas',         'car',          430,  20),
-   ('Marketing',      'speakerphone', 430, 260),
-   ('Taller',         'tool',          20, 260)
+   ('Ventas',         'car',          684,  20),
+   ('Marketing',      'speakerphone', 684, 320),
+   ('Taller',         'tool',          20, 320)
  ) as z(nombre, icono, x, y)
  where not exists (
    select 1 from public.zonas existente where existente.agencia_id = a.id

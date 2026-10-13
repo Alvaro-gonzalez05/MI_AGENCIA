@@ -22,6 +22,7 @@ import 'package:mi_agencia/funciones/interesados/pantalla_interesados.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_inventario.dart';
 import 'package:mi_agencia/funciones/inventario/pantalla_ficha.dart';
 import 'package:mi_agencia/funciones/panel/pantalla_panel.dart';
+import 'package:mi_agencia/funciones/equipo/pizarra_equipo.dart';
 import 'package:mi_agencia/funciones/estadisticas/pantalla_estadisticas.dart';
 import 'package:mi_agencia/funciones/vehiculos/formulario_vehiculo.dart';
 import 'package:mi_agencia/main.dart';
@@ -80,6 +81,7 @@ void main() {
     Widget pantalla, {
     Size tamano = const Size(1280, 1000),
     bool oscuro = false,
+    Repositorio? repo,
   }) async {
     tester.view.physicalSize = tamano;
     tester.view.devicePixelRatio = 1;
@@ -87,7 +89,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          repositorioProvider.overrideWithValue(_Repo()),
+          repositorioProvider.overrideWithValue(repo ?? _Repo()),
           usuarioProvider.overrideWithValue(_duena),
         ],
         child: MaterialApp(
@@ -215,6 +217,18 @@ void main() {
   testWidgets('simulador', (t) async {
     await capturar(t, 'simulador', const PantallaSimulador());
   });
+  testWidgets('equipo', (t) async {
+    await capturar(
+      t,
+      'equipo',
+      const PantallaEquipo(),
+      tamano: const Size(1280, 900),
+      // El equipo sale del repositorio de ejemplo: la pizarra necesita
+      // gente de verdad para que se entienda la captura.
+      repo: RepositorioDemo(),
+    );
+  });
+
   testWidgets('estadisticas', (t) async {
     await capturar(
       t,

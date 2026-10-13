@@ -5841,9 +5841,9 @@ as $$
 begin
   insert into public.zonas (agencia_id, nombre, icono, x, y) values
     (new.id, 'Administración', 'calculator',    20,  20),
-    (new.id, 'Ventas',         'car',          430,  20),
-    (new.id, 'Marketing',      'speakerphone', 430, 260),
-    (new.id, 'Taller',         'tool',          20, 260);
+    (new.id, 'Ventas',         'car',          684,  20),
+    (new.id, 'Marketing',      'speakerphone', 684, 320),
+    (new.id, 'Taller',         'tool',          20, 320);
   return new;
 end $$;
 
@@ -5858,9 +5858,9 @@ select a.id, z.nombre, z.icono, z.x, z.y
   from public.agencias a
  cross join (values
    ('Administración', 'calculator',    20,  20),
-   ('Ventas',         'car',          430,  20),
-   ('Marketing',      'speakerphone', 430, 260),
-   ('Taller',         'tool',          20, 260)
+   ('Ventas',         'car',          684,  20),
+   ('Marketing',      'speakerphone', 684, 320),
+   ('Taller',         'tool',          20, 320)
  ) as z(nombre, icono, x, y)
  where not exists (
    select 1 from public.zonas existente where existente.agencia_id = a.id
@@ -5942,3 +5942,27 @@ drop trigger if exists membresias_protegidas on public.membresias;
 create trigger membresias_protegidas
   before insert or update on public.membresias
   for each row execute function public.proteger_membresias();
+
+
+-- >>>>>>>>>>>>>>>>>>>>  0037_pizarra_donde_quedo_el_dueno.sql  <<<<<<<<<<<<<<<<<<<<
+
+-- =====================================================================
+--  MI AGENCIA — 0037: dónde quedó el dueño en la pizarra
+--
+--  Las zonas ya guardan su posición (0035). Falta la de la tarjeta del
+--  dueño, que es de la que salen todas las líneas: si no se guarda, el
+--  cliente acomoda su pizarra, cierra la app y vuelve a encontrarla como
+--  la dejamos nosotros.
+--
+--  Va en `agencia_config` porque es exactamente eso: una preferencia de la
+--  agencia, al lado de los umbrales y el redondeo. Una tabla nueva con una
+--  fila y dos números sería una tabla de más.
+-- =====================================================================
+
+alter table public.agencia_config
+  add column if not exists pizarra_x integer not null default 352,
+  add column if not exists pizarra_y integer not null default 250;
+
+comment on column public.agencia_config.pizarra_x is
+  'Dónde quedó la tarjeta del dueño en la pizarra de usuarios. Es de la '
+  'agencia, no de cada usuario: el tablero es de la oficina.';

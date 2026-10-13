@@ -8,6 +8,7 @@ import '../dominio/alta_interesado.dart';
 import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
+import '../dominio/equipo.dart';
 import '../dominio/gastos.dart';
 import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
@@ -386,27 +387,16 @@ class RepositorioSupabase implements Repositorio {
   }
 
   // -------------------------------------------------------------------
-  // Alta de cuentas (solo desarrollador)
+  // Alta de cuentas
   // -------------------------------------------------------------------
 
-  @override
-  Future<CuentaCreada> crearCuentaAgencia({
-    required String agenciaId,
-    required String email,
-    required String nombre,
-    RolMembresia rol = RolMembresia.owner,
-  }) async {
+  /// Todo lo que exige la clave de servicio —crear un usuario, cambiarle la
+  /// clave— pasa por la misma Edge Function. Acá sólo se traduce el error:
+  /// la pantalla no tiene que saber qué es un FunctionException.
+  Future<CuentaCreada> _cuenta(Map<String, dynamic> cuerpo) async {
     late FunctionResponse r;
     try {
-      r = await _db.functions.invoke(
-        'crear-cuenta-agencia',
-        body: {
-          'agencia_id': agenciaId,
-          'email': email.trim().toLowerCase(),
-          'nombre': nombre.trim(),
-          'rol': rol.valorBd,
-        },
-      );
+      r = await _db.functions.invoke('crear-cuenta-agencia', body: cuerpo);
     } on FunctionException catch (e) {
       final detalle = e.details;
       if (detalle is Map && detalle['error'] != null) {
@@ -415,7 +405,7 @@ class RepositorioSupabase implements Repositorio {
       throw Exception(
         e.status == 404
             ? 'El alta de cuentas todavía no está desplegada.'
-            : 'No se pudo crear la cuenta. Reintentá en unos minutos.',
+            : 'No se pudo completar. Reintentá en unos minutos.',
       );
     }
 
@@ -428,12 +418,212 @@ class RepositorioSupabase implements Repositorio {
     }
 
     return CuentaCreada(
-      email: datos['email'] as String? ?? email,
+      email: datos['email'] as String? ?? '',
       clave: datos['clave'] as String?,
-      rol: datos['rol'] as String? ?? rol.valorBd,
-      agencia: datos['agencia'] as String? ?? nombre,
+      rol: datos['rol'] as String? ?? '',
+      agencia: datos['agencia'] as String? ?? '',
       yaExistia: datos['ya_existia'] as bool? ?? false,
     );
+  }
+
+  @override
+  Future<CuentaCreada> crearCuentaAgencia({
+    required String agenciaId,
+    required String email,
+    required String nombre,
+    RolMembresia rol = RolMembresia.owner,
+  }) => _cuenta({
+    'agencia_id': agenciaId,
+    'email': email.trim().toLowerCase(),
+    'nombre': nombre.trim(),
+    'rol': rol.valorBd,
+  });
+
+  // -------------------------------------------------------------------
+  // El equipo de la agencia
+  // -------------------------------------------------------------------
+
+  @override
+  Future<List<Miembro>> equipo() async {
+    final filas = await _db
+        .from('v_equipo')
+        .select(
+          'membresia_id, usuario_id, rol, activa, desde, zona_id, '
+          'zona_nombre, nombre, apellido, email, ultima_sesion',
+        )
+        .order('rol')
+        .order('nombre');
+
+    return filas.map((f) {
+      final nombre = [
+        f['nombre'],
+        f['apellido'],
+      ].whereType<String>().where((s) => s.isNotEmpty).join(' ');
+      return Miembro(
+        membresiaId: f['membresia_id'] as String,
+        usuarioId: f['usuario_id'] as String,
+        nombre: nombre.isEmpty
+            ? (f['email'] as String? ?? '').split('@').first
+            : nombre,
+        email: f['email'] as String? ?? '',
+        rol: RolMembresia.desde(f['rol'] as String?),
+        activa: f['activa'] as bool? ?? true,
+        zonaId: f['zona_id'] as String?,
+        zonaNombre: f['zona_nombre'] as String?,
+        desde: _fecha(f['desde']),
+        ultimaSesion: _fecha(f['ultima_sesion']),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<List<Zona>> zonas() async {
+    final filas = await _db
+        .from('zonas')
+        .select('id, nombre, icono, x, y')
+        .order('creada_el');
+
+    return filas
+        .map(
+          (f) => Zona(
+            id: f['id'] as String,
+            nombre: f['nombre'] as String,
+            icono: f['icono'] as String? ?? 'folder',
+            x: (_decimal(f['x']) ?? 0).toDouble(),
+            y: (_decimal(f['y']) ?? 0).toDouble(),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<Zona> crearZona({
+    required String nombre,
+    required String icono,
+    double x = 0,
+    double y = 0,
+  }) async {
+    final agencia = await _miAgencia();
+    final f = await _db
+        .from('zonas')
+        .insert({
+          'agencia_id': agencia,
+          'nombre': nombre.trim(),
+          'icono': icono,
+          'x': x.round(),
+          'y': y.round(),
+        })
+        .select('id, nombre, icono, x, y')
+        .single();
+
+    return Zona(
+      id: f['id'] as String,
+      nombre: f['nombre'] as String,
+      icono: f['icono'] as String? ?? 'folder',
+      x: (_decimal(f['x']) ?? 0).toDouble(),
+      y: (_decimal(f['y']) ?? 0).toDouble(),
+    );
+  }
+
+  @override
+  Future<void> guardarZona(Zona z) async {
+    await _db
+        .from('zonas')
+        .update({
+          'nombre': z.nombre.trim(),
+          'icono': z.icono,
+          'x': z.x.round(),
+          'y': z.y.round(),
+        })
+        .eq('id', z.id);
+  }
+
+  @override
+  Future<void> borrarZona(String id) async {
+    await _db.from('zonas').delete().eq('id', id);
+  }
+
+  @override
+  Future<void> moverAZona(String membresiaId, String? zonaId) async {
+    // Por función y no por update directo: la base chequea que quien mueve
+    // administre esa agencia y que la zona sea de ella.
+    await _db.rpc(
+      'mover_a_zona',
+      params: {'p_membresia': membresiaId, 'p_zona': zonaId},
+    );
+  }
+
+  @override
+  Future<CuentaCreada> crearCuentaEmpleado(AltaMiembro alta) async {
+    final agencia = await _miAgencia();
+    return _cuenta({
+      'agencia_id': agencia,
+      'email': alta.email.trim().toLowerCase(),
+      'nombre': alta.nombre.trim(),
+      'rol': alta.rol.valorBd,
+      if (alta.zonaId != null) 'zona_id': alta.zonaId,
+    });
+  }
+
+  @override
+  Future<CuentaCreada> nuevaClave(String usuarioId) async {
+    final agencia = await _miAgencia();
+    return _cuenta({
+      'accion': 'nueva_clave',
+      'agencia_id': agencia,
+      'usuario_id': usuarioId,
+    });
+  }
+
+  @override
+  Future<void> cambiarAcceso(String membresiaId, {required bool activa}) async {
+    final filas = await _db
+        .from('membresias')
+        .update({'activa': activa})
+        .eq('id', membresiaId)
+        .select('id');
+    if (filas.isEmpty) {
+      throw Exception(
+        'No se pudo cambiar el acceso: no existe o no tenés permiso.',
+      );
+    }
+  }
+
+  @override
+  Future<(double, double)> posicionDueno() async {
+    final agencia = await _miAgencia();
+    final f = await _db
+        .from('agencia_config')
+        .select('pizarra_x, pizarra_y')
+        .eq('agencia_id', agencia)
+        .maybeSingle();
+    return (
+      (_decimal(f?['pizarra_x']) ?? 352).toDouble(),
+      (_decimal(f?['pizarra_y']) ?? 250).toDouble(),
+    );
+  }
+
+  @override
+  Future<void> guardarPosicionDueno(double x, double y) async {
+    final agencia = await _miAgencia();
+    await _db
+        .from('agencia_config')
+        .update({'pizarra_x': x.round(), 'pizarra_y': y.round()})
+        .eq('agencia_id', agencia);
+  }
+
+  @override
+  Future<void> cambiarRol(String membresiaId, RolMembresia rol) async {
+    final filas = await _db
+        .from('membresias')
+        .update({'rol': rol.valorBd})
+        .eq('id', membresiaId)
+        .select('id');
+    if (filas.isEmpty) {
+      throw Exception(
+        'No se pudo cambiar el rol: no existe o no tenés permiso.',
+      );
+    }
   }
 
   // -------------------------------------------------------------------

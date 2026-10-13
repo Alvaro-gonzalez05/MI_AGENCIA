@@ -10,6 +10,7 @@ import '../dominio/alta_interesado.dart';
 import '../dominio/agencias.dart';
 import '../dominio/bcra.dart';
 import '../dominio/campanas.dart';
+import '../dominio/equipo.dart';
 import '../dominio/gastos.dart';
 import '../dominio/importacion.dart';
 import '../dominio/precios.dart';
@@ -148,6 +149,55 @@ abstract interface class Repositorio {
     required String nombre,
     RolMembresia rol = RolMembresia.owner,
   });
+
+  // -------------------------------------------------------------------
+  // El equipo de la agencia (la pizarra de usuarios)
+  // -------------------------------------------------------------------
+
+  /// Quiénes son, con qué rol, en qué zona y si siguen entrando.
+  Future<List<Miembro>> equipo();
+
+  /// Las áreas de la agencia, con la posición en la que quedaron en la
+  /// pizarra.
+  Future<List<Zona>> zonas();
+
+  /// Crea una zona nueva y devuelve la que quedó guardada.
+  Future<Zona> crearZona({
+    required String nombre,
+    required String icono,
+    double x = 0,
+    double y = 0,
+  });
+
+  /// Renombrarla, cambiarle el icono o dejarla donde la soltaron.
+  Future<void> guardarZona(Zona z);
+
+  /// La gente que estaba adentro queda sin zona, no sin acceso.
+  Future<void> borrarZona(String id);
+
+  /// Arrastrar a alguien de una zona a otra. Con [zonaId] en null queda
+  /// fuera de todas.
+  Future<void> moverAZona(String membresiaId, String? zonaId);
+
+  /// Da de alta la cuenta de un empleado en la agencia propia. Devuelve la
+  /// clave una sola vez.
+  Future<CuentaCreada> crearCuentaEmpleado(AltaMiembro alta);
+
+  /// Le genera una clave nueva a alguien que perdió la suya. No existe
+  /// "ver la clave": no se guarda en ningún lado.
+  Future<CuentaCreada> nuevaClave(String usuarioId);
+
+  /// Le saca o le devuelve el acceso. Nunca borra a la persona: su
+  /// historial sigue atado a su nombre.
+  Future<void> cambiarAcceso(String membresiaId, {required bool activa});
+
+  /// Le cambia el rol, que es lo que define qué ve y qué puede tocar.
+  Future<void> cambiarRol(String membresiaId, RolMembresia rol);
+
+  /// Dónde quedó la tarjeta del dueño en la pizarra.
+  Future<(double, double)> posicionDueno();
+
+  Future<void> guardarPosicionDueno(double x, double y);
 
   Future<List<Gasto>> gastos({String? vehiculoId});
 
@@ -360,6 +410,234 @@ class RepositorioDemo implements Repositorio {
   final Map<String, List<DetalleVehiculo>> _detalles = {};
   final List<Tarea> _tareas = [];
   final List<PlanPago> _planes = [];
+
+  (double, double) _posDueno = (352, 250);
+
+  @override
+  Future<(double, double)> posicionDueno() async => _posDueno;
+
+  @override
+  Future<void> guardarPosicionDueno(double x, double y) async {
+    _posDueno = (x, y);
+  }
+
+  @override
+  Future<List<Miembro>> equipo() async {
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    return _equipoDemo;
+  }
+
+  @override
+  Future<List<Zona>> zonas() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _zonasDemo;
+  }
+
+  @override
+  Future<Zona> crearZona({
+    required String nombre,
+    required String icono,
+    double x = 0,
+    double y = 0,
+  }) async {
+    final z = Zona(
+      id: 'z${_zonasDemo.length + 1}',
+      nombre: nombre,
+      icono: icono,
+      x: x,
+      y: y,
+    );
+    _zonasDemo.add(z);
+    return z;
+  }
+
+  @override
+  Future<void> guardarZona(Zona z) async {
+    final i = _zonasDemo.indexWhere((x) => x.id == z.id);
+    if (i >= 0) _zonasDemo[i] = z;
+  }
+
+  @override
+  Future<void> borrarZona(String id) async {
+    _zonasDemo.removeWhere((z) => z.id == id);
+    for (var i = 0; i < _equipoDemo.length; i++) {
+      if (_equipoDemo[i].zonaId == id) {
+        _equipoDemo[i] = _conZona(_equipoDemo[i], null, null);
+      }
+    }
+  }
+
+  @override
+  Future<void> moverAZona(String membresiaId, String? zonaId) async {
+    final i = _equipoDemo.indexWhere((m) => m.membresiaId == membresiaId);
+    if (i < 0) return;
+    final z = _zonasDemo.where((z) => z.id == zonaId).firstOrNull;
+    _equipoDemo[i] = _conZona(_equipoDemo[i], zonaId, z?.nombre);
+  }
+
+  @override
+  Future<CuentaCreada> crearCuentaEmpleado(AltaMiembro alta) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final z = _zonasDemo.where((z) => z.id == alta.zonaId).firstOrNull;
+    _equipoDemo.add(
+      Miembro(
+        membresiaId: 'm${_equipoDemo.length + 1}',
+        usuarioId: 'u${_equipoDemo.length + 1}',
+        nombre: alta.nombre,
+        email: alta.email,
+        rol: alta.rol,
+        activa: true,
+        zonaId: alta.zonaId,
+        zonaNombre: z?.nombre,
+        desde: DateTime.now(),
+      ),
+    );
+    return CuentaCreada(
+      email: alta.email,
+      clave: 'demo-${alta.nombre.toLowerCase().split(' ').first}',
+      rol: alta.rol.valorBd,
+      agencia: 'Agencia Demo',
+    );
+  }
+
+  @override
+  Future<CuentaCreada> nuevaClave(String usuarioId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final m = _equipoDemo.firstWhere((m) => m.usuarioId == usuarioId);
+    return CuentaCreada(
+      email: m.email,
+      clave: 'demo-nueva-1234',
+      rol: m.rol.valorBd,
+      agencia: 'Agencia Demo',
+      yaExistia: true,
+    );
+  }
+
+  @override
+  Future<void> cambiarAcceso(String membresiaId, {required bool activa}) async {
+    final i = _equipoDemo.indexWhere((m) => m.membresiaId == membresiaId);
+    if (i >= 0) _equipoDemo[i] = _conAcceso(_equipoDemo[i], activa);
+  }
+
+  @override
+  Future<void> cambiarRol(String membresiaId, RolMembresia rol) async {
+    final i = _equipoDemo.indexWhere((m) => m.membresiaId == membresiaId);
+    if (i >= 0) _equipoDemo[i] = _conRol(_equipoDemo[i], rol);
+  }
+
+  static Miembro _conZona(Miembro m, String? id, String? nombre) => Miembro(
+    membresiaId: m.membresiaId,
+    usuarioId: m.usuarioId,
+    nombre: m.nombre,
+    email: m.email,
+    rol: m.rol,
+    activa: m.activa,
+    zonaId: id,
+    zonaNombre: nombre,
+    desde: m.desde,
+    ultimaSesion: m.ultimaSesion,
+  );
+
+  static Miembro _conAcceso(Miembro m, bool activa) => Miembro(
+    membresiaId: m.membresiaId,
+    usuarioId: m.usuarioId,
+    nombre: m.nombre,
+    email: m.email,
+    rol: m.rol,
+    activa: activa,
+    zonaId: m.zonaId,
+    zonaNombre: m.zonaNombre,
+    desde: m.desde,
+    ultimaSesion: m.ultimaSesion,
+  );
+
+  static Miembro _conRol(Miembro m, RolMembresia rol) => Miembro(
+    membresiaId: m.membresiaId,
+    usuarioId: m.usuarioId,
+    nombre: m.nombre,
+    email: m.email,
+    rol: rol,
+    activa: m.activa,
+    zonaId: m.zonaId,
+    zonaNombre: m.zonaNombre,
+    desde: m.desde,
+    ultimaSesion: m.ultimaSesion,
+  );
+
+  final List<Zona> _zonasDemo = [
+    const Zona(
+      id: 'z1',
+      nombre: 'Administración',
+      icono: 'calculator',
+      x: 20,
+      y: 20,
+    ),
+    const Zona(id: 'z2', nombre: 'Ventas', icono: 'car', x: 684, y: 20),
+    const Zona(
+      id: 'z3',
+      nombre: 'Marketing',
+      icono: 'speakerphone',
+      x: 684,
+      y: 320,
+    ),
+    const Zona(id: 'z4', nombre: 'Taller', icono: 'tool', x: 20, y: 320),
+  ];
+
+  final List<Miembro> _equipoDemo = [
+    Miembro(
+      membresiaId: 'm1',
+      usuarioId: 'u1',
+      nombre: 'Carlos Valle',
+      email: 'carlos@agenciademo.com',
+      rol: RolMembresia.owner,
+      activa: true,
+      desde: DateTime(2026, 1, 10),
+    ),
+    Miembro(
+      membresiaId: 'm2',
+      usuarioId: 'u2',
+      nombre: 'Lucía Sosa',
+      email: 'lucia@agenciademo.com',
+      rol: RolMembresia.admin,
+      activa: true,
+      zonaId: 'z1',
+      zonaNombre: 'Administración',
+      desde: DateTime(2026, 3, 2),
+    ),
+    Miembro(
+      membresiaId: 'm3',
+      usuarioId: 'u3',
+      nombre: 'Nico Fredes',
+      email: 'nico@agenciademo.com',
+      rol: RolMembresia.vendedor,
+      activa: true,
+      zonaId: 'z2',
+      zonaNombre: 'Ventas',
+      desde: DateTime(2026, 1, 20),
+    ),
+    Miembro(
+      membresiaId: 'm4',
+      usuarioId: 'u4',
+      nombre: 'Dai Romero',
+      email: 'dai@agenciademo.com',
+      rol: RolMembresia.vendedor,
+      activa: true,
+      zonaId: 'z2',
+      zonaNombre: 'Ventas',
+      desde: DateTime(2026, 8, 5),
+    ),
+    Miembro(
+      membresiaId: 'm5',
+      usuarioId: 'u5',
+      nombre: 'Raúl Pérez',
+      email: 'contador@agenciademo.com',
+      rol: RolMembresia.soloLectura,
+      activa: true,
+      zonaId: 'z1',
+      zonaNombre: 'Administración',
+      desde: DateTime(2026, 6, 14),
+    ),
+  ];
 
   @override
   Future<CuentaCreada> crearCuentaAgencia({
@@ -1351,6 +1629,14 @@ final fotosProvider = FutureProvider.family<List<FotoVehiculo>, String>(
 
 final configProvider = Provider<ConfigAgencia>(
   (ref) => ref.watch(configAsyncProvider).value ?? const ConfigAgencia(),
+);
+
+final equipoProvider = FutureProvider<List<Miembro>>(
+  (ref) => ref.watch(repositorioProvider).equipo(),
+);
+
+final zonasProvider = FutureProvider<List<Zona>>(
+  (ref) => ref.watch(repositorioProvider).zonas(),
 );
 
 /// Qué puede ver y tocar el que está mirando.

@@ -12,6 +12,7 @@ class Seccion {
     required this.subtitulo,
     this.soloDesarrollador = false,
     this.soloPlata = false,
+    this.soloAdministra = false,
     this.enBarraInferior = false,
   });
 
@@ -32,6 +33,9 @@ class Seccion {
   /// Visible solo para quien ve la plata (dueño y administrador). Una
   /// sección entera de márgenes y ganancias no se le muestra al vendedor.
   final bool soloPlata;
+
+  /// Visible solo para quien maneja el equipo (dueño y administrador).
+  final bool soloAdministra;
 
   /// Los cinco lugares del diseño: Inicio, Inventario, Cargar, Clientes y
   /// Más. Todo lo demás se llega desde Cargar (las altas) o desde Más (las
@@ -171,6 +175,17 @@ abstract final class Secciones {
     subtitulo: 'Umbrales y parámetros — todo se recalcula solo',
   );
 
+  static const equipo = Seccion(
+    id: 'equipo',
+    etiqueta: 'Equipo',
+    ruta: '/equipo',
+    icono: Icons.groups_outlined,
+    grupo: 'Sistema',
+    titulo: 'Usuarios y permisos',
+    subtitulo: 'Quién usa el sistema y qué ve cada uno',
+    soloAdministra: true,
+  );
+
   static const agencias = Seccion(
     id: 'agencias',
     etiqueta: 'Agencias',
@@ -195,15 +210,18 @@ abstract final class Secciones {
     estadisticas,
     simulador,
     configuracion,
+    equipo,
     agencias,
   ];
 
   static List<Seccion> visibles({
     required bool esDesarrollador,
     bool vePlata = true,
+    bool administra = true,
   }) => todas
       .where((s) => !s.soloDesarrollador || esDesarrollador)
       .where((s) => !s.soloPlata || vePlata)
+      .where((s) => !s.soloAdministra || administra)
       .toList(growable: false);
 
   static List<Seccion> get barraInferior =>
@@ -215,8 +233,12 @@ abstract final class Secciones {
   static const cargar = <Seccion>[vehiculos, gastos, precios, ventas];
 
   /// Las herramientas de "Más" que le corresponden a quien está mirando.
-  static List<Seccion> herramientasPara({required bool vePlata}) => herramientas
+  static List<Seccion> herramientasPara({
+    required bool vePlata,
+    bool administra = true,
+  }) => herramientas
       .where((s) => !s.soloPlata || vePlata)
+      .where((s) => !s.soloAdministra || administra)
       .toList(growable: false);
 
   /// Las herramientas que viven en "Más".
@@ -224,6 +246,7 @@ abstract final class Secciones {
     estadisticas,
     simulador,
     campanas,
+    equipo,
     configuracion,
   ];
 

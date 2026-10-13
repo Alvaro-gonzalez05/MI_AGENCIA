@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../funciones/agencias/pantalla_agencias.dart';
+import '../funciones/equipo/pizarra_equipo.dart';
 import '../funciones/auth/pantalla_login.dart';
 import '../funciones/campanas/pantalla_campanas.dart';
 import '../funciones/cargar/pantalla_cargar.dart';
@@ -135,6 +136,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               estado,
               const PantallaConfiguracion(),
             ),
+          ),
+          GoRoute(
+            path: Secciones.equipo.ruta,
+            pageBuilder: (_, estado) =>
+                Transiciones.paginaSeccion(estado, const PantallaEquipo()),
           ),
           GoRoute(
             path: Secciones.agencias.ruta,

@@ -115,6 +115,7 @@ class _BarraLateral extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.paleta;
     final vePlata = ref.watch(vePlataProvider);
+    final administra = ref.watch(permisosProvider).puedeAdministrar;
     // Los mismos destinos que abajo en el teléfono. El diseño tiene cinco
     // lugares; tener once acá y cinco allá obliga a aprender dos apps. Lo
     // que se da de alta vive adentro de "Cargar"; las herramientas, abajo.
@@ -136,7 +137,10 @@ class _BarraLateral extends ConsumerWidget {
             ? Divider(color: p.negroBorde, height: 1)
             : EtiquetaSeccion('Herramientas', color: p.sobreNegro2),
       ),
-      for (final s in Secciones.herramientasPara(vePlata: vePlata))
+      for (final s in Secciones.herramientasPara(
+        vePlata: vePlata,
+        administra: administra,
+      ))
         _EnlaceNav(
           seccion: s,
           activo: s.id == seccionActual.id,
@@ -1079,17 +1083,24 @@ class _HojaMasOpciones extends ConsumerWidget {
                       'agencia',
                   onTap: () => irA(Secciones.configuracion.ruta),
                 ),
-                _FilaOpcion(
-                  icono: Icons.manage_accounts_outlined,
-                  titulo: 'Usuarios y permisos',
-                  descripcion:
-                      'Quién usa el sistema y qué puede ver de cada unidad',
-                  pastilla: esDesarrollador ? null : 'Próximamente',
-                  onTap: esDesarrollador
-                      ? () => irA(Secciones.agencias.ruta)
-                      : null,
-                  ultima: true,
-                ),
+                // El equipo lo maneja el dueño de la agencia; las agencias
+                // en sí, nosotros.
+                if (ref.watch(permisosProvider).puedeAdministrar)
+                  _FilaOpcion(
+                    icono: Icons.groups_outlined,
+                    titulo: 'Usuarios y permisos',
+                    descripcion: 'Quién usa el sistema y qué ve cada uno',
+                    onTap: () => irA(Secciones.equipo.ruta),
+                    ultima: !esDesarrollador,
+                  ),
+                if (esDesarrollador)
+                  _FilaOpcion(
+                    icono: Icons.apartment_outlined,
+                    titulo: 'Agencias',
+                    descripcion: 'Alta y administración de cuentas cliente',
+                    onTap: () => irA(Secciones.agencias.ruta),
+                    ultima: true,
+                  ),
               ],
             ),
           ),

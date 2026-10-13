@@ -84,6 +84,10 @@ enum RolMembresia {
 
   bool get puedeEditar => this != soloLectura;
 
+  /// Quién maneja el equipo: da de alta gente, la mueve de zona, le cambia
+  /// el rol y le saca el acceso. El vendedor ve la pizarra, no la toca.
+  bool get puedeAdministrar => this == owner || this == admin;
+
   static RolMembresia desde(String? s) => RolMembresia.values.firstWhere(
     (r) => r.valorBd == s,
     orElse: () => RolMembresia.vendedor,
