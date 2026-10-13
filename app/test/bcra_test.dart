@@ -357,6 +357,86 @@ void main() {
       expect(textos.length, 6);
     });
   });
+
+  group('El peor tramo de los 24 meses', () {
+    ConsultaBcra con(List<MesBcra> meses, {List<EntidadBcra> hoy = const []}) =>
+        ConsultaBcra(
+          cuit: '27230938607',
+          consultadoEl: DateTime(2026, 9, 10),
+          entidades: hoy,
+          historico: meses,
+        );
+
+    MesBcra mes(String periodo, int situacion, {double monto = 0}) => MesBcra(
+      periodo: periodo,
+      situacion: situacion,
+      entidades: [
+        EntidadMes(
+          entidad: 'CREDITO RAPIDO S.A.',
+          situacion: situacion,
+          montoMiles: monto,
+        ),
+      ],
+    );
+
+    test('sin nada grave no inventa un antecedente', () {
+      final c = con([mes('202607', 1), mes('202606', 2)]);
+      expect(c.peorTramo, isNull);
+    });
+
+    test('dice con quién fue, desde cuándo y cuánto llegó a deber', () {
+      final c = con([
+        mes('202603', 0),
+        mes('202602', 5, monto: 580),
+        mes('202601', 5, monto: 640),
+        mes('202512', 4, monto: 600),
+        mes('202511', 1, monto: 100),
+      ]);
+
+      final t = c.peorTramo!;
+      expect(t.entidad, 'CREDITO RAPIDO S.A.');
+      expect(t.situacion, 5);
+      expect(t.desde.periodo, '202512');
+      expect(t.hasta.periodo, '202602');
+      expect(t.meses, 3);
+      expect(t.duracion, '3 meses');
+      expect(t.montoMaximo, 640000);
+      // El último informado es el del mes más nuevo del tramo, no el mayor.
+      expect(t.montoUltimo, 580000);
+    });
+
+    test('un solo mes se dice en singular', () {
+      final c = con([mes('202602', 4, monto: 300)]);
+      expect(c.peorTramo!.duracion, 'Un mes');
+    });
+
+    test('si ya no le debe, dice desde cuándo está limpio', () {
+      final c = con([mes('202612', 5, monto: 100)]);
+      final t = c.peorTramo!;
+      expect(t.regularizado, isTrue);
+      // Diciembre 2026 fue el último malo: está al día desde enero 2027.
+      expect(t.estadoHoy, 'Sin deuda con esta entidad desde enero 2027');
+    });
+
+    test('si sigue debiendo, lo dice en vez de darlo por cerrado', () {
+      final c = con(
+        [mes('202607', 4, monto: 900)],
+        hoy: const [
+          EntidadBcra(
+            entidad: 'CREDITO RAPIDO S.A.',
+            situacion: 4,
+            montoMiles: 900,
+            refinanciaciones: true,
+          ),
+        ],
+      );
+      final t = c.peorTramo!;
+      expect(t.regularizado, isFalse);
+      expect(t.deudaHoy, 4);
+      expect(t.refinanciada, isTrue);
+      expect(t.estadoHoy, 'Sigue informada en situación 4');
+    });
+  });
 }
 
 String _texto(SemaforoCrediticio s) => switch (s) {

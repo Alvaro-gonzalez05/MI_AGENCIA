@@ -327,6 +327,51 @@ class ConsultaBcra {
     return salida;
   }
 
+  /// El peor tramo de los 24 meses, contado como lo contaría una persona:
+  /// con quién, desde cuándo hasta cuándo, cuánto llegó a deber y cómo está
+  /// hoy.
+  ///
+  /// Sirve para lo que más se pregunta en la agencia cuando el semáforo da
+  /// rojo por el pasado: "¿esto de cuándo es y con quién fue?". Devuelve
+  /// null si en los 24 meses nunca pasó de riesgo bajo: ahí no hay nada que
+  /// detallar y el informe no inventa un problema.
+  TramoIrregular? get peorTramo {
+    final porEntidad = historialPorEntidad;
+    if (porEntidad.isEmpty) return null;
+
+    final (entidad, meses) = porEntidad.first;
+    // Riesgo medio para arriba. Debajo de eso es un atraso de días, no un
+    // antecedente que valga la pena destacar.
+    final malos = meses.where((x) => x.$2.situacion >= 3).toList();
+    if (malos.isEmpty) return null;
+
+    // `historialPorEntidad` los deja del más nuevo al más viejo.
+    final ultimo = malos.first;
+    final primero = malos.last;
+
+    final enCurso = entidades.where((e) => e.entidad == entidad).toList();
+
+    return TramoIrregular(
+      entidad: entidad,
+      situacion: malos.fold(
+        0,
+        (a, x) => x.$2.situacion > a ? x.$2.situacion : a,
+      ),
+      desde: primero.$1,
+      hasta: ultimo.$1,
+      montoMaximo: malos.fold<double>(
+        0,
+        (a, x) => x.$2.monto > a ? x.$2.monto : a,
+      ),
+      montoUltimo: ultimo.$2.monto,
+      refinanciada: enCurso.any((e) => e.refinanciaciones),
+      procesoJudicial:
+          enCurso.any((e) => e.procesoJudicial) ||
+          malos.any((x) => x.$2.procesoJudicial),
+      deudaHoy: enCurso.isEmpty ? null : enCurso.first.situacion,
+    );
+  }
+
   /// Hoy no debe nada, pero sí tuvo deuda en los últimos 24 meses.
   bool get regularizo => entidades.isEmpty && (situacionMax24m ?? 0) >= 1;
 
@@ -343,6 +388,9 @@ class ConsultaBcra {
     }
     return '${_meses[m - 1]} $a';
   }
+
+  /// "abril" para 4. Público porque lo usa [TramoIrregular].
+  static String nombreDelMes(int mes) => _meses[(mes - 1).clamp(0, 11)];
 
   static const _meses = [
     'enero',
@@ -564,4 +612,63 @@ String formatearCuit(String cuit) {
   final d = cuit.replaceAll(RegExp(r'\D'), '');
   if (d.length != 11) return cuit;
   return '${d.substring(0, 2)}-${d.substring(2, 10)}-${d.substring(10)}';
+}
+
+/// El peor tramo con una entidad dentro de los 24 meses informados.
+///
+/// Es la respuesta a "¿de cuándo es esto?". Un 5 de hace dos años, ya
+/// regularizado, no se negocia igual que un 5 de este mes, y el informe
+/// tiene que dejar ver la diferencia en vez de mostrar un número suelto.
+class TramoIrregular {
+  const TramoIrregular({
+    required this.entidad,
+    required this.situacion,
+    required this.desde,
+    required this.hasta,
+    required this.montoMaximo,
+    required this.montoUltimo,
+    required this.refinanciada,
+    required this.procesoJudicial,
+    this.deudaHoy,
+  });
+
+  final String entidad;
+
+  /// La peor situación que informó esa entidad en el tramo.
+  final int situacion;
+
+  final MesBcra desde, hasta;
+  final double montoMaximo, montoUltimo;
+  final bool refinanciada, procesoJudicial;
+
+  /// En qué situación está hoy con esa entidad, o null si ya no le debe.
+  final int? deudaHoy;
+
+  /// Cuántos meses duró, contando los dos extremos.
+  int get meses {
+    int n(MesBcra m) =>
+        int.parse(m.periodo.substring(0, 4)) * 12 +
+        int.parse(m.periodo.substring(4));
+    return n(hasta) - n(desde) + 1;
+  }
+
+  String get duracion => meses == 1 ? 'Un mes' : '$meses meses';
+
+  /// Sigue debiendo, o se puso al día: es la línea que define si el
+  /// antecedente pesa hoy o es historia.
+  bool get regularizado => deudaHoy == null;
+
+  String get estadoHoy => regularizado
+      ? 'Sin deuda con esta entidad desde ${_mesSiguiente(hasta)}'
+      : 'Sigue informada en situación $deudaHoy';
+
+  static String _mesSiguiente(MesBcra m) {
+    var anio = int.parse(m.periodo.substring(0, 4));
+    var mes = int.parse(m.periodo.substring(4)) + 1;
+    if (mes == 13) {
+      mes = 1;
+      anio++;
+    }
+    return '${ConsultaBcra.nombreDelMes(mes)} $anio';
+  }
 }

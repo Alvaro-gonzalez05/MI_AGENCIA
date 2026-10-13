@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../dominio/agencias.dart';
 import '../../dominio/bcra.dart';
 import '../../dominio/modelos.dart';
 
@@ -22,6 +23,7 @@ abstract final class InformeCrediticio {
     required Interesado interesado,
     String? agencia,
     String? generadoPor,
+    Agencia? datosAgencia,
   }) async {
     final tipografia = await _tipografia();
     final doc = pw.Document(
@@ -42,7 +44,13 @@ abstract final class InformeCrediticio {
             ctx.pageNumber == 1 ? pw.SizedBox() : _encabezadoCorto(interesado),
         footer: (ctx) => _pie(ctx, generadoEl, generadoPor),
         build: (ctx) => [
-          _portada(agencia, generadoEl, numeroDe(generadoEl, interesado.id)),
+          _portada(
+            agencia ?? datosAgencia?.nombre,
+            datosAgencia,
+            generadoEl,
+            numeroDe(generadoEl, interesado.id),
+            generadoPor,
+          ),
           pw.SizedBox(height: 18),
           _veredicto(interesado),
           pw.SizedBox(height: 16),
@@ -62,13 +70,19 @@ abstract final class InformeCrediticio {
               pw.SizedBox(height: 14),
               _entidades(c),
             ],
+            pw.SizedBox(height: 14),
+            _cheques(c),
+            // "¿De cuándo es esto y con quién fue?": la pregunta que sigue
+            // siempre que el semáforo da rojo por el pasado.
+            if (c.peorTramo != null) ...[
+              pw.SizedBox(height: 14),
+              _peorSituacion(c.peorTramo!),
+            ],
             // Mes por mes y entidad por entidad (checklist tanda 2, 2.4).
             for (final (entidad, meses) in c.historialPorEntidad) ...[
               pw.SizedBox(height: 14),
               _historialDeEntidad(entidad, meses),
             ],
-            pw.SizedBox(height: 14),
-            _cheques(c),
           ],
           pw.SizedBox(height: 10),
           _comoSeLee(c),
@@ -108,7 +122,27 @@ abstract final class InformeCrediticio {
     return 'INF-${cuando.year}-${dia.toString().padLeft(3, '0')}$sufijo';
   }
 
-  static pw.Widget _portada(String? agencia, DateTime cuando, String numero) {
+  /// El membrete, como el modelo del diseño: a la izquierda quién lo emite
+  /// —con su domicilio y su CUIT, que es lo que lo convierte en un papel de
+  /// la agencia y no en una impresión cualquiera—, y a la derecha de qué
+  /// informe se trata.
+  static pw.Widget _portada(
+    String? agencia,
+    Agencia? datos,
+    DateTime cuando,
+    String numero,
+    String? generadoPor,
+  ) {
+    final nombre = agencia ?? datos?.nombre ?? 'Mi Agencia';
+    final domicilio = [
+      datos?.localidad,
+      datos?.provincia,
+    ].whereType<String>().where((x) => x.trim().isNotEmpty).join(', ');
+    final contacto = [
+      if ((datos?.telefono ?? '').isNotEmpty) 'Tel. ${datos!.telefono}',
+      if ((datos?.cuit ?? '').isNotEmpty) 'CUIT ${datos!.cuit}',
+    ].join('  ·  ');
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -116,71 +150,118 @@ abstract final class InformeCrediticio {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
+            pw.Expanded(
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // El cuadradito con las iniciales hace de logo hasta que la
+                  // agencia cargue el suyo.
+                  pw.Container(
+                    width: 34,
+                    height: 34,
+                    alignment: pw.Alignment.center,
+                    decoration: pw.BoxDecoration(
+                      color: _tinta,
+                      borderRadius: pw.BorderRadius.circular(6),
+                    ),
+                    child: pw.Text(
+                      _iniciales(nombre),
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _acento,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 9),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          nombre,
+                          style: pw.TextStyle(
+                            fontSize: 13,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _tinta,
+                          ),
+                        ),
+                        if (domicilio.isNotEmpty)
+                          pw.Text(
+                            domicilio,
+                            style: const pw.TextStyle(
+                              fontSize: 8.5,
+                              color: _tinta3,
+                            ),
+                          ),
+                        if (contacto.isNotEmpty)
+                          pw.Text(
+                            contacto,
+                            style: const pw.TextStyle(
+                              fontSize: 8.5,
+                              color: _tinta3,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(width: 14),
             pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
                 pw.Text(
-                  (agencia ?? 'Mi Agencia').toUpperCase(),
+                  'INFORME CREDITICIO DEL CLIENTE',
                   style: pw.TextStyle(
-                    fontSize: 9,
-                    letterSpacing: 1.6,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _tinta3,
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  'Informe crediticio del cliente',
-                  style: pw.TextStyle(
-                    fontSize: 21,
+                    fontSize: 10.5,
+                    letterSpacing: 0.4,
                     fontWeight: pw.FontWeight.bold,
                     color: _tinta,
                   ),
                 ),
                 pw.SizedBox(height: 3),
                 pw.Text(
-                  'Central de Deudores del Banco Central de la República '
-                  'Argentina',
-                  style: const pw.TextStyle(fontSize: 9.5, color: _tinta3),
+                  'N.° $numero',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    letterSpacing: 0.6,
+                    color: _tinta2,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Emitido el ${DateFormat('d/MM/y', 'es_AR').format(cuando)}'
+                  '${generadoPor == null ? '' : ' por $generadoPor'}',
+                  style: const pw.TextStyle(fontSize: 8.5, color: _tinta3),
+                ),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  'Central de Deudores del BCRA',
+                  style: const pw.TextStyle(fontSize: 8.5, color: _tinta3),
                 ),
               ],
             ),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 7,
-              ),
-              decoration: pw.BoxDecoration(
-                color: _hundido,
-                borderRadius: pw.BorderRadius.circular(7),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    'N.° $numero',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      letterSpacing: 0.6,
-                      color: _tinta,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    'Emitido el '
-                    '${DateFormat("d 'de' MMMM 'de' y", 'es_AR').format(cuando)}',
-                    style: const pw.TextStyle(fontSize: 8.5, color: _tinta2),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         pw.Container(height: 2.5, color: _acento),
       ],
     );
+  }
+
+  /// "ADV" para "Automotores Del Valle": hace de logo mientras no haya uno.
+  static String _iniciales(String nombre) {
+    final palabras = nombre
+        .split(RegExp(r'\s+'))
+        .where((p) => p.length > 2)
+        .toList();
+    if (palabras.isEmpty) {
+      return nombre.isEmpty ? 'MA' : nombre.substring(0, 1).toUpperCase();
+    }
+    return palabras.take(3).map((p) => p.substring(0, 1).toUpperCase()).join();
   }
 
   static pw.Widget _encabezadoCorto(Interesado i) => pw.Container(
@@ -608,6 +689,73 @@ abstract final class InformeCrediticio {
     ),
   );
 
+  /// El peor tramo, como lo cuenta el diseño: con quién fue, desde cuándo
+  /// hasta cuándo, cuánto llegó a deber y cómo está hoy.
+  static pw.Widget _peorSituacion(TramoIrregular t) {
+    final (color, lavado) = t.situacion >= 4
+        ? (_rojo, _rojoLavado)
+        : (const PdfColor.fromInt(0xFFE0782F), _hundido);
+
+    return _seccion(
+      numero: 6,
+      'Detalle de la peor situación (últimos 24 meses)',
+      pw.Container(
+        padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 10),
+        // Sin esquinas redondeadas: el paquete de PDF no acepta radio con
+        // un borde de un solo lado, y la barra de color importa más.
+        decoration: pw.BoxDecoration(
+          color: lavado,
+          border: pw.Border(left: pw.BorderSide(color: color, width: 3)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                _bandera(
+                  'Situación ${t.situacion} · '
+                  '${_capitalizar(_nombreSituacion(t.situacion))}',
+                  color,
+                  lavado == _hundido ? PdfColors.white : lavado,
+                ),
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  child: pw.Text(
+                    t.regularizado
+                        ? 'Ya no le debe a esta entidad'
+                        : 'Sigue informada hoy',
+                    style: const pw.TextStyle(fontSize: 9, color: _tinta2),
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 8),
+            _grilla([
+              ('Entidad', t.entidad),
+              ('Duración', t.duracion),
+              ('Desde', _capitalizar(t.desde.largo)),
+              ('Hasta', _capitalizar(t.hasta.largo)),
+              ('Monto máximo informado', _pesos(t.montoMaximo)),
+              ('Último monto informado', _pesos(t.montoUltimo)),
+              ('Refinanciada', t.refinanciada ? 'Sí' : 'No'),
+              ('En proceso judicial', t.procesoJudicial ? 'Sí' : 'No'),
+            ]),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              t.estadoHoy,
+              style: pw.TextStyle(
+                fontSize: 9.5,
+                fontWeight: pw.FontWeight.bold,
+                color: t.regularizado ? _verde : color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Una entidad, sus 24 meses: situación, deuda, gestión judicial.
   static pw.Widget _historialDeEntidad(
     String entidad,
@@ -724,56 +872,61 @@ abstract final class InformeCrediticio {
         );
 
   /// El criterio, escrito. Sin esto el informe es una opinión con colores.
-  static pw.Widget _comoSeLee(ConsultaBcra? c) => pw.Container(
-    padding: const pw.EdgeInsets.all(8),
-    decoration: pw.BoxDecoration(
-      color: _hundido,
-      borderRadius: pw.BorderRadius.circular(8),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'Cómo se lee este informe',
-          style: pw.TextStyle(
-            fontSize: 8.5,
-            fontWeight: pw.FontWeight.bold,
-            color: _tinta,
-          ),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              child: _notasLectura([
-                'Verde: situación 1 en todas las entidades, sin cheques impagos ni juicios.',
-                'Amarillo: situación 2 o 3, cheques ya pagados o más de 30 días de atraso.',
-              ]),
+  /// La leyenda de cómo se lee. Va entera o en la hoja siguiente: partida
+  /// dejaba un rectángulo gris vacío al pie de una hoja y el texto en la
+  /// otra.
+  static pw.Widget _comoSeLee(ConsultaBcra? c) => pw.Inseparable(
+    child: pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: _hundido,
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Cómo se lee este informe',
+            style: pw.TextStyle(
+              fontSize: 8.5,
+              fontWeight: pw.FontWeight.bold,
+              color: _tinta,
             ),
-            pw.SizedBox(width: 10),
-            pw.Expanded(
-              child: _notasLectura([
-                'Rojo: situación 4 a 6, cheques sin pagar o proceso judicial informado.',
-                'Gris: faltan datos o la consulta venció; nunca equivale a una aprobación.',
-              ]),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: _notasLectura([
+                  'Verde: situación 1 en todas las entidades, sin cheques impagos ni juicios.',
+                  'Amarillo: situación 2 o 3, cheques ya pagados o más de 30 días de atraso.',
+                ]),
+              ),
+              pw.SizedBox(width: 10),
+              pw.Expanded(
+                child: _notasLectura([
+                  'Rojo: situación 4 a 6, cheques sin pagar o proceso judicial informado.',
+                  'Gris: faltan datos o la consulta venció; nunca equivale a una aprobación.',
+                ]),
+              ),
+            ],
+          ),
+          if (c != null) ...[
+            pw.SizedBox(height: 3),
+            pw.Text(
+              'Fuente: BCRA, Central de Deudores. Los montos publicados en miles de pesos se muestran convertidos a pesos. '
+              'La información se actualiza mensualmente y no reemplaza el análisis de la agencia.',
+              style: pw.TextStyle(
+                fontSize: 6.8,
+                color: _tinta3,
+                fontStyle: pw.FontStyle.italic,
+                lineSpacing: 1,
+              ),
             ),
           ],
-        ),
-        if (c != null) ...[
-          pw.SizedBox(height: 3),
-          pw.Text(
-            'Fuente: BCRA, Central de Deudores. Los montos publicados en miles de pesos se muestran convertidos a pesos. '
-            'La información se actualiza mensualmente y no reemplaza el análisis de la agencia.',
-            style: pw.TextStyle(
-              fontSize: 6.8,
-              color: _tinta3,
-              fontStyle: pw.FontStyle.italic,
-              lineSpacing: 1,
-            ),
-          ),
         ],
-      ],
+      ),
     ),
   );
 

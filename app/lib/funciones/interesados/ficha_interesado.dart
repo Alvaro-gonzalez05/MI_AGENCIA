@@ -114,6 +114,7 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
         interesado: _i,
         agencia: agencia,
         generadoPor: usuario?.nombre,
+        datosAgencia: ref.read(miAgenciaProvider).value,
       );
       await ref.read(repositorioProvider).guardarInforme(_i, bytes);
       if (mounted) {

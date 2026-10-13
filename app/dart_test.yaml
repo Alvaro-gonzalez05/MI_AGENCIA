@@ -1,7 +1,12 @@
 # Las capturas de diseño (capturas_diseno_test.dart) dibujan pantallas y las
-# guardan como PNG para mirarlas. No son pruebas de regresión: cada sistema
-# operativo dibuja las fuentes distinto, así que en CI se excluyen con
-# `flutter test --exclude-tags capturas`.
+# guardan como PNG para mirarlas. No son pruebas de regresión por dos motivos:
+# cada sistema operativo dibuja las fuentes distinto, y las pantallas muestran
+# la fecha de hoy y los días en stock, así que la imagen cambia sola de un día
+# para el otro aunque no se toque una línea de código.
+#
+# Por eso van salteadas en la corrida normal. Para mirarlas:
+#   flutter test --tags capturas --update-goldens
+#   (y después se abren los PNG de test/capturas)
 tags:
   capturas:
-    skip: false
+    skip: "Se corren a mano con --tags capturas; cambian con la fecha"

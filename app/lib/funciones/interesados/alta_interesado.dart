@@ -113,6 +113,7 @@ class _FormularioInteresadoState extends ConsumerState<FormularioInteresado> {
         agencia:
             ref.read(miAgenciaProvider).value?.nombre ?? usuario?.agenciaNombre,
         generadoPor: usuario?.nombre,
+        datosAgencia: ref.read(miAgenciaProvider).value,
       );
       await repo.guardarInforme(_guardado!, bytes);
       if (!mounted) return;
