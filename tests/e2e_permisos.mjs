@@ -112,7 +112,7 @@ try {
   });
   const respuesta = await funcion.json().catch(() => ({}));
   afirmar(funcion.status === 403, `no puede crear cuentas (HTTP ${funcion.status})`);
-  afirmar(/desarrollador/i.test(respuesta.error ?? ''), 'y lo dice con todas las letras');
+  afirmar(/permiso/i.test(respuesta.error ?? ''), 'y lo dice con todas las letras');
 
   // 7. Lo mismo pero como solo lectura: no puede ni tocar.
   await sql(`update public.membresias set rol = 'solo_lectura'
