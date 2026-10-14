@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mi_agencia/core/transiciones.dart';
+import 'package:mi_agencia/ui/componentes.dart';
 
 /// Cómo se ve el paso de una sección a otra.
 ///
@@ -142,5 +143,67 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(find.text('FICHA'), findsOneWidget);
+  });
+
+  group('Pulsable', () {
+    // Se llama Pulsable y recibe onTap: todo el que lo usa da por hecho que
+    // el toque entra. Durante un tiempo sólo hundía la tarjeta y no llamaba
+    // a nadie, así que había botones dibujados que no hacían nada.
+    testWidgets('llama a onTap', (t) async {
+      var tocado = 0;
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Pulsable(
+                onTap: () => tocado++,
+                child: const SizedBox(
+                  width: 120,
+                  height: 48,
+                  child: Text('tocame'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await t.tap(find.text('tocame'));
+      await t.pumpAndSettle();
+      expect(tocado, 1);
+    });
+
+    testWidgets('si el hijo ya maneja el toque, no se dispara dos veces', (
+      t,
+    ) async {
+      var afuera = 0;
+      var adentro = 0;
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Pulsable(
+                onTap: () => afuera++,
+                child: Material(
+                  child: InkWell(
+                    onTap: () => adentro++,
+                    child: const SizedBox(
+                      width: 120,
+                      height: 48,
+                      child: Text('tocame'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await t.tap(find.text('tocame'));
+      await t.pumpAndSettle();
+      expect(adentro, 1);
+      expect(afuera, 0, reason: 'El de adentro gana el gesto');
+    });
   });
 }

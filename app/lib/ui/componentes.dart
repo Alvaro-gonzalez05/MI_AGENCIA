@@ -6,11 +6,15 @@ import '../core/tema/colores.dart';
 import '../core/tema/tema.dart';
 import '../datos/repositorio.dart';
 
-/// Hace que lo que se toca se hunda un poquito.
+/// Hace que lo que se toca se hunda un poquito, y lo hace tocable.
 ///
 /// Es la respuesta mas barata que existe a "¿me tomó el toque?": el dedo
 /// tapa el boton y la unica senal que queda es que la cosa se mueva. Dura
 /// menos de lo que tarda en levantarse el dedo, asi que no retrasa nada.
+///
+/// Tambien dispara [onTap]. Si el hijo ya maneja el toque —un InkWell, un
+/// boton—, ese gana: en Flutter, entre dos reconocedores anidados, el de
+/// adentro se queda con el gesto, asi que no se dispara dos veces.
 class Pulsable extends StatefulWidget {
   const Pulsable({
     super.key,
@@ -36,10 +40,11 @@ class _PulsableState extends State<Pulsable> {
   }
 
   @override
-  Widget build(BuildContext context) => Listener(
-    onPointerDown: (_) => _marcar(true),
-    onPointerUp: (_) => _marcar(false),
-    onPointerCancel: (_) => _marcar(false),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: widget.onTap,
+    onTapDown: (_) => _marcar(true),
+    onTapUp: (_) => _marcar(false),
+    onTapCancel: () => _marcar(false),
     child: AnimatedScale(
       scale: _presionado ? widget.escala : 1,
       duration: Duracion.rapida,

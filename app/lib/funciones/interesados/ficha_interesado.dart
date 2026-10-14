@@ -14,6 +14,7 @@ import '../../dominio/modelos.dart';
 import '../../ui/componentes.dart';
 import '../../ui/formulario.dart';
 import '../../ui/confirmacion.dart';
+import 'detalle_bcra.dart';
 import 'historial_bcra.dart';
 import 'informe_pdf.dart';
 import 'plan_de_pagos.dart';
@@ -274,6 +275,13 @@ class _FichaInteresadoState extends ConsumerState<FichaInteresado> {
                     if (c != null && c.entidades.isNotEmpty) ...[
                       const SizedBox(height: Esp.md),
                       Aparecer(indice: 2, child: _Entidades(consulta: c)),
+                    ],
+
+                    // Mes por mes y entidad por entidad, como lo publica el
+                    // BCRA: con quién fue, desde cuándo y por cuánto.
+                    if (c != null && c.historialPorEntidad.isNotEmpty) ...[
+                      const SizedBox(height: Esp.md),
+                      Aparecer(indice: 3, child: DetalleBcra(consulta: c)),
                     ],
 
                     if (c != null && c.cheques.isNotEmpty) ...[
