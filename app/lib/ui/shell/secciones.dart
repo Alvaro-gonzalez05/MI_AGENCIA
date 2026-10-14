@@ -57,12 +57,12 @@ abstract final class Secciones {
 
   static const inventario = Seccion(
     id: 'inventario',
-    etiqueta: 'Inventario',
+    etiqueta: 'Autos',
     ruta: '/inventario',
-    icono: Icons.inventory_2_outlined,
+    icono: Icons.directions_car_outlined,
     grupo: 'Gestión',
-    titulo: 'Inventario',
-    subtitulo: 'Todas las unidades con sus costos y márgenes',
+    titulo: 'Autos',
+    subtitulo: 'Todas las unidades, con su precio y sus días en salón',
     enBarraInferior: true,
   );
 
@@ -167,12 +167,12 @@ abstract final class Secciones {
 
   static const configuracion = Seccion(
     id: 'configuracion',
-    etiqueta: 'Configuración',
+    etiqueta: 'Mi agencia',
     ruta: '/configuracion',
-    icono: Icons.tune_outlined,
+    icono: Icons.storefront_outlined,
     grupo: 'Sistema',
-    titulo: 'Configuración',
-    subtitulo: 'Umbrales y parámetros — todo se recalcula solo',
+    titulo: 'Datos de la agencia',
+    subtitulo: 'Nombre, CUIT, contacto y dirección',
   );
 
   static const equipo = Seccion(

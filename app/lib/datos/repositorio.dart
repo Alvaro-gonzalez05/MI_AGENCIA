@@ -122,6 +122,11 @@ abstract interface class Repositorio {
   /// esta en nuestra copia.
   Future<void> pedirRevista(String texto, {int? anio});
 
+  /// Le pregunta a la guía en el momento, para cuando el cliente está
+  /// enfrente. Devuelve cuántos precios quedaron guardados y cuántas
+  /// consultas quedan en el día; si el cupo se acabó, [BusquedaEnVivo.agotado].
+  Future<BusquedaEnVivo> buscarRevistaEnVivo(String texto);
+
   /// Los planes de pago. Sin filtro, los activos de la agencia.
   Future<List<PlanPago>> planes({
     String? oportunidadId,
@@ -788,6 +793,12 @@ class RepositorioDemo implements Repositorio {
     return [
       for (var i = 0; i < 5; i++) AnioRevista(anio: hoy - i, versiones: 3),
     ];
+  }
+
+  @override
+  Future<BusquedaEnVivo> buscarRevistaEnVivo(String texto) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    return const BusquedaEnVivo(guardadas: 25, quedan: 27);
   }
 
   @override

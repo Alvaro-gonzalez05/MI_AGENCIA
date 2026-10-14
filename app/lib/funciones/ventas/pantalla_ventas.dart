@@ -59,10 +59,6 @@ class PantallaVentas extends ConsumerWidget {
             0,
             (s, v) => s + (v.ganancia ?? 0),
           );
-          final real = ventas.fold<double>(
-            0,
-            (s, v) => s + (v.gananciaReal ?? 0),
-          );
           final dias = ventas
               .where((v) => v.diasEnStock != null)
               .map((v) => v.diasEnStock!)
@@ -78,7 +74,6 @@ class PantallaVentas extends ConsumerWidget {
                 _Resumen(
                   cantidad: ventas.length,
                   nominal: nominal,
-                  real: real,
                   diasPromedio: promedio,
                 )
               else
@@ -122,20 +117,16 @@ class _Resumen extends StatelessWidget {
   const _Resumen({
     required this.cantidad,
     required this.nominal,
-    required this.real,
     required this.diasPromedio,
   });
 
   final int cantidad;
   final double nominal;
-  final double real;
   final double? diasPromedio;
 
   @override
   Widget build(BuildContext context) {
     final p = context.paleta;
-    final erosion = nominal - real;
-    final proporcion = nominal > 0 ? real / nominal : 0.0;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
@@ -151,76 +142,19 @@ class _Resumen extends StatelessWidget {
                 : 'Rotación promedio: ${diasPromedio!.toStringAsFixed(0)} días',
           ),
           const SizedBox(height: Esp.lg),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ganancia nominal',
-                      style: TextStyle(fontSize: 13, color: p.tinta3),
-                    ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        Fmt.pesos(nominal),
-                        style: TextStyle(
-                          fontFamily: TemaApp.mono,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: p.tinta2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          Text('Ganancia', style: TextStyle(fontSize: 13, color: p.tinta3)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              Fmt.pesos(nominal),
+              style: TextStyle(
+                fontFamily: TemaApp.mono,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: nominal < 0 ? p.critico : p.bien,
               ),
-              const SizedBox(width: Esp.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Real, ajustada por dólar (USD)',
-                      style: TextStyle(fontSize: 13, color: p.tinta3),
-                    ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        Fmt.pesos(real),
-                        style: TextStyle(
-                          fontFamily: TemaApp.mono,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: real < 0 ? p.critico : p.bien,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Esp.lg),
-          BarraProgreso(
-            valor: proporcion.clamp(0, 1),
-            color: real < 0 ? p.critico : p.bien,
-          ),
-          const SizedBox(height: Esp.md),
-          Text(
-            nominal <= 0
-                ? 'Todavía no hay ganancia acumulada.'
-                : erosion >= 0
-                ? 'Medida en dólares, la ganancia es ${Fmt.pesos(erosion)} '
-                      'menor: queda el '
-                      '${Fmt.porcentaje(proporcion, decimales: 0)} de la nominal.'
-                : 'Medida en dólares, la ganancia es ${Fmt.pesos(-erosion)} '
-                      'mayor que en pesos.',
-            style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
+            ),
           ),
         ],
       ),
@@ -393,9 +327,9 @@ class _Fila extends ConsumerWidget {
                 ),
                 Expanded(
                   child: _Mini(
-                    etiqueta: 'Real (USD)',
-                    valor: Fmt.pesosCompacto(real),
-                    color: color,
+                    etiqueta: 'Precio de venta',
+                    valor: Fmt.pesosCompacto(v.precioFinal),
+                    color: p.tinta2,
                   ),
                 ),
                 Expanded(

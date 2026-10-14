@@ -46,8 +46,10 @@ class _ModalPrecioRevistaState extends ConsumerState<ModalPrecioRevista> {
   List<AnioRevista> _anios = const [];
   List<PrecioRevista> _precios = const [];
   bool _cargando = true;
+  bool _consultandoGuia = false;
   bool _pedido = false;
   String? _error;
+  String? _aviso;
 
   @override
   void initState() {
@@ -74,16 +76,65 @@ class _ModalPrecioRevistaState extends ConsumerState<ModalPrecioRevista> {
         _cargando = false;
       });
 
-      // Todavía no lo tenemos: que el cosechador lo pida.
+      // No lo tenemos: se le pregunta a la guía en el momento. El cliente
+      // está enfrente; esperar al cosechador no sirve.
       if (precios.isEmpty && !_pedido) {
         _pedido = true;
-        await repo.pedirRevista(widget.texto, anio: widget.anio);
+        await _preguntarALaGuia();
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _cargando = false;
         _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  /// Una consulta a la guía, ahora. Trae hasta 25 versiones con su precio,
+  /// las guarda, y vuelve a leer de nuestra copia.
+  Future<void> _preguntarALaGuia() async {
+    setState(() {
+      _consultandoGuia = true;
+      _aviso = null;
+    });
+    try {
+      final repo = ref.read(repositorioProvider);
+      final r = await repo.buscarRevistaEnVivo(widget.texto);
+
+      if (r.agotado) {
+        // Se acabó el cupo del día: queda anotado para el cosechador.
+        await repo.pedirRevista(widget.texto, anio: widget.anio);
+        if (!mounted) return;
+        setState(() {
+          _consultandoGuia = false;
+          _aviso =
+              r.mensaje ??
+              'Se acabaron las consultas de hoy. Lo anotamos y el precio '
+                  'llega en el día.';
+        });
+        return;
+      }
+
+      final anios = await repo.aniosRevista(widget.texto);
+      final anio = _anio ?? (anios.isEmpty ? null : anios.first.anio);
+      final precios = await repo.buscarRevista(widget.texto, anio: anio);
+      if (!mounted) return;
+      setState(() {
+        _anios = anios;
+        _anio = anio;
+        _precios = precios;
+        _consultandoGuia = false;
+        _aviso = precios.isEmpty
+            ? 'La guía no tiene ese auto. Probá con menos palabras: '
+                  'marca y modelo.'
+            : null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _consultandoGuia = false;
+        _aviso = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -158,7 +209,7 @@ class _ModalPrecioRevistaState extends ConsumerState<ModalPrecioRevista> {
         Divider(color: p.borde, height: 1),
 
         Flexible(
-          child: _cargando
+          child: _cargando || _consultandoGuia
               ? const Padding(
                   padding: EdgeInsets.all(Esp.xxl),
                   child: Center(child: CircularProgressIndicator()),
@@ -201,13 +252,40 @@ class _ModalPrecioRevistaState extends ConsumerState<ModalPrecioRevista> {
         ),
 
         Divider(color: p.borde, height: 1),
+        if (_aviso != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Esp.xl, Esp.md, Esp.xl, 0),
+            child: Text(
+              _aviso!,
+              style: TextStyle(fontSize: 14, height: 1.4, color: p.tinta2),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.all(Esp.lg),
-          child: Center(
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _consultandoGuia ? null : _preguntarALaGuia,
+                icon: _consultandoGuia
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  _consultandoGuia
+                      ? 'Preguntándole a la guía…'
+                      : 'Buscar en la guía',
+                ),
+              ),
+              const SizedBox(width: Esp.sm),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
           ),
         ),
       ],

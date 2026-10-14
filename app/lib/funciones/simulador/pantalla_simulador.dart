@@ -147,7 +147,7 @@ class _PantallaSimuladorState extends ConsumerState<PantallaSimulador> {
                   spacing: Esp.sm,
                   runSpacing: Esp.sm,
                   children: [
-                    for (final s in SistemaAmortizacion.values)
+                    for (final s in SistemaAmortizacion.elegibles)
                       ChipSeleccion(
                         etiqueta: s.etiqueta,
                         activo: _sistema == s,
@@ -265,12 +265,6 @@ class _PantallaSimuladorState extends ConsumerState<PantallaSimulador> {
                           _Total(
                             etiqueta: 'Intereses',
                             valor: Fmt.pesos(r.interes),
-                          ),
-                          _Total(
-                            etiqueta: 'Sobre el capital',
-                            valor: _monto > 0
-                                ? Fmt.porcentaje(r.interes / _monto)
-                                : Fmt.sinDato,
                           ),
                         ],
                       ),

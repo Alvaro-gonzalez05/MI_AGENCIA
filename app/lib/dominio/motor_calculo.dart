@@ -32,6 +32,13 @@ enum SistemaAmortizacion {
   /// asi la cuota que calcula Postgres es la que mostro el simulador.
   final String valorBd;
 
+  /// Los que se le ofrecen a la agencia. "Global" queda afuera —un solo
+  /// pago al final no es como se vende un auto usado— pero el cálculo
+  /// sigue existiendo: hay planes viejos guardados con ese sistema y sus
+  /// cuotas tienen que seguir dando lo mismo.
+  static List<SistemaAmortizacion> get elegibles =>
+      values.where((s) => s != global).toList(growable: false);
+
   static SistemaAmortizacion desde(String? v) =>
       SistemaAmortizacion.values.where((s) => s.valorBd == v).firstOrNull ??
       SistemaAmortizacion.frances;

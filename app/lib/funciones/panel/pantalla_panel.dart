@@ -331,11 +331,20 @@ class _Saludo extends StatefulWidget {
 
 class _SaludoState extends State<_Saludo> {
   final _busqueda = TextEditingController();
-  int? _anio;
+  final _anioTexto = TextEditingController();
+
+  int? get _anio {
+    final limpio = _anioTexto.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final n = int.tryParse(limpio);
+    // Un año de dos dígitos o de cinco no es un año: se ignora en vez de
+    // buscar cualquier cosa.
+    return n != null && n > 1900 && n < 2100 ? n : null;
+  }
 
   @override
   void dispose() {
     _busqueda.dispose();
+    _anioTexto.dispose();
     super.dispose();
   }
 
@@ -369,13 +378,10 @@ class _SaludoState extends State<_Saludo> {
         )
         .toList();
 
-    final ganancia = delMes.fold<double>(
-      0,
-      (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
-    );
+    final ganancia = delMes.fold<double>(0, (s, v) => s + (v.ganancia ?? 0));
     final gananciaPasada = delMesPasado.fold<double>(
       0,
-      (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
+      (s, v) => s + (v.ganancia ?? 0),
     );
     final facturado = delMes.fold<double>(0, (s, v) => s + v.precioFinal);
     final facturadoPasado = delMesPasado.fold<double>(
@@ -437,7 +443,7 @@ class _SaludoState extends State<_Saludo> {
                     icono: Icons.payments_outlined,
                     colorIcono: p.acentoTexto,
                     nota: gananciaPasada == 0
-                        ? 'Ganancia real, ajustada por dólar'
+                        ? 'Lo que dejaron las entregas del mes'
                         : ganancia >= gananciaPasada
                         ? 'Mejor que $nombreMesPasado'
                         : 'Por debajo de $nombreMesPasado',
@@ -701,8 +707,8 @@ class _SaludoState extends State<_Saludo> {
     _ => 'Equipo',
   };
 
-  /// El buscador de precio de revista del diseño. La guía todavía no está
-  /// conectada: el campo existe y lo avisa, en vez de inventar un precio.
+  /// El buscador de precio de revista del diseño: se escribe el auto, se
+  /// escribe el año si importa, y el precio sale en el momento.
   Widget _buscadorRevista(BuildContext context) {
     final p = context.paleta;
 
@@ -719,46 +725,24 @@ class _SaludoState extends State<_Saludo> {
       ),
     );
 
-    final anio = Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: Esp.md),
-      decoration: BoxDecoration(
-        color: p.superficie,
-        borderRadius: BorderRadius.circular(Curva.md),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          value: _anio,
-          isExpanded: true,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.calendar_today_outlined, size: 20, color: p.tinta2),
-              const SizedBox(width: Esp.sm),
-              Flexible(
-                child: Text(
-                  'Año',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16, color: p.tinta2),
-                ),
-              ),
-            ],
-          ),
-          icon: Icon(Icons.expand_more_rounded, color: p.tinta2),
-          borderRadius: BorderRadius.circular(Curva.md),
-          dropdownColor: p.superficieElevada,
-          style: TextStyle(fontSize: 16, color: p.tinta),
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Cualquier año')),
-            for (
-              var a = DateTime.now().year;
-              a >= DateTime.now().year - 15;
-              a--
-            )
-              DropdownMenuItem(value: a, child: Text('$a')),
-          ],
-          onChanged: (v) => setState(() => _anio = v),
+    // El año se escribe, no se elige de una lista: es más rápido tipear
+    // "2015" que abrir un desplegable y bajar quince renglones, y lo pidió
+    // la agencia (doc de octubre).
+    final anio = TextField(
+      controller: _anioTexto,
+      onSubmitted: (_) => _verPrecio(),
+      keyboardType: TextInputType.number,
+      maxLength: 4,
+      style: TextStyle(fontSize: 16, color: p.tinta),
+      decoration: InputDecoration(
+        hintText: 'Año',
+        counterText: '',
+        filled: true,
+        fillColor: p.superficie,
+        prefixIcon: Icon(
+          Icons.calendar_today_outlined,
+          size: 20,
+          color: p.tinta3,
         ),
       ),
     );
@@ -775,9 +759,8 @@ class _SaludoState extends State<_Saludo> {
               children: [
                 Expanded(child: campo),
                 const SizedBox(width: Esp.md),
-                // Ancho fijo: el desplegable se estira hasta donde le dejen,
-                // y en una fila sin limite eso es infinito.
-                SizedBox(width: 190, child: anio),
+                // Cuatro dígitos no necesitan más que esto.
+                SizedBox(width: 130, child: anio),
                 const SizedBox(width: Esp.md),
                 boton,
               ],
@@ -1187,10 +1170,7 @@ class _ComoVienenLasVentas extends StatelessWidget {
           return (
             mes: mes,
             unidades: delMes.length,
-            ganancia: delMes.fold<double>(
-              0,
-              (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
-            ),
+            ganancia: delMes.fold<double>(0, (s, v) => s + (v.ganancia ?? 0)),
           );
         }(),
     ];

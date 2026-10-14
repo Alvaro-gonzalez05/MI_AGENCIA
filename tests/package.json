@@ -15,7 +15,8 @@
     "e2e": "node e2e_permisos.mjs && node e2e_alta_de_cuentas.mjs && node e2e_equipo.mjs",
     "e2e-permisos": "node e2e_permisos.mjs",
     "e2e-alta": "node e2e_alta_de_cuentas.mjs",
-    "e2e-equipo": "node e2e_equipo.mjs"
+    "e2e-equipo": "node e2e_equipo.mjs",
+    "e2e-revista": "node e2e_revista.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.11"

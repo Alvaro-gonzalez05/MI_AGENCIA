@@ -136,12 +136,19 @@ void main() {
 
         expect(find.text('Monto a financiar'), findsOneWidget);
         expect(find.text('Sistema de amortización'), findsOneWidget);
-        for (final s in SistemaAmortizacion.values) {
+        for (final s in SistemaAmortizacion.elegibles) {
           expect(
             find.widgetWithText(ChipSeleccion, s.etiqueta),
             findsOneWidget,
           );
         }
+        // "Global" —un solo pago al final— no se ofrece: no es como se
+        // vende un auto usado. El cálculo sigue existiendo para los planes
+        // viejos que lo usaron.
+        expect(find.widgetWithText(ChipSeleccion, 'Global'), findsNothing);
+        // Tampoco el porcentaje sobre el capital: lo que se le muestra al
+        // cliente es la cuota, el total y los intereses.
+        expect(find.text('Sobre el capital'), findsNothing);
         expect(find.text('Tasa anual (TNA)'), findsOneWidget);
         expect(find.text('Cuotas'), findsOneWidget);
         // Sin anticipo: el cliente lo pidió expresamente (tanda 2, 2.2).

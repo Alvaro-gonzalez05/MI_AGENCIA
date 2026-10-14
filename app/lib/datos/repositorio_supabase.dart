@@ -792,6 +792,37 @@ class RepositorioSupabase implements Repositorio {
   }
 
   @override
+  Future<BusquedaEnVivo> buscarRevistaEnVivo(String texto) async {
+    late FunctionResponse r;
+    try {
+      r = await _db.functions.invoke('revista-buscar', body: {'q': texto});
+    } on FunctionException catch (e) {
+      final detalle = e.details;
+      if (detalle is Map && detalle['error'] != null) {
+        throw Exception(detalle['error']);
+      }
+      throw Exception(
+        e.status == 404
+            ? 'La consulta a la guía todavía no está desplegada.'
+            : 'No se pudo consultar la guía. Probá de nuevo.',
+      );
+    }
+
+    final datos = r.data;
+    if (datos is! Map) {
+      throw Exception('La guía contestó algo que no se entiende.');
+    }
+    if (datos['error'] != null) throw Exception(datos['error'].toString());
+
+    return BusquedaEnVivo(
+      guardadas: _entero(datos['guardadas']) ?? 0,
+      quedan: _entero(datos['quedan']) ?? 0,
+      agotado: datos['agotado'] as bool? ?? false,
+      mensaje: datos['mensaje'] as String?,
+    );
+  }
+
+  @override
   Future<void> pedirRevista(String texto, {int? anio}) async {
     await _db.rpc<dynamic>(
       'pedir_revista',

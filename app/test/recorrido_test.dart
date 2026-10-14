@@ -75,13 +75,14 @@ void main() {
     expect(tester.takeException(), isNull);
 
     for (final seccion in [
-      'Inventario',
+      'Autos',
       'Cargar',
       'Clientes',
       'Estadísticas',
       'Simulador',
       'Campañas',
-      'Configuración',
+      'Equipo',
+      'Mi agencia',
     ]) {
       await ir(tester, seccion);
       expect(
@@ -96,9 +97,9 @@ void main() {
     tester,
   ) async {
     await entrar(tester);
-    await ir(tester, 'Inventario');
+    await ir(tester, 'Autos');
 
-    expect(find.text('Inventario'), findsWidgets);
+    expect(find.text('Autos'), findsWidgets);
     expect(find.widgetWithText(ChipSeleccion, 'Disponibles'), findsOneWidget);
 
     // Las pestañas cambian lo que se lista.
@@ -128,15 +129,17 @@ void main() {
     tester,
   ) async {
     await entrar(tester);
-    await ir(tester, 'Inventario');
+    await ir(tester, 'Autos');
 
     await tocar(tester, find.text('Ver ficha').first);
     expect(find.text('Valuación comercial y precio'), findsOneWidget);
     expect(find.text('Datos técnicos'), findsOneWidget);
     expect(find.text('Papeles y documentación'), findsOneWidget);
 
-    // El simulador de precio recalcula al mover el margen.
-    expect(find.text('Simulador de precio'), findsOneWidget);
+    // El simulador de precio y la ganancia en dólares salieron de la ficha:
+    // la agencia los pidió afuera (doc de octubre).
+    expect(find.text('Simulador de precio'), findsNothing);
+    expect(find.text('Ganancia real (USD)'), findsNothing);
 
     await tocar(tester, find.text('Cargar un gasto'));
     expect(find.text('Gastos'), findsWidgets);
@@ -149,7 +152,7 @@ void main() {
     await entrar(tester);
 
     // Cuántas unidades hay antes.
-    await ir(tester, 'Inventario');
+    await ir(tester, 'Autos');
     await tocar(tester, find.widgetWithText(ChipSeleccion, 'Todos'));
     final textoAntes = tester
         .widgetList<Text>(find.textContaining('Mostrando'))
@@ -169,7 +172,7 @@ void main() {
     expect(find.text('Marca *'), findsWidgets);
     await tocar(tester, find.text('Cancelar').first);
 
-    await ir(tester, 'Inventario');
+    await ir(tester, 'Autos');
     await tocar(tester, find.widgetWithText(ChipSeleccion, 'Todos'));
     expect(
       tester.widgetList<Text>(find.textContaining('Mostrando')).first.data,

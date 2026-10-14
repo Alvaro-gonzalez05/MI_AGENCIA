@@ -53,7 +53,7 @@ void main() {
 
   final pantallas = <String, Widget>{
     'Panel': const PantallaPanel(),
-    'Inventario': const PantallaInventario(),
+    'Autos': const PantallaInventario(),
     'Interesados': const PantallaInteresados(),
     'Gastos': const PantallaGastos(),
     'Precios': const PantallaPrecios(),

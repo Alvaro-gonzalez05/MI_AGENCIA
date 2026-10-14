@@ -68,22 +68,6 @@ enum OrdenInventario {
   final String etiqueta;
 }
 
-/// Tramos de precio. Fijos y en millones: es como habla la agencia
-/// ("tenés algo hasta veinte palos?").
-enum TramoPrecio {
-  todos('Cualquier precio', 0, double.infinity),
-  hasta10('Hasta \$10 M', 0, 10000000),
-  de10a20('\$10 M a \$20 M', 10000000, 20000000),
-  de20a40('\$20 M a \$40 M', 20000000, 40000000),
-  masDe40('Más de \$40 M', 40000000, double.infinity);
-
-  const TramoPrecio(this.etiqueta, this.desde, this.hasta);
-  final String etiqueta;
-  final double desde, hasta;
-
-  bool incluye(double precio) => precio >= desde && precio < hasta;
-}
-
 /// Cuánto hace que la unidad está parada. En el diseño es el filtro "Días
 /// inmovilizado"; acá reutiliza el semáforo de rotación, que ya tiene los
 /// umbrales configurados por la agencia.
@@ -106,8 +90,10 @@ class FiltroInventario {
     this.periodo = PeriodoIngreso.todo,
     this.rango,
     this.marca,
-    this.anio,
-    this.precio = TramoPrecio.todos,
+    this.anioDesde,
+    this.anioHasta,
+    this.precioDesde,
+    this.precioHasta,
     this.parado = DiasParado.todos,
     this.orden = OrdenInventario.recientes,
   });
@@ -120,8 +106,12 @@ class FiltroInventario {
   final DateTimeRange? rango;
 
   final String? marca;
-  final int? anio;
-  final TramoPrecio precio;
+
+  /// Año y precio se escriben, no se eligen de una lista: el cliente que
+  /// entra preguntando "¿tenés algo del 2018 hasta 25 palos?" no encaja en
+  /// tramos fijos. Los dos extremos son opcionales.
+  final int? anioDesde, anioHasta;
+  final double? precioDesde, precioHasta;
   final DiasParado parado;
   final OrdenInventario orden;
 
@@ -131,21 +121,26 @@ class FiltroInventario {
     PeriodoIngreso? periodo,
     DateTimeRange? rango,
     String? marca,
-    int? anio,
-    TramoPrecio? precio,
+    int? anioDesde,
+    int? anioHasta,
+    double? precioDesde,
+    double? precioHasta,
     DiasParado? parado,
     OrdenInventario? orden,
     bool limpiarRango = false,
     bool limpiarMarca = false,
     bool limpiarAnio = false,
+    bool limpiarPrecio = false,
   }) => FiltroInventario(
     busqueda: busqueda ?? this.busqueda,
     estado: estado ?? this.estado,
     periodo: periodo ?? this.periodo,
     rango: limpiarRango ? null : (rango ?? this.rango),
     marca: limpiarMarca ? null : (marca ?? this.marca),
-    anio: limpiarAnio ? null : (anio ?? this.anio),
-    precio: precio ?? this.precio,
+    anioDesde: limpiarAnio ? null : (anioDesde ?? this.anioDesde),
+    anioHasta: limpiarAnio ? null : (anioHasta ?? this.anioHasta),
+    precioDesde: limpiarPrecio ? null : (precioDesde ?? this.precioDesde),
+    precioHasta: limpiarPrecio ? null : (precioHasta ?? this.precioHasta),
     parado: parado ?? this.parado,
     orden: orden ?? this.orden,
   );
@@ -157,8 +152,10 @@ class FiltroInventario {
       periodo != PeriodoIngreso.todo ||
       rango != null ||
       marca != null ||
-      anio != null ||
-      precio != TramoPrecio.todos ||
+      anioDesde != null ||
+      anioHasta != null ||
+      precioDesde != null ||
+      precioHasta != null ||
       parado != DiasParado.todos;
 
   bool pasa(VehiculoInventario v) {
@@ -170,8 +167,10 @@ class FiltroInventario {
     if (hasta != null && v.fechaIngreso.isAfter(hasta)) return false;
 
     if (marca != null && v.marca != marca) return false;
-    if (anio != null && v.anio != anio) return false;
-    if (!precio.incluye(v.precioActual)) return false;
+    if (anioDesde != null && v.anio < anioDesde!) return false;
+    if (anioHasta != null && v.anio > anioHasta!) return false;
+    if (precioDesde != null && v.precioActual < precioDesde!) return false;
+    if (precioHasta != null && v.precioActual > precioHasta!) return false;
     if (parado.alerta != null && v.alerta != parado.alerta) return false;
 
     final q = busqueda.trim().toLowerCase();
@@ -456,8 +455,6 @@ class _Filtros extends ConsumerWidget {
     final notificador = ref.read(filtroProvider.notifier);
 
     final marcas = todos.map((v) => v.marca).toSet().toList()..sort();
-    final anios = todos.map((v) => v.anio).toSet().toList()
-      ..sort((a, b) => b.compareTo(a));
 
     Future<void> elegirFechas() async {
       final hoy = DateTime.now();
@@ -546,30 +543,54 @@ class _Filtros extends ConsumerWidget {
                       : filtro.copiar(marca: v),
                 ),
               ),
-              _Selector<int?>(
+              _RangoFiltro(
                 icono: Icons.calendar_today_outlined,
-                etiqueta: filtro.anio?.toString() ?? 'Año',
-                activo: filtro.anio != null,
-                valor: filtro.anio,
-                opciones: [
-                  (null, 'Todos los años'),
-                  for (final a in anios) (a, '$a'),
-                ],
-                onElegir: (v) => notificador.poner(
-                  v == null
+                titulo: 'Año',
+                etiqueta: _rotulo(
+                  'Año',
+                  filtro.anioDesde?.toString(),
+                  filtro.anioHasta?.toString(),
+                ),
+                activo: filtro.anioDesde != null || filtro.anioHasta != null,
+                desde: filtro.anioDesde?.toString() ?? '',
+                hasta: filtro.anioHasta?.toString() ?? '',
+                ayuda: 'Ej: 2015',
+                onAplicar: (d, h) => notificador.poner(
+                  d == null && h == null
                       ? filtro.copiar(limpiarAnio: true)
-                      : filtro.copiar(anio: v),
+                      : filtro.copiar(
+                          limpiarAnio: true,
+                          anioDesde: d?.toInt(),
+                          anioHasta: h?.toInt(),
+                        ),
                 ),
               ),
-              _Selector<TramoPrecio>(
+              _RangoFiltro(
                 icono: Icons.attach_money_rounded,
-                etiqueta: filtro.precio == TramoPrecio.todos
-                    ? 'Precio'
-                    : filtro.precio.etiqueta,
-                activo: filtro.precio != TramoPrecio.todos,
-                valor: filtro.precio,
-                opciones: [for (final t in TramoPrecio.values) (t, t.etiqueta)],
-                onElegir: (v) => notificador.poner(filtro.copiar(precio: v)),
+                titulo: 'Precio',
+                etiqueta: _rotulo(
+                  'Precio',
+                  filtro.precioDesde == null
+                      ? null
+                      : Fmt.pesosCompacto(filtro.precioDesde),
+                  filtro.precioHasta == null
+                      ? null
+                      : Fmt.pesosCompacto(filtro.precioHasta),
+                ),
+                activo:
+                    filtro.precioDesde != null || filtro.precioHasta != null,
+                desde: filtro.precioDesde?.round().toString() ?? '',
+                hasta: filtro.precioHasta?.round().toString() ?? '',
+                ayuda: 'En pesos. Ej: 25000000',
+                onAplicar: (d, h) => notificador.poner(
+                  d == null && h == null
+                      ? filtro.copiar(limpiarPrecio: true)
+                      : filtro.copiar(
+                          limpiarPrecio: true,
+                          precioDesde: d,
+                          precioHasta: h,
+                        ),
+                ),
               ),
               _Selector<DiasParado>(
                 icono: Icons.hourglass_top_rounded,
@@ -749,9 +770,22 @@ class _Resumen extends StatelessWidget {
       else if (filtro.periodo != PeriodoIngreso.todo)
         'ingresados ${filtro.periodo.etiqueta.toLowerCase()}',
       if (filtro.marca != null) filtro.marca!,
-      if (filtro.anio != null) 'del ${filtro.anio}',
-      if (filtro.precio != TramoPrecio.todos)
-        filtro.precio.etiqueta.toLowerCase(),
+      if (filtro.anioDesde != null || filtro.anioHasta != null)
+        _rotulo(
+          'año',
+          filtro.anioDesde?.toString(),
+          filtro.anioHasta?.toString(),
+        ).toLowerCase(),
+      if (filtro.precioDesde != null || filtro.precioHasta != null)
+        _rotulo(
+          'precio',
+          filtro.precioDesde == null
+              ? null
+              : Fmt.pesosCompacto(filtro.precioDesde),
+          filtro.precioHasta == null
+              ? null
+              : Fmt.pesosCompacto(filtro.precioHasta),
+        ).toLowerCase(),
       if (filtro.parado != DiasParado.todos)
         filtro.parado.etiqueta.toLowerCase(),
     ].join(' · ');
@@ -1095,6 +1129,170 @@ class _MenuUnidad extends StatelessWidget {
         const PopupMenuItem(value: 'gasto', child: Text('Cargar un gasto')),
         if (!vehiculo.vendido)
           const PopupMenuItem(value: 'venta', child: Text('Marcar vendida')),
+      ],
+    );
+  }
+}
+
+/// "Año: 2015 a 2020", "Precio: hasta $25 M". Arma el rótulo de un filtro
+/// que puede tener uno de los dos extremos, los dos, o ninguno.
+String _rotulo(String titulo, String? desde, String? hasta) {
+  if (desde == null && hasta == null) return titulo;
+  if (desde != null && hasta != null) return '$titulo: $desde a $hasta';
+  if (desde != null) return '$titulo: desde $desde';
+  return '$titulo: hasta $hasta';
+}
+
+/// Un filtro de rango escrito a mano: dos campos, los dos opcionales.
+///
+/// Reemplaza a los tramos fijos de precio y a la lista de años. Un cliente
+/// pregunta "¿tenés algo del 2018 para arriba hasta 25 palos?" y eso no
+/// entra en opciones armadas de antemano.
+class _RangoFiltro extends StatelessWidget {
+  const _RangoFiltro({
+    required this.icono,
+    required this.titulo,
+    required this.etiqueta,
+    required this.activo,
+    required this.desde,
+    required this.hasta,
+    required this.ayuda,
+    required this.onAplicar,
+  });
+
+  final IconData icono;
+  final String titulo, etiqueta, desde, hasta, ayuda;
+  final bool activo;
+  final void Function(double? desde, double? hasta) onAplicar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return Pulsable(
+      onTap: () async {
+        final r = await showDialog<(double?, double?)>(
+          context: context,
+          builder: (_) => _DialogoRango(
+            titulo: titulo,
+            desde: desde,
+            hasta: hasta,
+            ayuda: ayuda,
+          ),
+        );
+        if (r != null) onAplicar(r.$1, r.$2);
+      },
+      child: AnimatedContainer(
+        duration: Duracion.rapida,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Esp.md,
+          vertical: Esp.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: activo ? p.acento : p.superficie,
+          borderRadius: BorderRadius.circular(Curva.md),
+          border: Border.all(
+            color: activo ? p.acentoTinta : p.borde,
+            width: activo ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icono, size: 17, color: activo ? p.acentoTinta : p.tinta3),
+            const SizedBox(width: Esp.sm - 2),
+            Text(
+              etiqueta,
+              style: TextStyle(
+                fontSize: 14,
+                color: activo ? p.acentoTinta : p.tinta2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DialogoRango extends StatefulWidget {
+  const _DialogoRango({
+    required this.titulo,
+    required this.desde,
+    required this.hasta,
+    required this.ayuda,
+  });
+
+  final String titulo, desde, hasta, ayuda;
+
+  @override
+  State<_DialogoRango> createState() => _DialogoRangoState();
+}
+
+class _DialogoRangoState extends State<_DialogoRango> {
+  late final _desde = TextEditingController(text: widget.desde);
+  late final _hasta = TextEditingController(text: widget.hasta);
+
+  @override
+  void dispose() {
+    _desde.dispose();
+    _hasta.dispose();
+    super.dispose();
+  }
+
+  double? _leer(TextEditingController c) {
+    final limpio = c.text.replaceAll(RegExp(r'[^0-9]'), '');
+    return limpio.isEmpty ? null : double.tryParse(limpio);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.paleta;
+    return AlertDialog(
+      title: Text(widget.titulo),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Podés poner uno solo de los dos.',
+            style: TextStyle(fontSize: 14, color: p.tinta2),
+          ),
+          const SizedBox(height: Esp.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _desde,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: 'Desde',
+                    hintText: widget.ayuda,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Esp.md),
+              Expanded(
+                child: TextField(
+                  controller: _hasta,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Hasta'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, (null, null)),
+          child: const Text('Limpiar'),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.pop(context, (_leer(_desde), _leer(_hasta))),
+          child: const Text('Aplicar'),
+        ),
       ],
     );
   }

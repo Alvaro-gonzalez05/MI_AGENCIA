@@ -97,7 +97,7 @@ class PantallaEstadisticas extends ConsumerWidget {
 
     final ganancia = delPeriodo.fold<double>(
       0,
-      (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
+      (s, v) => s + (v.ganancia ?? 0),
     );
     final diasPromedio = delPeriodo.isEmpty
         ? null
@@ -270,10 +270,7 @@ List<({DateTime mes, int unidades, double ganancia})> _serie(
         return (
           mes: mes,
           unidades: delMes.length,
-          ganancia: delMes.fold<double>(
-            0,
-            (s, v) => s + (v.gananciaReal ?? v.ganancia ?? 0),
-          ),
+          ganancia: delMes.fold<double>(0, (s, v) => s + (v.ganancia ?? 0)),
         );
       }(),
   ];
@@ -662,7 +659,7 @@ class _GananciaPorMes extends StatelessWidget {
           CabeceraBloque(
             titulo: 'Ganancia por mes',
             descripcion: hayAlgo
-                ? 'Ganancia real (ajustada por dólar) de las unidades entregadas'
+                ? 'Lo que dejaron las unidades entregadas'
                 : 'Se dibuja cuando haya ventas cargadas',
           ),
           const SizedBox(height: Esp.xl),

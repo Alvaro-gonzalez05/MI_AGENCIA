@@ -1078,9 +1078,7 @@ class _HojaMasOpciones extends ConsumerWidget {
                 _FilaOpcion(
                   icono: Icons.storefront_outlined,
                   titulo: 'Datos de la agencia',
-                  descripcion:
-                      'Umbrales, márgenes, redondeo y tipo de cambio de la '
-                      'agencia',
+                  descripcion: 'Nombre, CUIT, contacto y dirección',
                   onTap: () => irA(Secciones.configuracion.ruta),
                 ),
                 // El equipo lo maneja el dueño de la agencia; las agencias

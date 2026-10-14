@@ -39,3 +39,27 @@ class AnioRevista {
   final int anio;
   final int versiones;
 }
+
+/// Lo que dejó una consulta a la guía hecha en el momento.
+///
+/// La guía deja 30 consultas por día y el cupo es de la IP: lo gastan entre
+/// todas las agencias y el cosechador de la noche. Por eso la pantalla
+/// necesita saber cuántas quedan, y decirlo antes de que se acaben.
+class BusquedaEnVivo {
+  const BusquedaEnVivo({
+    this.guardadas = 0,
+    this.quedan = 0,
+    this.agotado = false,
+    this.mensaje,
+  });
+
+  /// Cuántos precios entraron a nuestra copia con esta consulta. Una sola
+  /// búsqueda trae hasta 25 versiones.
+  final int guardadas;
+
+  /// Cuántas consultas quedan hoy.
+  final int quedan;
+
+  final bool agotado;
+  final String? mensaje;
+}

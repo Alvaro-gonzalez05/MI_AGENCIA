@@ -383,7 +383,7 @@ class _HojaPlanDePagosState extends ConsumerState<HojaPlanDePagos> {
               spacing: Esp.sm,
               runSpacing: Esp.sm,
               children: [
-                for (final s in SistemaAmortizacion.values)
+                for (final s in SistemaAmortizacion.elegibles)
                   ChipSeleccion(
                     etiqueta: s.etiqueta,
                     activo: _p.sistema == s.valorBd,

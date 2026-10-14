@@ -344,11 +344,7 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
       tipoCambio: ref.watch(configProvider).tipoCambio,
     );
 
-    final color = r.perdioPlata
-        ? p.critico
-        : r.gananciaReal < 0
-        ? p.observar
-        : p.bien;
+    final color = r.perdioPlata ? p.critico : p.bien;
 
     return Tarjeta(
       padding: const EdgeInsets.all(Esp.xl),
@@ -361,25 +357,11 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
                 '${v.codigo} · ${v.titulo} · ${Fmt.dias(v.diasEnStock)} en stock',
           ),
           const SizedBox(height: Esp.lg),
-          Row(
-            children: [
-              Expanded(
-                child: ValorAntesDespues(
-                  etiqueta: 'Ganancia nominal',
-                  valor: Fmt.pesos(r.ganancia),
-                  color: r.perdioPlata ? p.critico : p.tinta,
-                ),
-              ),
-              Icon(Icons.arrow_forward, size: 16, color: p.tinta3),
-              Expanded(
-                child: ValorAntesDespues(
-                  etiqueta: 'Ganancia real (USD)',
-                  valor: Fmt.pesos(r.gananciaReal),
-                  color: color,
-                  destacado: true,
-                ),
-              ),
-            ],
+          ValorAntesDespues(
+            etiqueta: 'Ganancia',
+            valor: Fmt.pesos(r.ganancia),
+            color: color,
+            destacado: true,
           ),
           const SizedBox(height: Esp.lg),
           Divider(color: p.borde, height: 1),
@@ -388,16 +370,11 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
             etiqueta: 'Costo con gastos de cierre',
             valor: Fmt.pesos(r.costoConCierre),
           ),
-          FilaDato(etiqueta: 'Margen nominal', valor: Fmt.porcentaje(r.margen)),
           FilaDato(
-            etiqueta: 'Margen real (USD)',
-            valor: Fmt.porcentaje(r.margenReal),
+            etiqueta: 'Margen',
+            valor: Fmt.porcentaje(r.margen),
             valorColor: color,
             destacado: true,
-          ),
-          FilaDato(
-            etiqueta: 'En dólares',
-            valor: Fmt.dolares(r.gananciaRealUsd),
           ),
           const SizedBox(height: Esp.sm),
           Container(
@@ -410,18 +387,8 @@ class _FormularioVentaState extends ConsumerState<FormularioVenta> {
               r.perdioPlata
                   ? 'La operación cierra a pérdida: se vendió por debajo de lo '
                         'que costó ponerla en condiciones.'
-                  : r.perdioContraInflacion
-                  ? 'En pesos da ganancia, pero medida en dólares la '
-                        'operación pierde: lo invertido, al dólar de cada '
-                        'fecha, vale más que el precio de venta. La unidad '
-                        'estuvo ${Fmt.dias(v.diasEnStock)} en stock.'
-                  : r.erosion >= 0
-                  ? 'Medida en dólares, la ganancia es ${Fmt.pesos(r.erosion)} '
-                        'menor que en pesos. Lo que queda de verdad es '
-                        '${Fmt.pesos(r.gananciaReal)}.'
-                  : 'Medida en dólares, la ganancia es '
-                        '${Fmt.pesos(-r.erosion)} mayor que en pesos: '
-                        '${Fmt.pesos(r.gananciaReal)}.',
+                  : 'La unidad estuvo ${Fmt.dias(v.diasEnStock)} en stock y '
+                        'deja ${Fmt.pesos(r.ganancia)}.',
               style: TextStyle(fontSize: 13, color: p.tinta2, height: 1.45),
             ),
           ),
